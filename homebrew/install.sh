@@ -80,7 +80,7 @@ install ripgrep
 install ruff
 install rustup
 install slack yes
-install spaceship
+install starship
 install swiftformat
 install swiftlint
 install tree

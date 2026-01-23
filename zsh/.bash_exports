@@ -62,7 +62,7 @@ esac
 # tree-me auto-cd support
 # shellcheck source=/dev/null
 if command -v tree-me >/dev/null 2>&1; then
-    source <(tree-me shellenv)
+    source <(tree-me shellenv 2>/dev/null)
 fi
 
 # Terminal greeting
@@ -71,5 +71,8 @@ if command -v fortune >/dev/null 2>&1 && command -v cowsay >/dev/null 2>&1 && [ 
     export GREETING_SHOWN=1
 fi
 
-# Spaceship prompt
-source "$(brew --prefix)/opt/spaceship/spaceship.zsh"
+# Starship prompt
+if command -v starship >/dev/null 2>&1; then
+    eval "$(starship init zsh)"
+fi
+
