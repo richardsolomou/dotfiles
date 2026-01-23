@@ -1,7 +1,5 @@
 #!/bin/zsh
 # shellcheck shell=bash
-export ZSH_THEME="agnoster"
-prompt_context(){ :; }
 
 listening() {
     if [ $# -eq 0 ]; then
@@ -30,13 +28,6 @@ export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@3/lib/pkgconfig"
 
 export CPPFLAGS=-I/opt/homebrew/opt/openssl/include
 export LDFLAGS=-L/opt/homebrew/opt/openssl/lib
-
-# Pyenv exports
-export PATH="$HOME/.pyenv/bin:$PATH"
-eval "$(pyenv init --path)"
-eval "$(pyenv virtualenv-init -)"
-
-eval "$(nodenv init -)" 
 
 THEARCH=$(arch)
 if [[ x"$THEARCH" == x"i386" ]]; then
@@ -79,3 +70,6 @@ if command -v fortune >/dev/null 2>&1 && command -v cowsay >/dev/null 2>&1 && [ 
     fortune -n 320 -s | cowsay -f small
     export GREETING_SHOWN=1
 fi
+
+# Spaceship prompt
+source "$(brew --prefix)/opt/spaceship/spaceship.zsh"

@@ -59,42 +59,26 @@ install gh
 install git-extras
 install go
 install google-drive yes
-install helm
+install httpie
 install hey
-install iterm2 yes
-install jetbrains-toolbox yes
 install jq
-install k6
-install k9s
-install kubectx
 install libmaxminddb
 install libxmlsec1
 install llvm
 install markdownlint-cli2
 install mergiraf
 install mprocs
-install ngrok yes
 install nvm
 install openssl
+install orbstack yes
 install pngquant
-install postman yes
-install postgresql@14
-install pulumi/tap/pulumi
-install pyenv
-install python@3.10
-install python@3.11
-install python@3.12
 install rbenv
 install readline
 install ripgrep
-install ruby
-install ruby-install
 install ruff
 install rustup
-install secretive yes
 install slack yes
-install spotify yes
-install sqlite3
+install spaceship
 install swiftformat
 install swiftlint
 install tree
@@ -116,16 +100,6 @@ if test ! "$(which rustup)"
 then
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 fi
-
-# You may need to run these commands for ruby-installer to work.
-# export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"
-# export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@1.1/lib/pkgconfig"
-# export LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib"
-# export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include"
-ruby-install ruby 3.1.3
-gem install jekyll --user-install
-
-curl https://pyenv.run | bash
 
 brew cleanup
 rm -f -r /Library/Caches/Homebrew/*
