@@ -54,6 +54,7 @@ install direnv
 install dotenvx/brew/dotenvx
 install elixir
 install fortune
+install flox yes
 install fzf
 install gh
 install git-extras
@@ -64,6 +65,7 @@ install hey
 install jq
 install libmaxminddb
 install libxmlsec1
+install linearmouse yes
 install llvm
 install markdownlint-cli2
 install mergiraf
