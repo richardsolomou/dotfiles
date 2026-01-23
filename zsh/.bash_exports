@@ -65,12 +65,6 @@ if command -v tree-me >/dev/null 2>&1; then
     source <(tree-me shellenv 2>/dev/null)
 fi
 
-# Terminal greeting
-if command -v fortune >/dev/null 2>&1 && command -v cowsay >/dev/null 2>&1 && [ -z "$GREETING_SHOWN" ]; then
-    fortune -n 320 -s | cowsay -f small
-    export GREETING_SHOWN=1
-fi
-
 # Starship prompt
 if command -v starship >/dev/null 2>&1; then
     eval "$(starship init zsh)"

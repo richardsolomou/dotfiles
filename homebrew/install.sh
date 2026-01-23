@@ -49,11 +49,9 @@ EOF
 install 1password yes
 install cmake
 install composer
-install cowsay
 install direnv
 install dotenvx/brew/dotenvx
 install elixir
-install fortune
 install flox yes
 install fzf
 install gh
