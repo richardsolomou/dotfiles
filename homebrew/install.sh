@@ -34,9 +34,9 @@ EOF
     scoop install "${app}"
   else
     if [ -z "$cask" ]; then
-      brew list "${app}" >/dev/null || brew install "${app}"
+      brew list "${app}" &>/dev/null || brew install "${app}"
     else
-      brew list "${app}" --cask >/dev/null || brew install "${app}" --cask
+      brew list --cask "${app}" &>/dev/null || brew install --cask "${app}"
     fi
   fi
 
@@ -84,8 +84,7 @@ install swiftlint
 install tree
 install uv
 install vips
-install visual-studio-code yes
-install wezterm yes
+install ghostty yes
 install wget
 install xz
 install ykman
