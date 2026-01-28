@@ -55,5 +55,10 @@
 [user]
   name = Richard Solomou
   email = richard.s@posthog.com
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFzn+PnXv/oafj+YFv2jwNYBdWLyknN3sYlJYDli12XA
 [gpg "ssh"]
-	program = /usr/bin/ssh-keygen
+	program = /Applications/1Password.app/Contents/MacOS/op-ssh-sign
+[commit]
+	gpgsign = true
+[gpg]
+	format = ssh
