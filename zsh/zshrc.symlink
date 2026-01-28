@@ -1,0 +1,14 @@
+# Initialize direnv - added by PostHog's Flox activation hook
+eval "$(direnv hook zsh)"
+
+# Source bash exports
+if [ -f ${HOME}/.dotfiles/zsh/.bash_exports ]; then
+  . ${HOME}/.dotfiles/zsh/.bash_exports
+fi
+
+# Source all .zsh files from dotfiles
+for config_file (${HOME}/.dotfiles/zsh/*.zsh); do
+  source $config_file
+done
+
+export PATH="$HOME/.local/bin:$PATH"
