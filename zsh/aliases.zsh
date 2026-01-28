@@ -31,3 +31,15 @@ alias disk-cleanup-rust='~/.dotfiles/bin/disk-cleanup --module rust'
 alias disk-cleanup-rust-aggressive='~/.dotfiles/bin/disk-cleanup --module rust --aggressive'
 alias disk-cleanup-caches='~/.dotfiles/bin/disk-cleanup --module python'
 alias disk-monitor-log='tail -f ~/.dotfiles/.notes/disk-monitor.log'
+
+# Markdownlint
+alias markdownlint='markdownlint-cli2'
+
+# Navigation
+alias ..='cd ..'
+
+# Editor
+alias c='cursor'
+
+# File listing
+alias ll='ls -lah'
