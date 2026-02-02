@@ -242,10 +242,7 @@ fi
 # Define MCP servers as a list of entries
 # Format: "name|description|command"
 MCP_SERVERS="
-posthog-db|PostHog database connection|/Users/richard/.local/bin/postgres-mcp --access-mode=restricted
-puppeteer|Puppeteer web automation|npx -y @modelcontextprotocol/server-puppeteer
 memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory
-git|Structured git operations|npx -y @modelcontextprotocol/server-git
 grafana|Grafana MCP server|/Users/richard/.dotfiles/bin/mcp-grafana-wrapper.sh
 "
 
@@ -253,9 +250,6 @@ grafana|Grafana MCP server|/Users/richard/.dotfiles/bin/mcp-grafana-wrapper.sh
 set_server_env() {
     local server_name="$1"
     case "$server_name" in
-        posthog-db)
-            echo "-e DATABASE_URI=postgresql://posthog:posthog@localhost:5432/posthog"
-            ;;
         *)
             echo ""
             ;;
