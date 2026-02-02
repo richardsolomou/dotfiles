@@ -84,7 +84,7 @@ install swiftlint
 install tree
 install uv
 install vips
-install ghostty yes
+install warp yes
 install wget
 install xz
 install ykman
