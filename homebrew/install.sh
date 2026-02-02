@@ -85,6 +85,7 @@ install tree
 install uv
 install vips
 install warp yes
+install withgraphite/tap/graphite
 install wget
 install xz
 install ykman
