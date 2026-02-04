@@ -47,6 +47,7 @@ EOF
 }
 
 install 1password yes
+install awscli
 install cmake
 install composer
 install direnv
