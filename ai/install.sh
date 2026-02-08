@@ -286,6 +286,33 @@ if [ "$INSTALL_MCP" = "true" ]; then
     done
 fi
 
+# Install plugins
+PLUGINS="
+frontend-design|Frontend design skill for UI/UX implementation
+ralph-loop|Ralph Wiggum iterative development loops
+"
+
+if command -v claude > /dev/null 2>&1; then
+    info "Installing Claude Code plugins…"
+
+    echo "$PLUGINS" | grep -v "^$" | while IFS='|' read -r name description; do
+        [ -z "$name" ] && continue
+
+        if claude plugin list 2>/dev/null | grep -q "${name}@"; then
+            success "${description} already installed"
+        else
+            info "Installing ${description}…"
+            if claude plugin install "${name}" --scope user 2>/dev/null; then
+                success "${description} installed"
+            else
+                warning "Failed to install ${description}"
+            fi
+        fi
+    done
+else
+    warning "Claude CLI not found, skipping plugin installation"
+fi
+
 # Configure Claude Code hooks
 if [ "$INSTALL_HOOKS" = "true" ]; then
     info "Configuring Claude Code hooks…"
