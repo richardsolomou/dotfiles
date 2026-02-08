@@ -39,7 +39,7 @@ alias markdownlint='markdownlint-cli2'
 alias ..='cd ..'
 
 # Editor
-alias c='cursor'
+alias c='code'
 
 # File listing
 alias ll='ls -lah'
