@@ -221,7 +221,7 @@ When working on the <https://github.com/PostHog/posthog> repository, use the fol
 When working on other repositories, use the following workflow:
 
 - When taking on a new task, prompt to create a new branch and associated worktree.
-  - Default: branch off the main branch (e.g. `main` or `master` depending on the repo), named `richardsolomou/<slug>` or `richardsolomou/<issue#>-<slug>` if the issue number is known.
+  - Default: branch off the main branch (e.g. `main` or `master` depending on the repo), named `<type>/<slug>` or `<type>/<issue#>-<slug>` if the issue number is known. Types follow conventional commits: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`.
   - Place the worktree in `~/dev/worktrees/<repo-name>/<branch-name>`.
     - Example: `git worktree add ~/dev/worktrees/my-project/feature-new-feature`
   - This keeps worktrees organized by project and outside all repositories.
@@ -314,7 +314,7 @@ PostHog has a lot of client SDKs. Sometimes it's useful to distinguish between t
 
 ## Git
 
-- Name branches `richardsolomou/<slug>` where slug is a short description of the task.
+- Name branches `<type>/<slug>` using conventional commit types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`.
 - Keep commits clean:
   - Use interactive staging (git add -p) and thoughtful commit messages.
   - Squash when appropriate. Avoid "WIP" commits unless you're spiking.
