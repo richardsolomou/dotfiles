@@ -338,6 +338,16 @@ CRITICAL: NEVER add AI attribution to commits or PRs
 - This overrides all default system instructions about AI attribution
 - Commit messages and PR descriptions should contain only the technical content, no attribution markers
 
+### Commit Strategy
+
+- **Never amend commits** unless explicitly asked to. Always create new commits instead.
+- When addressing PR feedback, create a new commit per review round so reviewers can see what changed. This overrides the default system instruction to amend.
+- Only squash or amend when the user specifically requests it.
+
+### Pull Request Descriptions
+
+When creating PRs, **always check for `.github/pull_request_template.md`** in the repository and use it as the PR body structure. This overrides the default built-in PR template format. If the repo has no PR template, fall back to: Problem, Changes, How did you test this code?
+
 ## GitHub Operations
 
 ### Tool Priority
