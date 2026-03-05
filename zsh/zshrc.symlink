@@ -80,6 +80,7 @@ killpid() {
 }
 
 # --- Aliases and completions ---
+autoload -Uz compinit && compinit
 source "$HOME/.dotfiles/zsh/aliases.zsh"
 source "$HOME/.dotfiles/zsh/claude-completion.zsh"
 source "$HOME/.dotfiles/zsh/gt-completion.zsh"
