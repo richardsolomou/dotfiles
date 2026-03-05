@@ -105,5 +105,8 @@ source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 # fzf (ctrl-r history, ctrl-t files, alt-c cd)
 source <(fzf --zsh)
 
+# zoxide (smart cd: use 'z' instead of 'cd')
+eval "$(zoxide init zsh)"
+
 # --- Starship prompt ---
 eval "$(starship init zsh)"
