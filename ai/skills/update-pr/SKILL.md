@@ -1,7 +1,7 @@
 ---
 name: update-pr
 description: "Update a pull request's title and description based on the actual changes in the PR. Uses the repo's PR template and conventional commit style titles."
-user_invocable: true
+disable-model-invocation: true
 ---
 
 # Update PR
