@@ -52,12 +52,11 @@ else
 fi
 
 # Use different notes location for PostHog repos
+notes_base="$HOME/dev/richardsolomou/notes"
 org_lower=$(echo "$org" | tr '[:upper:]' '[:lower:]')
 if [[ "$org_lower" == "posthog" ]]; then
-    notes_base="$HOME/dev/richardsolomou/notes/PostHog/repositories"
-    note_path="${notes_base}/${repo}/${slug}.md"
+    note_path="${notes_base}/PostHog/repositories/${repo}/${slug}.md"
 else
-    notes_base="$HOME/dev/ai/notes"
     note_path="${notes_base}/${org}/${repo}/${slug}.md"
 fi
 

@@ -45,7 +45,7 @@ This returns tab-separated output:
 **Never construct paths manually.** The script handles:
 - Deriving org/repo from the current git repository
 - PostHog repos: `~/dev/richardsolomou/notes/PostHog/repositories/{repo}/{slug}.md`
-- Other repos: `~/dev/ai/notes/{org}/{repo}/{slug}.md`
+- Other repos: `~/dev/richardsolomou/notes/{org}/{repo}/{slug}.md`
 - Validating the slug format (kebab-case required)
 
 **Naming Convention**: Use kebab-case (e.g., `cohort-uploads`, `oauth-flow`)
@@ -164,7 +164,7 @@ Focus on capturing the knowledge that was hard-won through exploration, debuggin
 
 This agent creates **technical discovery notes** using the `note-find-or-create.sh` script. Notes are stored at:
 - PostHog repos: `~/dev/richardsolomou/notes/PostHog/repositories/{repo}/`
-- Other repos: `~/dev/ai/notes/{org}/{repo}/`
+- Other repos: `~/dev/richardsolomou/notes/{org}/{repo}/`
 
 These are:
 - Reusable technical knowledge for future development
