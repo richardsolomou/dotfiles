@@ -79,6 +79,14 @@ killpid() {
   fi
 }
 
+# --- Shell history ---
+HISTSIZE=100000
+SAVEHIST=100000
+HISTFILE="$HOME/.zsh_history"
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_REDUCE_BLANKS
+
 # --- Aliases and completions ---
 autoload -Uz compinit && compinit
 source "$HOME/.dotfiles/zsh/aliases.zsh"
