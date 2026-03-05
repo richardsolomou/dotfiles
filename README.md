@@ -2,7 +2,7 @@
 
 Your dotfiles are how you personalize your system. These are mine.
 
-They're so personal I copied basically all of them from my coworker [dmarticus's dotfiles](https://github.com/dmarticus/dotfiles) including the approach to install them.
+They're so personal I copied basically all of them from [haacked's dotfiles](https://github.com/haacked/dotfiles) including the approach to install them.
 
 ## Install
 
@@ -27,10 +27,5 @@ this script in `bin/`.
 
 ### ZSH
 
-Add the following to the bottom of your `~/.zshrc` file:
-
-```bash
-if [ -f ${HOME}/.dotfiles/zsh/.bash_exports ]; then
-  . ${HOME}/.dotfiles/zsh/.bash_exports
-fi
-```
+`~/.zshrc` is managed by this repo via `zsh/zshrc.symlink`. Running
+`script/bootstrap` creates the symlink automatically.

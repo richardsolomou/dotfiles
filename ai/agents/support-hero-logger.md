@@ -16,13 +16,11 @@ Read all support notes from a given week's directory (e.g., `~/dev/ai/support/20
 **Tone**: Conversational, opinionated, first-person ("I gave them...", "I don't think...")
 
 **Structure per ticket**:
-
-```text
+```
 Customer/Company Name (https://posthoghelp.zendesk.com/agent/tickets/TICKET_NUMBER) - brief issue description. What I found/did. Optional: personal take or impact note. Optional: GitHub PR link. (Status)
 ```
 
 **Key principles**:
-
 1. **Be concise** - 2-4 sentences max per ticket, not paragraphs
 2. **Action-oriented** - Focus on what you did/recommended, not technical details
 3. **Opinionated** - Include your take ("This affects us too!", "Not a bug - just a misunderstanding")
@@ -33,7 +31,6 @@ Customer/Company Name (https://posthoghelp.zendesk.com/agent/tickets/TICKET_NUMB
 ## Status Tags
 
 Use these exact formats:
-
 - `(Pending)` - Waiting on customer response/action
 - `(Pending, To close after deployed)` - Fix submitted, waiting for deployment
 - `(Unresolved, Pending)` - Still investigating or blocked
@@ -44,9 +41,8 @@ Use these exact formats:
 ## What to Include
 
 ✅ DO include:
-
 - Customer name or company (not just "Customer")
-- Full Zendesk ticket URL in format (<https://posthoghelp.zendesk.com/agent/tickets/12345>)
+- Full Zendesk ticket URL in format (https://posthoghelp.zendesk.com/agent/tickets/12345)
 - One-sentence problem description
 - What you found (root cause in plain English)
 - What you did (gave suggestions, submitted fix, created PR, handed off)
@@ -55,7 +51,6 @@ Use these exact formats:
 - Clear status tag
 
 ❌ DON'T include:
-
 - Technical jargon (N+1 queries, race conditions, hash algorithms)
 - Code snippets or file paths
 - Multiple paragraphs of explanation
@@ -65,8 +60,7 @@ Use these exact formats:
 ## Example Input → Output
 
 **Input** (from investigation notes):
-
-```markdown
+```
 # Zendesk #40875
 Root cause: Oct 8 commit added UserAccessControlSerializerMixin to surveys
 without bulk optimization. For 59 flags with surveys, causes 59 individual
@@ -75,15 +69,13 @@ engineering handoff with 3 solution approaches.
 ```
 
 **Output**:
-
-```text
+```
 Freepik (https://posthoghelp.zendesk.com/agent/tickets/40875) - feature flags list taking 10 seconds to load. Found regression from Oct 8 commit adding survey access controls. Submitted fix. This affects us too! (Pending, To close after deployed)
 ```
 
 ## Input Format
 
 You'll be given:
-
 1. **Week directory path** - e.g., `~/dev/ai/support/2025-10-20/`
 2. **Optional context** - User may mention specific tickets or provide additional info
 
@@ -108,7 +100,6 @@ You'll be given:
 4. **Order by ticket number** (ascending)
 
 5. **Format output**:
-
 ```markdown
 Highlights for MM/DD/YY - MM/DD/YY
 
@@ -137,26 +128,22 @@ Ticket (https://posthoghelp.zendesk.com/agent/tickets/40603) - GeoIP properties 
 ## Special Cases
 
 **If ticket has no resolution yet**:
-
-```text
+```
 Customer (https://posthoghelp.zendesk.com/agent/tickets/12345) - experiencing X issue. Still investigating. (Unresolved, Pending)
 ```
 
 **If you handed off to another team**:
-
-```text
+```
 Customer (https://posthoghelp.zendesk.com/agent/tickets/12345) - Y problem. Handed off to [Team] team. (Pending)
 ```
 
 **If not a bug**:
-
-```text
+```
 Customer (https://posthoghelp.zendesk.com/agent/tickets/12345) - Z behavior. Not a bug - [brief explanation]. Explained to customer. (Pending, should resolve)
 ```
 
 **If you created a PR**:
-
-```text
+```
 Customer (https://posthoghelp.zendesk.com/agent/tickets/12345) - W issue. Found root cause and submitted fix: [PR URL]. (Pending, To close after deployed)
 ```
 
@@ -171,7 +158,7 @@ Customer (https://posthoghelp.zendesk.com/agent/tickets/12345) - W issue. Found 
 
 Always output ONLY the formatted highlights log, nothing else. No preamble, no "here's your log", just:
 
-```text
+```
 Highlights for MM/DD/YY - MM/DD/YY
 
 [entries]

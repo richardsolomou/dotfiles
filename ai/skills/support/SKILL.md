@@ -1,7 +1,8 @@
 ---
 name: support
-description: "Start a deterministic support investigation workflow with automatic note organization. Use when investigating Zendesk or GitHub support tickets."
-user_invocable: true
+description: Start a support investigation workflow with automatic note organization
+argument-hint: [find|zendesk|github] <number>
+disable-model-invocation: true
 ---
 
 # Support Investigation
@@ -10,10 +11,22 @@ Start a deterministic support investigation workflow with automatic note organiz
 
 ## Arguments (parsed from user input)
 
-- **ticket_type**: `zendesk` or `github` (required)
+- `find` - Find existing support notes without starting a new investigation
+  - `find zendesk <number>` - Find notes for a Zendesk ticket (e.g., `find zendesk 40875`)
+  - `find github <number>` - Find notes for a GitHub issue (e.g., `find github 12345`)
+  - `find z <number>` - Shorthand for Zendesk (e.g., `find z 40875`)
+  - `find gh <number>` - Shorthand for GitHub (e.g., `find gh 12345`)
+- **ticket_type**: `zendesk` or `github` (required for new investigations)
 - **ticket_number**: The ticket/issue number (required)
 
 Example invocations:
+
+**Find existing notes:**
+
+- `/support find zendesk 40875` - Find existing notes for Zendesk ticket
+- `/support find gh 12345` - Find existing notes for GitHub issue
+
+**Start new investigation:**
 
 - `/support zendesk 40875`
 - `/support github 12345`
@@ -26,17 +39,51 @@ Example invocations:
 
 Extract from user input:
 
+- `find_mode` = true if first argument is "find"
 - `ticket_type` = zendesk (or z) / github (or gh)
 - `ticket_number` = numeric ticket ID
 
-If either is missing, ask the user for them. Do not proceed without both.
+Normalize shorthands:
+
+- `z` → `zendesk`
+- `gh` → `github`
+
+If either ticket_type or ticket_number is missing, ask the user for them. Do not proceed without both.
+
+### Step 1.5: Handle Find Mode
+
+If `find_mode` is true, use the helper script to search for existing notes:
+
+```bash
+result=$(~/.claude/skills/support/scripts/support-find-ticket.sh {ticket_type} {ticket_number})
+status=$(echo "$result" | cut -f1)
+notes_dir=$(echo "$result" | cut -f2)
+```
+
+**Present results based on status:**
+
+If `status` is "found":
+
+- Display: "Found existing support notes for {ticket_type} #{ticket_number}"
+- Show the directory path: `$notes_dir`
+- Show the notes file path: `$notes_dir/notes.md`
+- Read and show a summary of the notes file (first ~30 lines)
+- Offer to open or continue the investigation
+
+If `status` is "new":
+
+- Display: "No existing notes found for {ticket_type} #{ticket_number}"
+- Show where notes would be created: `$notes_dir`
+- Suggest running `/support {ticket_type} {ticket_number}` (without `find`) to start a new investigation
+
+**Then stop** - do not proceed with creating directories or files in find mode.
 
 ### Step 2: Find or Create Notes Directory (Deterministic)
 
 **ALWAYS** use the helper script to find existing tickets or get the path for new ones:
 
 ```bash
-~/.dotfiles/ai/bin/support-find-ticket.sh {ticket_type} {ticket_number}
+~/.claude/skills/support/scripts/support-find-ticket.sh {ticket_type} {ticket_number}
 ```
 
 This returns tab-separated output:
@@ -53,7 +100,7 @@ This returns tab-separated output:
 ### Step 3: Create Notes Directory and File
 
 ```bash
-result=$(~/.dotfiles/ai/bin/support-find-ticket.sh {ticket_type} {ticket_number})
+result=$(~/.claude/skills/support/scripts/support-find-ticket.sh {ticket_type} {ticket_number})
 status=$(echo "$result" | cut -f1)
 notes_dir=$(echo "$result" | cut -f2)
 
@@ -65,41 +112,7 @@ else
 fi
 ```
 
-Create `notes.md` in that directory with this template:
-
-```markdown
-# {Ticket Type} #{ticket_number}
-
-**Ticket URL**: {constructed_url}
-**Started**: {current_date_time}
-**Status**: In Progress
-
-## Customer Context
-
-<!-- Customer name, company, environment details -->
-
-## Problem Summary
-
-<!-- One-paragraph description of the issue -->
-
-## Investigation Log
-
-### {timestamp}
-
-<!-- Add investigation notes here -->
-
-## Root Cause
-
-<!-- Fill in when identified -->
-
-## Resolution
-
-<!-- Fill in when resolved -->
-
-## Follow-up Actions
-
-- [ ] <!-- Any follow-up tasks -->
-```
+Create `notes.md` in that directory using the template from `templates/investigation-notes.md`.
 
 Construct URLs as:
 
@@ -129,7 +142,7 @@ This command ensures:
 ## Boundary: /support vs note-taker
 
 | Use `/support` for | Use `note-taker` for |
-|--------------------|----------------------|
+| --- | --- |
 | Customer tickets (Zendesk, GitHub) | Technical discoveries for future dev |
 | Weekly support log summaries | System behavior documentation |
 | Time-bounded support work | Knowledge persisting beyond ticket |

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_TEAM="team-feature-flags"
+DEFAULT_TEAM=team-llm-analytics
 
 usage() {
   echo "Usage: $(basename "$0") [-o ORG] [-t [TEAM]] [-r [TEAM]] [-h]"
@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -o)
       ORG="$2"
-      shift $((2))
+      shift 2
       ;;
     -t)
       if [[ -z "${2:-}" || "$2" == -* ]]; then
@@ -39,7 +39,7 @@ while [[ $# -gt 0 ]]; do
         shift
       else
         AUTHOR_TEAM="$2"
-        shift $((2))
+        shift 2
       fi
       ;;
     -r)
@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
         shift
       else
         REVIEW_TEAM="$2"
-        shift $((2))
+        shift 2
       fi
       ;;
     -h|--help)

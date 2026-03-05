@@ -15,6 +15,7 @@
 - Avoid premature abstractions
 - No clever tricks - choose the boring solution
 - If you need to explain it, it's too complex
+- If the type already supports an operation (via derives, traits, or methods), use it - don't reimplement
 
 ## Backwards compatibility
 
@@ -83,6 +84,8 @@ For complex tasks, the `implementation-planner` agent creates durable, structure
 5. **Commit** - With clear message linking to plan
 
 ### 3. When Stuck (After 2 Attempts)
+
+**CRITICAL**: When implementation goes sideways, immediately switch to plan mode and re-plan. Don't keep pushing forward with a broken approach.
 
 **CRITICAL**: Maximum 2 attempts per issue, then use `bug-root-cause-analyzer` agent.
 
@@ -206,6 +209,29 @@ For implementation decisions, refer to the decision framework in the `implementa
 - Learn from existing implementations
 - Stop after 2 failed attempts and use `bug-root-cause-analyzer` agent
 - Use the `code-reviewer` agent to review code before committing
+
+## Self-Improvement
+
+After Claude makes a mistake and you correct it, end with:
+
+> "Update your CLAUDE.md so you don't make that mistake again"
+
+Claude is good at writing rules for itself. Ruthlessly edit over time until the mistake rate drops.
+
+## Advanced Prompting Patterns
+
+### Challenge Claude
+
+- "Grill me on these changes and don't make a PR until I pass your test"
+- "Prove to me this works" (have Claude diff behavior between main and feature branch)
+
+### Iterate on Solutions
+
+- After a mediocre fix: "Knowing everything you know now, scrap this and implement the elegant solution"
+
+### Use More Compute
+
+- Append "use subagents" to any request where you want Claude to work harder
 
 ## Project-specific Workflow
 
@@ -350,6 +376,10 @@ When creating PRs, **always check for `.github/pull_request_template.md`** in th
 
 ## GitHub Operations
 
+### Voice & Attribution
+
+When writing PR descriptions, commit messages, issue comments, or any public-facing content, write as the user — never refer to yourself as an AI, agent, or assistant. Use first person ("I") to represent the user, not yourself.
+
 ### Tool Priority
 
 **ALWAYS use `gh` CLI** (via Bash tool) for all GitHub operations - it's token-efficient, fully-featured, and has auto-approval configured.
@@ -457,6 +487,19 @@ gh api graphql -f query='{ ... }'
 
 ## Coding
 
+### Read Before You Write
+
+Before implementing functionality that operates on a type:
+
+1. **Read the type's definition** - struct, class, interface, enum
+2. **Note its derives, attributes, trait implementations** - these often provide the functionality you need
+3. **Check if the operation you need is already supported** - parsing, serialization, comparison, etc.
+4. **Only write custom code if the built-in capability is insufficient**
+
+**Smell test**: If you're writing >10 lines for a common operation (parsing JSON, serializing data, comparing objects), stop and verify there isn't a built-in way. Standard libraries handle these in 1-3 lines.
+
+### General Principles
+
 - When writing code, think like a principal engineer.
   - Focus on code correctness and maintainability.
   - Bias for simplicity: Prefer boring, maintainable solutions over clever ones.
@@ -478,6 +521,13 @@ gh api graphql -f query='{ ... }'
 - **Red Flag**: Any `cargo shear` ignore should trigger investigation - unused deps indicate design problems
 - **Cargo Features**: Verify Cargo features actually enable code that exists and is used
 - **Before adding ignores**: Always investigate why the dependency appears unused and ensure it's actually needed
+
+#### Serialization/Deserialization
+
+- **Before writing any parsing/serialization code**: Read the struct definition and check its derives
+- **If a struct has `#[derive(Deserialize)]`**: Use `serde_json::from_value()`, `from_str()`, etc. - never manually extract fields
+- **If a struct has `#[derive(Serialize)]`**: Use `serde_json::to_value()`, `to_string()`, etc.
+- **Red flag**: If you're writing >10 lines to convert JSON to a struct, stop and check the derives
 
 #### Quality Checklist for Rust
 
@@ -524,10 +574,19 @@ gh api graphql -f query='{ ... }'
 
 ## Comments
 
+- Write eloquent, but concise commentary, and only comment on what is not obvious to a skilled programmer by reading the code.
+- Comments should contain proper grammar and punctuation and should be prose-like, rather than choppy partial sentences. A human reading your code's comments should feel like they're reading a well-written professional whitepaper.
+- Avoid dramatic and all-caps comments.
 - IMPORTANT: Comment on the code as it is, not as it was.  For example, we recently combined two queries into one with a LEFT JOIN. Instead of saying "we combined two queries into one with a LEFT JOIN", describe what the query does now. The fact that it was combined is not important.
 - Don't comment on code that is self-explanatory.
 
 ## Approach to work
+
+### Voice Dictation
+
+Use voice dictation (fn x2 on macOS) for prompts. You speak 3x faster than you type, and prompts get more detailed as a result.
+
+### Simple Code
 
 I like "Simple code" that means:
 

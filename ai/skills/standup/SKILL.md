@@ -1,194 +1,252 @@
 ---
 name: standup
-description: "Generate a daily standup summary from GitHub and Slack activity, then write to ~/standups/YYYY-MM-DD.md."
-user_invocable: true
+description: Generate standup notes from GitHub PR activity
+disable-model-invocation: true
 ---
 
-# Standup
+# Standup Notes Generator
 
-Generate a daily standup summary from GitHub and Slack activity, then write to ~/standups/YYYY-MM-DD.md.
+Generate standup notes for PostHog standups (Monday, Wednesday, Friday).
 
-## Arguments
+## Purpose
 
-- `/standup` - Today (previous day 7pm local → now; Friday 7pm → now on Mondays)
-- `/standup yesterday` - Previous standup window
-- `/standup monday`, `tuesday`, etc. - That day's standup window
-- `/standup N days` - N days ago at 7pm local to now
+Every standup, you need to report:
 
-## Prerequisites
-
-- GitHub CLI (`gh`) must be authenticated.
-- Slack MCP server must be configured (handles Slack authentication).
+- **Completed**: PRs merged since last standup
+- **Working on**: PRs with recent activity + items from last standup not yet done
+- **Discussion**: Usually something playful ("Nothing", "Nada", "Ain't got a thing")
 
 ## Your Task
 
-### Step 1: Preflight Checks
+### Step 1: Get Date Context
+
+Run the helper script to get standup dates:
 
 ```bash
-gh auth status 2>&1
+~/.claude/skills/standup/scripts/standup-dates.sh
 ```
 
-If gh is not authenticated, tell the user to run `gh auth login` and stop.
+This returns tab-separated: `<today>\t<last_standup_date>\t<new_file_path>`
 
-### Step 2: Compute the Standup Window
+Store these values:
 
-The standup hour is **19:00 local time** (7pm). Compute the window based on the argument:
+- `today` - Today's date (for the new standup file)
+- `last_standup_date` - When the previous standup was (for PR queries)
+- `new_file_path` - Where to write the new standup notes
 
-| Argument | SINCE | UNTIL | FILE_DATE |
-| -------- | ----- | ----- | --------- |
-| (none) / today | Yesterday 19:00 local → UTC | Now (UTC) | Today |
-| (none) on Monday | Friday 19:00 local → UTC | Now (UTC) | Today |
-| yesterday | 2 days ago 19:00 local → UTC | Yesterday 19:00 local → UTC | Yesterday |
-| day name (e.g. monday) | Day before that 19:00 local → UTC | That day 19:00 local → UTC | That day |
-| N days | N days ago 19:00 local → UTC | Now (UTC) | Today |
+### Step 2: Find Previous Standup Notes
 
-Compute all values silently in a single bash command and output only the final values. Do NOT echo intermediate calculations or run separate verification commands. Output exactly these four lines:
-
-```text
-SINCE=<UTC ISO 8601>
-UNTIL=<UTC ISO 8601>
-FILE_DATE=<YYYY-MM-DD>
-```
-
-### Step 3: Gather GitHub Activity
-
-Get the GitHub username and run ALL of these in parallel (use separate Bash calls). Replace `$SINCE` and `$UNTIL` with the computed UTC timestamps, and `$USER` with the GitHub username. Include `gh api /user --jq '.login'` as one of the parallel calls:
-
-1. PRs I opened:
-
-    ```bash
-    gh search prs --author=@me --created="$SINCE..$UNTIL" --json repository,title,number,url,state --limit 50
-    ```
-
-2. PRs I merged:
-
-    ```bash
-    gh search prs --author=@me --merged --json repository,title,number,url --limit 50 -- "merged:$SINCE..$UNTIL"
-    ```
-
-3. PRs I reviewed:
-
-    ```bash
-    gh search prs --reviewed-by=@me --updated=">=$SINCE" --json repository,title,number,url,author --limit 50 -- "-author:$USER"
-    ```
-
-4. Issues I created:
-
-    ```bash
-    gh search issues --author=@me --created="$SINCE..$UNTIL" --json repository,title,number,url --limit 50
-    ```
-
-5. Issues/PRs I commented on:
-
-    ```bash
-    gh search issues --commenter=@me --updated=">=$SINCE" --include-prs --json repository,title,number,url,author --limit 50 -- "-author:$USER"
-    ```
-
-6. My commits:
-
-    ```bash
-    gh search commits --author=@me --author-date="$SINCE..$UNTIL" --json repository,sha,commit --limit 50
-    ```
-
-7. PRs awaiting my review:
-
-    ```bash
-    gh search prs --review-requested=@me --state=open --json repository,title,number,url,author --limit 50
-    ```
-
-8. My open PRs:
-
-    ```bash
-    gh search prs --author=@me --state=open --json repository,title,number,url --limit 50
-    ```
-
-### Step 4: Gather Slack Activity
-
-The Slack user ID is `U0A008HMS48`.
-
-Extract date-only values from SINCE and UNTIL for Slack's date filters. Both `filter_date_after` and `filter_date_before` are **exclusive** (messages on those exact dates are excluded), so subtract 1 day from SINCE_DATE and add 1 day to UNTIL_DATE. For example, if the window is `2026-02-23T17:00:00Z` to `2026-02-24T18:00:00Z`, use `filter_date_after: "2026-02-22"` and `filter_date_before: "2026-02-25"`.
-
-Use the `mcp__slack__conversations_search_messages` tool for both searches. Run both in parallel:
-
-1. Messages I sent:
-
-    ```text
-    mcp__slack__conversations_search_messages(
-      filter_users_from: "U0A008HMS48",
-      filter_date_after: "$SINCE_DATE_MINUS_1",
-      filter_date_before: "$UNTIL_DATE_PLUS_1",
-      limit: 50
-    )
-    ```
-
-2. Messages in threads/DMs involving me (from others):
-
-    ```text
-    mcp__slack__conversations_search_messages(
-      filter_users_with: "U0A008HMS48",
-      filter_date_after: "$SINCE_DATE_MINUS_1",
-      filter_date_before: "$UNTIL_DATE_PLUS_1",
-      limit: 30
-    )
-    ```
-
-If either call fails, report the error and stop.
-
-### Step 5: Synthesize the Standup
-
-Using all the gathered data, synthesize a standup summary. Your output must start with "Did:" - no preamble, commentary, or explanations.
-
-**Grouping:**
-
-- Group closely related items (e.g., 3 PRs for the same feature = one bullet with sub-bullets or inline links)
-- Group by theme/project, not by artifact type
-- A PR that was both opened and merged is one bullet, not two
-- Only use sub-bullets when there are multiple distinct items under one theme
-
-**Writing style:**
-
-- Casual, conversational tone
-- Lead with strong action verbs: "Shipped", "Landed", "Merged", "Opened", "Continued work on", "Reviewed/approved", "Debugged", "Pitched", "Chatted with", "Synced with", "Met with"
-- Include non-code activity naturally: meetings, 1:1s, syncs, Slack discussions, support, pitches
-- Include repo name when it adds useful context or when multiple repos are involved
-- Weave in Slack context where it relates to a GitHub item
-- Append Slack-formatted links to PRs/issues: `<URL|label>` where label is "PR", "issue", etc.
-- When a bullet references multiple PRs, list each link inline: `<url|PR>` `<url|PR>`
-
-**Inferring "Will do":**
-
-- Open PRs I authored = will continue/land
-- PRs awaiting my review = will review
-- Active Slack threads = may continue discussion
-- Do NOT fabricate work - only list items with evidence
-
-**Output format - ONLY output this, nothing else:**
-
-```text
-Did:
-- bullet
-- bullet
-
-Will do:
-- bullet
-- bullet
-```
-
-**Rules:**
-
-- No headers beyond "Did:" and "Will do:"
-- No preamble or closing
-- No mention of tools, sources, or data availability
-- Use `-` for bullets, 4-space indented `-` for sub-bullets
-- Blank line between Did and Will do sections
-- If no activity, output: "No activity found for the given date range."
-
-### Step 6: Write Output
+Run the helper script to find previous standup notes:
 
 ```bash
-mkdir -p ~/standups
+~/.claude/skills/standup/scripts/standup-find.sh
 ```
 
-Write the synthesized standup to `~/standups/{FILE_DATE}.md` using the Write tool.
+This returns tab-separated: `<status>\t<path>\t<date>`
 
-Tell the user the file path when done.
+If `status` is "found":
+
+- Read the previous standup notes at `<path>`
+- Extract the "Working on" items that are NOT completed (for carry-over)
+
+### Step 3: Query GitHub for PR Activity
+
+**Completed PRs** (merged since last standup):
+
+```bash
+gh api search/issues --method GET -f q="author:richardsolomou is:pr is:merged merged:>=${last_standup_date}" --jq '.items[] | {number, title, url: .html_url, repo: .repository_url, merged_at: .pull_request.merged_at}'
+```
+
+Note: `gh search prs --merged` is unreliable for date filtering — it returns stale results. Always use `gh api search/issues` with the `merged:` qualifier instead, which returns accurate `merged_at` timestamps.
+
+**Active PRs** (open PRs with recent activity) - include draft status and review requests:
+
+```bash
+gh pr list --author "@me" --state open --json number,title,url,isDraft,reviewRequests --repo PostHog/posthog
+```
+
+Also check for open PRs in other repos the user commonly works on:
+
+- `PostHog/posthog-js`
+- `PostHog/posthog-dotnet`
+- `PostHog/charts`
+- `PostHog/posthog-cloud-infra`
+
+**Recently Updated PRs** (may have changes since last standup even if not open):
+
+```bash
+gh api search/issues --method GET -f q="author:richardsolomou is:pr is:open updated:>=${last_standup_date}" --jq '.items[] | {number, title, url: .html_url, repo: .repository_url}'
+```
+
+### Step 4: Analyze and Compose Standup Notes
+
+Build the standup content with clickable links for Slack. You'll generate both:
+1. **Plain text** (for the archive file)
+2. **HTML** (for RTF clipboard copy - links work when pasted into Slack)
+
+**Completed Section:**
+
+- List all PRs that were merged since `last_standup_date`
+- Use **past tense** for the description
+- The entire description is the link text
+- Use backticks for code/method names (these render in Slack)
+
+Plain text format:
+```
+Added `getFeatureFlagResult` method for efficient flag + payload retrieval (https://github.com/PostHog/posthog-js/pull/2920)
+```
+
+HTML format (for clipboard):
+```html
+<a href="https://github.com/PostHog/posthog-js/pull/2920">Added <code>getFeatureFlagResult</code> method for efficient flag + payload retrieval</a>
+```
+
+**Working On Section:**
+
+- Include open PRs with recent activity
+- Carry over items from the previous standup's "Working on" — but verify each one first:
+  - For items with a PR URL, check the PR state: `gh pr view <number> --repo <owner/repo> --json state,mergedAt`
+  - If **MERGED** since last standup: add it to the Completed section (deduplicate by PR number — the merged PR search may not catch every PR, so this is the safety net)
+  - If **CLOSED**: drop it from the standup entirely
+  - If **OPEN**: keep it in Working on
+- Description first, then status indicator in parentheses as a link
+- Determine PR status:
+  - If `isDraft` is true: link text is "draft"
+  - If `reviewRequests` includes "llm-analytics" team or any reviewer: link text is "needs review"
+  - Otherwise for open PRs: link text is "PR"
+- For non-PR work items: just plain text description
+
+Plain text format:
+```
+Simplify readiness probe to prevent cascade failures (https://github.com/PostHog/posthog/pull/46589 - draft)
+```
+
+HTML format (for clipboard):
+```html
+Simplify readiness probe to prevent cascade failures (<a href="https://github.com/PostHog/posthog/pull/46589">draft</a>)
+```
+
+**Discussion Section:**
+
+- Default to a playful "nothing" variant
+- Rotate between: "Nothing", "Nada", "Ain't got a thing", "Zilch", "Not a thing", "All quiet on the western front"
+
+### Step 5: Write the Standup Notes
+
+Create the **plain text file** at `new_file_path` for archival:
+
+```text
+Completed:
+Did something awesome (https://github.com/org/repo/pull/123)
+Fixed the thing that was broken (https://github.com/org/repo/pull/456)
+
+Working on:
+Description of draft work (https://github.com/org/repo/pull/789 - draft)
+Description of work needing review (https://github.com/org/repo/pull/101 - needs review)
+Non-PR work item description
+
+Discussion:
+Nothing
+```
+
+### Step 6: Copy to Clipboard as Rich Text
+
+Generate HTML and copy to clipboard as rich text. This makes links clickable when pasted into Slack.
+
+Use `<ul><li>` for bullet lists — Slack renders these properly when pasting rich text.
+
+**IMPORTANT**: Every item in every section MUST be an `<li>` element inside the `<ul>`. Never place items as bare text between the section header and `<ul>` or outside the list structure. Any earlier examples that show just text or `<a>` elements are the inner contents of a list item — when generating HTML, always wrap them in `<li>` inside a `<ul>`. This applies to all items — fresh PR results and carry-over items alike.
+
+Create the HTML content:
+
+```html
+<b>Completed:</b>
+<ul>
+<li><a href="https://github.com/org/repo/pull/123">Did something awesome</a></li>
+<li><a href="https://github.com/org/repo/pull/456">Fixed the thing that was broken</a></li>
+</ul>
+<b>Working on:</b>
+<ul>
+<li>Description of draft work (<a href="https://github.com/org/repo/pull/789">draft</a>)</li>
+<li>Description of work needing review (<a href="https://github.com/org/repo/pull/101">needs review</a>)</li>
+<li>Non-PR work item description</li>
+</ul>
+<b>Discussion:</b>
+<ul>
+<li>Nothing</li>
+</ul>
+```
+
+Copy to clipboard using the helper script:
+
+```bash
+echo '<html content>' | swift ~/.claude/skills/standup/scripts/copy-html-to-clipboard.swift
+```
+
+Or with a heredoc for multiline HTML:
+
+```bash
+swift ~/.claude/skills/standup/scripts/copy-html-to-clipboard.swift <<'EOF'
+<b>Completed:</b>
+<ul>
+<li>...</li>
+</ul>
+EOF
+```
+
+### Step 7: Report to User
+
+Display:
+
+1. The generated standup notes (plain text version for review)
+2. The file path for easy access
+3. A message: "✅ Copied to clipboard as rich text — paste directly into Slack!"
+
+## Example Output
+
+**Plain text (saved to file):**
+```text
+Completed:
+Added `getFeatureFlagResult` method for efficient flag + payload retrieval (https://github.com/PostHog/posthog-js/pull/2920)
+Added bin scripts for setup, build, and test (https://github.com/PostHog/posthog-js/pull/2824)
+
+Working on:
+Simplify readiness probe to prevent cascade failures (https://github.com/PostHog/posthog/pull/46589 - draft)
+Add source field to feature flag created analytics (https://github.com/PostHog/posthog/pull/46782 - needs review)
+Add HyperCache support to flag definitions cache (https://github.com/PostHog/posthog/pull/44701 - needs review)
+Completing migration of celery tasks to dedicated flags queue
+
+Discussion:
+Zilch
+```
+
+**HTML (copied to clipboard as rich text):**
+```html
+<b>Completed:</b>
+<ul>
+<li><a href="https://github.com/PostHog/posthog-js/pull/2920">Added <code>getFeatureFlagResult</code> method for efficient flag + payload retrieval</a></li>
+<li><a href="https://github.com/PostHog/posthog-js/pull/2824">Added bin scripts for setup, build, and test</a></li>
+</ul>
+<b>Working on:</b>
+<ul>
+<li>Simplify readiness probe to prevent cascade failures (<a href="https://github.com/PostHog/posthog/pull/46589">draft</a>)</li>
+<li>Add source field to feature flag created analytics (<a href="https://github.com/PostHog/posthog/pull/46782">needs review</a>)</li>
+<li>Add HyperCache support to flag definitions cache (<a href="https://github.com/PostHog/posthog/pull/44701">needs review</a>)</li>
+<li>Completing migration of celery tasks to dedicated flags queue</li>
+</ul>
+<b>Discussion:</b>
+<ul>
+<li>Zilch</li>
+</ul>
+```
+
+## Notes
+
+- The standup notes are stored in `~/dev/richardsolomou/notes/PostHog/standup/`
+- Files are named `YYYY-MM-DD.md` for easy sorting
+- Previous standup notes are used to identify carry-over work items
+- The Discussion section adds personality with varied "nothing" responses
+- **Rich text clipboard**: Uses HTML with `<ul><li>` lists — links are clickable when pasted into Slack
+- **Plain text file**: Archived for reference with URLs in parentheses
+- Completed items use past tense with the whole description as link text
+- Working on items have plain text description + status as link in parentheses

@@ -1,7 +1,8 @@
 ---
 name: triage-issues
-description: "Identify unlabeled GitHub issues that may belong to a specific team. Use when triaging issues for feature-flags, web-analytics, or other teams."
-user_invocable: true
+description: Identify unlabeled GitHub issues that may belong to a specific team
+argument-hint: [days] [limit] [team]
+disable-model-invocation: true
 ---
 
 # Triage GitHub Issues
@@ -12,11 +13,11 @@ Identify unlabeled GitHub issues that may belong to a specific team.
 
 - **days**: How many days back to search (default: 14)
 - **limit**: Maximum issues to fetch (default: 30)
-- **team**: Which team to triage for (default: feature-flags)
+- **team**: Which team to triage for (default: llm-analytics)
 
 Example invocations:
 
-- `/triage-issues` → defaults (14 days, 30 issues, feature-flags team)
+- `/triage-issues` → defaults (14 days, 30 issues, llm-analytics team)
 - `/triage-issues 7` → last 7 days
 - `/triage-issues 7 50` → last 7 days, up to 50 issues
 - `/triage-issues for web-analytics` → triage for web-analytics team
@@ -30,10 +31,11 @@ Extract from the user's input (or use defaults):
 
 - `days` = number of days to look back (default: 14)
 - `limit` = max issues to fetch (default: 30)
-- `team` = team identifier (default: feature-flags)
+- `team` = team identifier (default: llm-analytics)
 
 Supported team identifiers:
 
+- `llm-analytics`, `llm`, or `llma` → LLM Analytics team
 - `feature-flags` or `ff` → Feature Flags team
 - (future: `web-analytics` or `wa`, `product-analytics` or `pa`, etc.)
 
@@ -47,10 +49,10 @@ Fetch unlabeled issues from PostHog/posthog using `gh`:
 gh issue list --repo PostHog/posthog --state open --limit {limit} --json number,title,body,labels,createdAt,url --search "created:>=$(date -v-{days}d +%Y-%m-%d) {exclusion_labels}"
 ```
 
-The `{exclusion_labels}` vary by team. For feature-flags:
+The `{exclusion_labels}` vary by team. For llm-analytics:
 
 ```text
--label:team/feature-flags -label:feature/feature-flags -label:feature/cohorts -label:feature/early-access
+-label:team/llm-analytics
 ```
 
 **Note:** The `date -v-Nd` syntax is macOS-specific. On Linux, use `date -d "N days ago"`.
@@ -59,6 +61,7 @@ The `{exclusion_labels}` vary by team. For feature-flags:
 
 Use the Task tool to spawn the appropriate triage subagent:
 
+- For `llm-analytics`: Use subagent `triage-llm-analytics`
 - For `feature-flags`: Use subagent `triage-feature-flags`
 
 Pass the fetched issues to the subagent for analysis. The subagent will:

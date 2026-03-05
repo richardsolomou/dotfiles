@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # JSON Settings Merger Helper
 # Provides functions for safely merging JSON configurations into settings files

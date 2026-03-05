@@ -3,6 +3,9 @@ git/gitconfig.local.symlink
 # Claude Code local settings (created when running claude from this directory)
 .claude/
 
+# Python bytecode
+__pycache__/
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
@@ -21,6 +24,9 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Node dependencies
+node_modules/
 
 # =========================
 # Operating System Files

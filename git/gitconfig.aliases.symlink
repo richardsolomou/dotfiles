@@ -14,9 +14,8 @@
     abort = rebase --abort
     aliases = "!git config -l | grep ^alias\\. | cut -c 7-"
     amend = commit -a --amend
-    # Deletes all branches merged into the specified branch (or the default branch if no branch is specified)
-    bclean-local = "!f() { DEFAULT=$(git default); git branch --merged ${1-$DEFAULT} | grep -v " ${1-$DEFAULT}$" | xargs git branch -d; }; f"
-    bclean = "!gh poi && git bclean-local"
+    # Prune remote-merged branches (gh poi) then delete local merged branches and their worktrees
+    bclean = "!f() { gh poi; git bclean-local \"$@\"; }; f"
     # Switches to specified branch (or the dafult branch if no branch is specified), runs git up, then runs bclean.
     bdone = "!f() { DEFAULT=$(git default); git checkout ${1-$DEFAULT} && git up && git bclean; }; f"
     # Switches to specified branch, runs git up, then runs bclean-squash for squash-merged branches
@@ -30,13 +29,16 @@
     cleanup = clean -xdf -e *.DotSettings* -e s3_keys.ps1
     # Stages every file then creates a commit with specified message
     cm = !git add -A && git commit -m
-    co = checkout
-    cob = checkout -b
+    co = switch
+    cob = switch -c
     # Show list of files in a conflict state.
     conflicts = !git diff --name-only --diff-filter=U
     cp = cherry-pick
     default = !git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
     delete = branch -d
+    # Deletes local branches matching a pattern (e.g., 'git delete-branches feat/*')
+    # Uses -d for safety (only merged branches). Use -D in the command for force delete.
+    delete-branches = "!f() { git branch --list \"$1\" | xargs -r git branch -d; }; f"
     # Discard changes to a file
     discard = checkout --
     ec = config --global -e
@@ -62,7 +64,7 @@
     migrate = "!f(){ DEFAULT=$(git default); CURRENT=$(git symbolic-ref --short HEAD); git checkout -b $1 && git branch --force $CURRENT ${3-$CURRENT@{u}} && git rebase --onto ${2-$DEFAULT} $CURRENT; }; f"
     new = !git init && git symbolic-ref HEAD refs/heads/main
     open = "!f(){ URL=$(git config remote.origin.url); open ${URL%.git}; }; f"
-    pr = "!f(){ URL=$(git config remote.origin.url); open ${URL%.git}/compare/$(git rev-parse --abbrev-ref HEAD); }; f"
+    pr = "!GH_PAGER= gh pr view --json url -q .url 2>/dev/null"
     publish = "!f() { git push origin $1 && git push drafts :$1 && git browse; }; f"
     pushf = push --force-with-lease --force-if-includes
     rba = rebase --abort

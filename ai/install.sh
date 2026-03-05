@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 export ZSH=$HOME/.dotfiles
 
@@ -15,8 +15,8 @@ uninstall_claude_config() {
         if [ -L ~/.claude/CLAUDE.md ]; then
             rm -f ~/.claude/CLAUDE.md
             success "Removed CLAUDE.md symlink"
-        elif [ -f "$HOME/.claude/CLAUDE.md" ]; then
-            warning "$HOME/.claude/CLAUDE.md is a regular file, not a symlink - skipping"
+        elif [ -f ~/.claude/CLAUDE.md ]; then
+            warning "~/.claude/CLAUDE.md is a regular file, not a symlink - skipping"
         fi
     fi
 
@@ -32,15 +32,22 @@ uninstall_claude_config() {
         fi
     fi
 
-    # Remove skill symlinks
+    # Remove skill symlinks and contexts
     if [ "$INSTALL_SKILLS" = "true" ]; then
         if [ -d ~/.claude/skills ]; then
-            for skill in ~/.claude/skills/*; do
-                if [ -L "$skill" ]; then
-                    rm -f "$skill"
+            for skill in ~/.claude/skills/*/; do
+                [ -d "$skill" ] || continue
+                skill_name=$(basename "$skill")
+                if [ -L ~/.claude/skills/"$skill_name" ]; then
+                    rm -f ~/.claude/skills/"$skill_name"
                 fi
             done
             success "Removed skill symlinks"
+        fi
+
+        if [ -L ~/.claude/contexts ]; then
+            rm -f ~/.claude/contexts
+            success "Removed contexts symlink"
         fi
     fi
 
@@ -200,7 +207,7 @@ fi
 
 # If cleanup flag is set, run cleanup and exit
 if [ "$CLEANUP_ONLY" = "true" ]; then
-    $ZSH/ai/bin/cleanup-settings-local.sh
+    $ZSH/ai/skills/analyze-permissions/scripts/cleanup-settings-local.sh
     exit 0
 fi
 
@@ -227,21 +234,36 @@ if [ "$INSTALL_AGENTS" = "true" ]; then
     success "Symlinked agents"
 fi
 
-# Symlink skills (each skill is a directory with SKILL.md)
+# Symlink skills (directories, not files)
 if [ "$INSTALL_SKILLS" = "true" ]; then
     mkdir -p ~/.claude/skills
     for skill_dir in $ZSH/ai/skills/*/; do
         [ -d "$skill_dir" ] || continue
         skill_name=$(basename "$skill_dir")
-        rm -f ~/.claude/skills/"$skill_name"
+        rm -rf ~/.claude/skills/"$skill_name"
         ln -sf "$skill_dir" ~/.claude/skills/"$skill_name"
     done
     success "Symlinked skills"
+
+    # Symlink contexts (for language-specific writing guidelines)
+    rm -f ~/.claude/contexts
+    ln -sf $ZSH/ai/contexts ~/.claude/contexts
+    success "Symlinked contexts"
+
+    # Clean up old command symlinks that were migrated to skills
+    MIGRATED_COMMANDS="note support standup analyze-permissions triage-issues"
+    for cmd in $MIGRATED_COMMANDS; do
+        if [ -L ~/.claude/commands/"$cmd".md ] || [ -f ~/.claude/commands/"$cmd".md ]; then
+            rm -f ~/.claude/commands/"$cmd".md
+        fi
+    done
+    success "Cleaned up migrated command symlinks"
 fi
 
 # Define MCP servers as a list of entries
 # Format: "name|description|command"
 MCP_SERVERS="
+posthog-db|PostHog database connection|/Users/richard/.local/bin/postgres-mcp --access-mode=restricted
 memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory
 grafana|Grafana MCP server|/Users/richard/.dotfiles/bin/mcp-grafana-wrapper.sh
 "
@@ -250,6 +272,9 @@ grafana|Grafana MCP server|/Users/richard/.dotfiles/bin/mcp-grafana-wrapper.sh
 set_server_env() {
     local server_name="$1"
     case "$server_name" in
+        posthog-db)
+            echo "-e DATABASE_URI=postgresql://posthog:posthog@localhost:5432/posthog"
+            ;;
         *)
             echo ""
             ;;
@@ -286,33 +311,6 @@ if [ "$INSTALL_MCP" = "true" ]; then
     done
 fi
 
-# Install plugins
-PLUGINS="
-frontend-design|Frontend design skill for UI/UX implementation
-ralph-loop|Ralph Wiggum iterative development loops
-"
-
-if command -v claude > /dev/null 2>&1; then
-    info "Installing Claude Code plugins…"
-
-    echo "$PLUGINS" | grep -v "^$" | while IFS='|' read -r name description; do
-        [ -z "$name" ] && continue
-
-        if claude plugin list 2>/dev/null | grep -q "${name}@"; then
-            success "${description} already installed"
-        else
-            info "Installing ${description}…"
-            if claude plugin install "${name}" --scope user 2>/dev/null; then
-                success "${description} installed"
-            else
-                warning "Failed to install ${description}"
-            fi
-        fi
-    done
-else
-    warning "Claude CLI not found, skipping plugin installation"
-fi
-
 # Configure Claude Code hooks
 if [ "$INSTALL_HOOKS" = "true" ]; then
     info "Configuring Claude Code hooks…"
@@ -339,6 +337,18 @@ if [ "$INSTALL_HOOKS" = "true" ]; then
         HOOKS_CONFIG=$(cat <<'EOF'
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.dotfiles/ai/bin/lang-context",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit",

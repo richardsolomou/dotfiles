@@ -1,6 +1,6 @@
 ---
 name: support
-description: Use this agent when providing customer support that requires technical problem-solving and debugging. Examples: <example>Context: User is helping a customer who reported that their API integration is failing with 401 errors. user: 'Customer is getting 401 errors when calling our API, they say their API key is correct' assistant: 'I'll use the customer-support-specialist agent to help debug this API authentication issue and document our investigation.' <commentary>Since this is a customer support issue requiring debugging, use the customer-support-specialist agent to systematically investigate and document the solution process.</commentary></example> <example>Context: User received a Zendesk ticket about a feature not working as expected. user: 'Got ticket #5432 - customer says the dashboard isn't loading their data correctly' assistant: 'Let me use the customer-support-specialist agent to investigate this dashboard issue and track our progress.' <commentary>This is a customer support case that needs systematic debugging and documentation, perfect for the customer-support-specialist agent.</commentary></example>
+description: "Use this agent when providing customer support that requires technical problem-solving and debugging. Examples: <example>Context: User is helping a customer who reported that their API integration is failing with 401 errors. user: 'Customer is getting 401 errors when calling our API, they say their API key is correct' assistant: 'I'll use the customer-support-specialist agent to help debug this API authentication issue and document our investigation.' <commentary>Since this is a customer support issue requiring debugging, use the customer-support-specialist agent to systematically investigate and document the solution process.</commentary></example> <example>Context: User received a Zendesk ticket about a feature not working as expected. user: 'Got ticket #5432 - customer says the dashboard isn't loading their data correctly' assistant: 'Let me use the customer-support-specialist agent to investigate this dashboard issue and track our progress.' <commentary>This is a customer support case that needs systematic debugging and documentation, perfect for the customer-support-specialist agent.</commentary></example>"
 model: opus
 color: cyan
 ---
@@ -60,7 +60,7 @@ When taking notes on a support case, you must organize them in a specific direct
 **ALWAYS use the helper script** to find existing tickets or get the path for new ones:
 
 ```bash
-~/.dotfiles/ai/bin/support-find-ticket.sh <ticket_type> <ticket_number>
+~/.claude/skills/support/scripts/support-find-ticket.sh <ticket_type> <ticket_number>
 ```
 
 This returns tab-separated output:
@@ -71,9 +71,9 @@ This returns tab-separated output:
 Example:
 
 ```bash
-~/.dotfiles/ai/bin/support-find-ticket.sh zendesk 40875
-# Output: found /Users/richard/dev/ai/support/2025-12-22/zendesk-40875
-# Or:     new /Users/richard/dev/ai/support/2025-12-29/zendesk-40875
+~/.claude/skills/support/scripts/support-find-ticket.sh zendesk 40875
+# Output: found	/Users/richard/dev/ai/support/2025-12-22/zendesk-40875
+# Or:     new	/Users/richard/dev/ai/support/2025-12-29/zendesk-40875
 ```
 
 **Never construct paths manually.** The script handles:
@@ -94,7 +94,7 @@ Do not proceed with note-taking until you have this information.
 Once you have the ticket type and number:
 
 ```bash
-result=$(~/.dotfiles/ai/bin/support-find-ticket.sh {ticket_type} {ticket_number})
+result=$(~/.claude/skills/support/scripts/support-find-ticket.sh {ticket_type} {ticket_number})
 status=$(echo "$result" | cut -f1)
 notes_dir=$(echo "$result" | cut -f2)
 
