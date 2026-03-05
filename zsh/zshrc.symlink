@@ -20,24 +20,10 @@ export LDFLAGS="-L/opt/homebrew/opt/openssl/lib"
 
 # --- Language/tool managers ---
 
-# pyenv
-if command -v pyenv >/dev/null 2>&1; then
-  export PATH="$HOME/.pyenv/bin:$PATH"
-  eval "$(pyenv init --path)"
-  eval "$(pyenv virtualenv-init -)"
+# mise (replaces pyenv, rbenv, nvm)
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
 fi
-
-# rbenv
-if command -v rbenv >/dev/null 2>&1; then
-  export RBENV_ROOT="$HOME/.rbenv"
-  export PATH="$RBENV_ROOT/bin:$PATH"
-  eval "$(rbenv init - zsh)"
-fi
-
-# NVM
-export NVM_DIR="$HOME/.nvm"
-[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && . "/opt/homebrew/opt/nvm/nvm.sh"
-[ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && . "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
 
 # pnpm
 export PNPM_HOME="$HOME/Library/pnpm"
@@ -102,30 +88,6 @@ source "$HOME/.dotfiles/zsh/gt-completion.zsh"
 if command -v tree-me >/dev/null 2>&1; then
   source <(tree-me shellenv)
 fi
-
-# --- NVM auto-switch on cd ---
-autoload -U add-zsh-hook
-load-nvmrc() {
-  # Skip in Flox environments where Node is managed externally
-  if [ -n "$FLOX_ENV" ] || [ -n "$FLOX_ACTIVE_ENVIRONMENTS" ]; then
-    return
-  fi
-  local node_version="$(nvm version)"
-  local nvmrc_path="$(nvm_find_nvmrc)"
-  if [ -n "$nvmrc_path" ]; then
-    local nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
-    if [ "$nvmrc_node_version" = "N/A" ]; then
-      nvm install
-    elif [ "$nvmrc_node_version" != "$node_version" ]; then
-      nvm use
-    fi
-  elif [ "$node_version" != "$(nvm version default)" ]; then
-    echo "Reverting to nvm default version"
-    nvm use default
-  fi
-}
-add-zsh-hook chpwd load-nvmrc
-load-nvmrc
 
 # --- Starship prompt ---
 eval "$(starship init zsh)"
