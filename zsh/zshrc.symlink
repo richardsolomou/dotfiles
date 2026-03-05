@@ -102,5 +102,8 @@ fi
 source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
+# fzf (ctrl-r history, ctrl-t files, alt-c cd)
+source <(fzf --zsh)
+
 # --- Starship prompt ---
 eval "$(starship init zsh)"
