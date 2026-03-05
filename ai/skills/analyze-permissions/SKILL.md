@@ -1,3 +1,9 @@
+---
+name: analyze-permissions
+description: "Analyze accumulated permissions in settings.local.json and suggest smart wildcard patterns to add to the shared configuration."
+user_invocable: true
+---
+
 # Analyze Claude Code Permissions
 
 Analyze accumulated permissions in `settings.local.json` and suggest smart wildcard patterns to add to the shared configuration.
@@ -47,7 +53,7 @@ For each entry in `settings.local.json`:
 
 Output a structured report:
 
-```
+```text
 ## Permission Analysis
 
 ### Settings Overview
@@ -66,8 +72,8 @@ These patterns would consolidate multiple specific entries:
 
 | Pattern | Covers | Safety |
 |---------|--------|--------|
-| Bash(kubectl:*) | 4 entries | ✅ Safe (read-heavy) |
-| Bash(docker exec:*) | 3 entries | ⚠️ Review (can modify) |
+| Bash(kubectl:*) | 4 entries | Safe (read-heavy) |
+| Bash(docker exec:*) | 3 entries | Review (can modify) |
 
 ### Uncategorized
 These entries don't fit a pattern (one-offs):

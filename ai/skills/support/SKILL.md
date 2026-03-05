@@ -1,3 +1,9 @@
+---
+name: support
+description: "Start a deterministic support investigation workflow with automatic note organization. Use when investigating Zendesk or GitHub support tickets."
+user_invocable: true
+---
+
 # Support Investigation
 
 Start a deterministic support investigation workflow with automatic note organization.

@@ -1,3 +1,9 @@
+---
+name: triage-issues
+description: "Identify unlabeled GitHub issues that may belong to a specific team. Use when triaging issues for feature-flags, web-analytics, or other teams."
+user_invocable: true
+---
+
 # Triage GitHub Issues
 
 Identify unlabeled GitHub issues that may belong to a specific team.
