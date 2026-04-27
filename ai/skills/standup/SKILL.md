@@ -58,17 +58,21 @@ gh api search/issues --method GET -f q="author:richardsolomou is:pr is:merged me
 
 Note: `gh search prs --merged` is unreliable for date filtering — it returns stale results. Always use `gh api search/issues` with the `merged:` qualifier instead, which returns accurate `merged_at` timestamps.
 
+**Deduplication**: The `merged:>=` query includes PRs merged on the last standup day itself, which may already appear in the previous standup's "Did" section. After fetching results, exclude any PR whose number already appears in the previous standup's "Did" section. Only include genuinely new merges.
+
 **Active PRs** (open PRs across the PostHog org with recent activity):
 
 ```bash
 gh api search/issues --method GET -f q="author:richardsolomou is:pr is:open org:PostHog" --jq '.items[] | {number, title, url: .html_url, repo: .repository_url}'
 ```
 
-For each open PR found, fetch draft status and review requests:
+For each open PR found, fetch draft status, review requests, reviews, and commit history:
 
 ```bash
-gh pr view <number> --repo <owner/repo> --json isDraft,reviewRequests
+gh pr view <number> --repo <owner/repo> --json isDraft,reviewRequests,reviews,commits
 ```
+
+Check the commit dates to determine if the PR had activity since `last_standup_date`. If any commit's `committedDate` is on or after `last_standup_date`, the PR has recent work.
 
 ### Step 4: Analyze and Compose Standup Notes
 
@@ -77,21 +81,26 @@ Build the standup content with clickable links for Slack. You'll generate both:
 1. **Plain text** (for the archive file)
 2. **HTML** (for RTF clipboard copy - links work when pasted into Slack)
 
+**Writing descriptions**: Do NOT repeat PR titles verbatim. Write a short, human summary (roughly 3-8 words) that captures the gist of what was done or is being worked on. Think "what would I say in a 30-second standup?" — e.g. "Vercel AI SDK OTel support" instead of "feat(llma): add Vercel AI SDK OTel middleware and make pipeline extensible". Group related PRs into a single line item when they represent the same logical piece of work.
+
 **Did Section:**
 
-- List all PRs that were merged since `last_standup_date`
+- List work done since the last standup — this includes:
+  - **Merged PRs** (deduplicated per Step 3)
+  - **Open PRs with commits since last standup** — if an open PR had commits on or after `last_standup_date`, it represents work done and belongs in "Did" as well as potentially "Will do"
 - Use **past tense** for the description
-- If no PRs were merged, use a single item: "Nothing merged since last standup"
+- If nothing was done, use a single item: "Nothing to report since last standup"
 
 Plain text format:
 
 ```text
-Added `getFeatureFlagResult` method for efficient flag + payload retrieval (https://github.com/PostHog/posthog-js/pull/2920)
+Vercel AI SDK OTel support (https://github.com/PostHog/posthog/pull/50662)
 ```
 
 **Will Do Section:**
 
-- Include open PRs with recent activity
+- Include open PRs that still have remaining work (not yet merged)
+- **Continuing work**: If a PR already appeared in "Did" (because it had recent commits but isn't merged yet), prefix the "Will do" description with "Continue" to make it clear this is ongoing work, not a repeat. For example: "Continue PostHogTraceExporter work" rather than repeating the same description verbatim.
 - Carry over items from the previous standup's "Will do" — but verify each one first:
   - For items with a PR URL, check the PR state: `gh pr view <number> --repo <owner/repo> --json state,mergedAt`
   - If **MERGED** since last standup: add it to the Did section (deduplicate by PR number — the merged PR search may not catch every PR, so this is the safety net)
@@ -100,6 +109,7 @@ Added `getFeatureFlagResult` method for efficient flag + payload retrieval (http
 - Description first, then status indicator in parentheses as a link
 - Determine PR status:
   - If `isDraft` is true: link text is "draft"
+  - If `reviews` contains any review with `state: "APPROVED"`: link text is "approved"
   - If `reviewRequests` includes "llm-analytics" team or any reviewer: link text is "needs review"
   - Otherwise for open PRs: link text is "PR"
 - For non-PR work items: just plain text description
@@ -107,7 +117,7 @@ Added `getFeatureFlagResult` method for efficient flag + payload retrieval (http
 Plain text format:
 
 ```text
-Simplify readiness probe to prevent cascade failures (https://github.com/PostHog/posthog/pull/46589 - draft)
+Readiness probe simplification (https://github.com/PostHog/posthog/pull/46589 - draft)
 ```
 
 ### Step 5: Write the Standup Notes
@@ -172,28 +182,28 @@ Display:
 
 ```text
 Did:
-Added `getFeatureFlagResult` method for efficient flag + payload retrieval (https://github.com/PostHog/posthog-js/pull/2920)
-Added bin scripts for setup, build, and test (https://github.com/PostHog/posthog-js/pull/2824)
+Flag result helper method for posthog-js (https://github.com/PostHog/posthog-js/pull/2920)
+Bin scripts for setup, build, and test (https://github.com/PostHog/posthog-js/pull/2824)
 
 Will do:
-Simplify readiness probe to prevent cascade failures (https://github.com/PostHog/posthog/pull/46589 - draft)
-Add source field to feature flag created analytics (https://github.com/PostHog/posthog/pull/46782 - needs review)
-Add HyperCache support to flag definitions cache (https://github.com/PostHog/posthog/pull/44701 - needs review)
-Completing migration of celery tasks to dedicated flags queue
+Readiness probe simplification (https://github.com/PostHog/posthog/pull/46589 - draft)
+Flag created analytics source field (https://github.com/PostHog/posthog/pull/46782 - needs review)
+HyperCache for flag definitions (https://github.com/PostHog/posthog/pull/44701 - needs review)
+Celery task migration to flags queue
 ```
 
 **HTML (copied to clipboard as rich text):**
 
 ```html
 <p><b>Did:</b></p>
-<p>• <a href="https://github.com/PostHog/posthog-js/pull/2920">Added <code>getFeatureFlagResult</code> method for efficient flag + payload retrieval</a></p>
-<p>• <a href="https://github.com/PostHog/posthog-js/pull/2824">Added bin scripts for setup, build, and test</a></p>
+<p>• Flag result helper method for posthog-js (<a href="https://github.com/PostHog/posthog-js/pull/2920">PR</a>)</p>
+<p>• Bin scripts for setup, build, and test (<a href="https://github.com/PostHog/posthog-js/pull/2824">PR</a>)</p>
 <br>
 <p><b>Will do:</b></p>
-<p>• Simplify readiness probe to prevent cascade failures (<a href="https://github.com/PostHog/posthog/pull/46589">draft</a>)</p>
-<p>• Add source field to feature flag created analytics (<a href="https://github.com/PostHog/posthog/pull/46782">needs review</a>)</p>
-<p>• Add HyperCache support to flag definitions cache (<a href="https://github.com/PostHog/posthog/pull/44701">needs review</a>)</p>
-<p>• Completing migration of celery tasks to dedicated flags queue</p>
+<p>• Readiness probe simplification (<a href="https://github.com/PostHog/posthog/pull/46589">draft</a>)</p>
+<p>• Flag created analytics source field (<a href="https://github.com/PostHog/posthog/pull/46782">needs review</a>)</p>
+<p>• HyperCache for flag definitions (<a href="https://github.com/PostHog/posthog/pull/44701">needs review</a>)</p>
+<p>• Celery task migration to flags queue</p>
 ```
 
 ## Notes
@@ -203,6 +213,6 @@ Completing migration of celery tasks to dedicated flags queue
 - Previous standup notes are used to identify carry-over work items
 - **Rich text clipboard**: Uses `<p>` tags with `•` bullet characters and `<a>` links — Slack breaks list rendering when `<a>` tags are inside `<ul><li>`, so we avoid that combination
 - **Plain text file**: Archived for reference with URLs in parentheses
-- Did items use past tense with the whole description as link text
-- Will do items have plain text description + status as link in parentheses
+- Both Did and Will do items use plain text description + link in parentheses
+- Did items link text is "PR"; Will do items link text is "draft", "approved", "needs review", or "PR"
 - Sections are separated by `<br>` for visual spacing in Slack

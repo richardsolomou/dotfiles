@@ -240,24 +240,13 @@ Claude is good at writing rules for itself. Ruthlessly edit over time until the 
 When working on the <https://github.com/PostHog/posthog> repository, use the following workflow:
 
 - Read the README.md file in the root of the repository and the <https://github.com/PostHog/posthog/blob/master/docs/published/handbook/engineering/flox-multi-instance-workflow.md> file.
-- When taking on a new task, prompt the user whether they want to create a new git worktree using the `phw` command for the task.
 - When completing a task, automatically run these checks and fix any issues:
   - `mypy --version && mypy -p posthog | mypy-baseline filter || (echo "run 'pnpm run mypy-baseline-sync' to update the baseline" && exit 1)`
 
 When working on other repositories, use the following workflow:
 
-- When taking on a new task, prompt to create a new branch and associated worktree.
-  - Default: branch off the main branch (e.g. `main` or `master` depending on the repo), named `<type>/<slug>` or `<type>/<issue#>-<slug>` if the issue number is known. Types follow conventional commits: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`.
-  - Place the worktree in `~/dev/worktrees/<repo-name>/<branch-name>`.
-    - Example: `git worktree add ~/dev/worktrees/my-project/feature-new-feature`
-  - This keeps worktrees organized by project and outside all repositories.
-- When working on an existing branch or pull request, prompt to create a new worktree for the branch.
-- Never nest worktrees or place them within the main repo.
-- Never use two worktrees on the same branch simultaneously.
-- When done with the task:
-  - Prompt to commit changes.
-  - Use `git worktree remove <path>` to clean up safely.
-- Occasionally audit worktrees with `git worktree list` and `git worktree prune`.
+- When taking on a new task, branch off the main branch (e.g. `main` or `master` depending on the repo), named `<type>/<slug>` or `<type>/<issue#>-<slug>` if the issue number is known. Types follow conventional commits: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`.
+- When done with the task, prompt to commit changes.
 - Run `bin/fmt` to format the code if available.
   - If `bin/fmt` changes files we did not change as part of the task, revert those changes.
 

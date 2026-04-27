@@ -46,11 +46,9 @@ _claude() {
     '--settings[Path to settings JSON file or JSON string]:file-or-json:_files' \
     '--strict-mcp-config[Only use MCP servers from --mcp-config]' \
     '--system-prompt[System prompt for the session]:prompt:' \
-    '--tmux[Create a tmux session for the worktree]' \
     '--tools[Specify available tools from the built-in set]:tools:' \
     '--verbose[Override verbose mode setting from config]' \
     '(-v --version)'{-v,--version}'[Output the version number]' \
-    '(-w --worktree)'{-w,--worktree}'[Create a new git worktree for this session]::name:' \
     '1: :_claude_commands' \
     '*::arg:->args'
 

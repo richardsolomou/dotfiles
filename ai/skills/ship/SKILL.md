@@ -107,9 +107,9 @@ If no PR exists, create one:
 
 **Description:**
 
-- Use the repo's PR template if one exists
-- Fill in sections based on the actual diff
-- If no template, use: Problem, Changes, How did you test this code?
+- **CRITICAL: Always check for a PR template first.** If one exists, use it as the exact structure for the PR body. Include ALL sections from the template, even if just to write "N/A" or "No" for sections that don't apply. Do not omit, rename, or reorder sections. Do not add sections that aren't in the template.
+- Fill in each section based on the actual diff, not assumptions.
+- If no template exists, use: Problem, Changes, How did you test this code?
 
 ```sh
 gh pr create --title "<title>" --body "$(cat <<'EOF'

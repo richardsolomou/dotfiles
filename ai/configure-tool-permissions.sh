@@ -126,7 +126,6 @@ PERMISSIONS_CONFIG=$(cat <<'EOF'
       "Bash(git stash:*)",
       "Bash(git switch:*)",
       "Bash(git tag:*)",
-      "Bash(git worktree:*)",
       "Bash(grep:*)",
       "Bash(head:*)",
       "Bash(ln:*)",

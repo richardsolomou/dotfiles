@@ -1,7 +1,6 @@
 ---
 name: update-pr
 description: "Update a pull request's title and description based on the actual changes in the PR. Uses the repo's PR template and conventional commit style titles."
-disable-model-invocation: true
 ---
 
 # Update PR
@@ -44,12 +43,12 @@ cat .github/pull_request_template.md 2>/dev/null
 - Scope is optional but encouraged
 
 **Description rules:**
-- Use the repo's PR template if one exists
+- **CRITICAL: Always check for a PR template first.** If one exists, use it as the exact structure for the PR body. Include ALL sections from the template, even if just to write "N/A" or "No" for sections that don't apply. Do not omit, rename, or reorder sections. Do not add sections that aren't in the template.
 - Fill in each section based on the actual diff, not assumptions
 - Problem: explain why this change is being made
 - Changes: summarize what changed, include file-level detail for non-obvious changes
 - How did you test: list tests that were added/modified, note if manual testing was done
-- Be concise, skip sections that don't apply (e.g. changelog for non-features)
+- Be concise
 
 6. Update the PR:
 
