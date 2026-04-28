@@ -18,8 +18,6 @@
     bclean = "!f() { gh poi; git bclean-local \"$@\"; }; f"
     # Switches to specified branch (or the dafult branch if no branch is specified), runs git up, then runs bclean.
     bdone = "!f() { DEFAULT=$(git default); git checkout ${1-$DEFAULT} && git up && git bclean; }; f"
-    # Switches to specified branch, runs git up, then runs bclean-squash for squash-merged branches
-    bdone-squash = "!f() { DEFAULT=$(git default); git checkout ${1-$DEFAULT} && git up && git bclean-squash ${1-$DEFAULT}; }; f"
     # Lists all branches including remote branches
     branches = branch -a
     browse = !git open

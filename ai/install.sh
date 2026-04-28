@@ -249,15 +249,6 @@ if [ "$INSTALL_SKILLS" = "true" ]; then
     rm -f ~/.claude/contexts
     ln -sf $ZSH/ai/contexts ~/.claude/contexts
     success "Symlinked contexts"
-
-    # Clean up old command symlinks that were migrated to skills
-    MIGRATED_COMMANDS="note support standup analyze-permissions triage-issues"
-    for cmd in $MIGRATED_COMMANDS; do
-        if [ -L ~/.claude/commands/"$cmd".md ] || [ -f ~/.claude/commands/"$cmd".md ]; then
-            rm -f ~/.claude/commands/"$cmd".md
-        fi
-    done
-    success "Cleaned up migrated command symlinks"
 fi
 
 # Define MCP servers as a list of entries
@@ -421,15 +412,6 @@ EOF
             success "Configured Claude Code hooks"
         fi
     fi
-fi
-
-# Configure terminal bell notifications (global config, not settings.json)
-if [ "$INSTALL_HOOKS" = "true" ]; then
-    info "Configuring terminal bell notifications…"
-    # Note: The 'claude config' command has been removed in recent versions
-    # Terminal bell notifications may need to be configured manually via settings
-    # claude config set -g preferredNotifChannel terminal_bell
-    success "Terminal bell notifications skipped (config command deprecated)"
 fi
 
 # Configure tool permissions

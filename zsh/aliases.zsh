@@ -18,23 +18,10 @@ _pytest-changes() {
 }
 compdef _pytest-changes pytest-changes
 
-# Disk Space Management
-alias disk-check='~/.dotfiles/bin/check-disk-space'
+# Disk Space
 alias disk-free='df -h /System/Volumes/Data | tail -1 | awk "{print \$4}"'
 alias disk-usage='df -h / /System/Volumes/Data | grep -v "^Filesystem"'
 alias disk-usage-all='df -h'
-alias disk-cleanup='~/.dotfiles/bin/disk-cleanup'
-alias disk-cleanup-aggressive='~/.dotfiles/bin/disk-cleanup --aggressive'
-alias disk-cleanup-docker='~/.dotfiles/bin/disk-cleanup --module docker'
-alias disk-cleanup-docker-aggressive='~/.dotfiles/bin/disk-cleanup --module docker --aggressive'
-alias disk-cleanup-rust='~/.dotfiles/bin/disk-cleanup --module rust'
-alias disk-cleanup-rust-aggressive='~/.dotfiles/bin/disk-cleanup --module rust --aggressive'
-alias disk-cleanup-caches='~/.dotfiles/bin/disk-cleanup --module python'
-alias disk-monitor-log='tail -f ~/.dotfiles/.notes/disk-monitor.log'
-
-# PR Reviews
-alias pr-review='~/.dotfiles/bin/pr-review.sh'
-alias submit-review='~/.dotfiles/bin/pr-review.sh submit'
 
 # Markdownlint
 alias markdownlint='markdownlint-cli2'
