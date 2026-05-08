@@ -31,6 +31,8 @@ alias ..='cd ..'
 
 # Editor
 alias c='code'
+alias cc='claude'
+alias z='zed'
 
 # File listing
 alias ll='ls -lah'
