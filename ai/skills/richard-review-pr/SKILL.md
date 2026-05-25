@@ -1,6 +1,6 @@
 ---
 name: richard-review-pr
-description: "Review a pull request and produce inline review comments anchored to specific lines, plus an optional short top-level summary, ready to paste into GitHub one at a time."
+description: "Review a pull request: first orient the reviewer with an ELI5 of what the PR actually does and the concepts in play, then produce inline review comments anchored to specific lines plus an optional short top-level summary, ready to paste into GitHub one at a time."
 argument-hint: "<pr-url|pr-number>"
 disable-model-invocation: true
 ---
@@ -78,7 +78,35 @@ When reading the discussion, note:
 
 Don't second feedback that another reviewer has already raised, even if it's unresolved. Trust them to deal with their own threads. Your job is to find what slipped through the cracks — concerns nobody else has flagged.
 
-### Step 3: Conduct the Review
+### Step 3: Orient the Reviewer
+
+Before forming opinions on what's right or wrong with the PR, lay out what it's doing and what concepts are in play, so the rest of the review lands against shared context rather than reading the diff cold. The goal here is learning — by the time the inline comments appear, the reviewer should already understand what the PR is changing and why.
+
+This whole section is for the user's terminal. It isn't posted anywhere, so default assistant voice is fine; the tone rules kick in later when drafting actual comment bodies. Keep it tight — this is orientation, not analysis. Save the critique for the inline comments.
+
+Produce these parts:
+
+**What this PR actually does**
+
+Plain English summary of the mechanics — 2–5 sentences, no jargon. Name the entry point, the affected types, the call sites that change. Explain what code path is being introduced, removed, or rerouted. If the PR description and the diff disagree on what's happening, say so here. The diff is the source of truth.
+
+**Whether the approach makes sense**
+
+A high-level sanity check, 1–3 sentences. Is this a reasonable way to solve the problem the PR claims to be solving? Is there an obvious alternative that would also have worked, and any signal in the commits or surrounding code about why the author picked this one? Don't list line-by-line issues here — those become inline comments in Step 5. This is just "does the overall shape hold up".
+
+**Concepts in play**
+
+Name the Go / distributed-systems / domain concepts the reviewer is about to encounter while reading the diff, with one-line explanations tied to specific spots in the change. Don't force a concept in if the PR doesn't touch it. Two to four bullets is usually right. Examples:
+
+- Touches goroutine coordination in `worker.go:120` — channel send to a possibly-closed `done` chan is the foot-gun to watch for here.
+- This is a hot path on every request, and `decodePayload` was allocation-free before; the new `fmt.Sprintf` will escape to the heap.
+- Changes idempotency semantics: the retry now re-fires the side effect, where the dedup key gated it before.
+
+**Anything non-obvious about the surrounding code** *(skip unless warranted)*
+
+Context the reviewer needs that isn't in the diff — a wrapper three levels up that already handles the concern, a constant defined elsewhere, a convention the file follows. Only include this when there's something specific worth flagging; skip the subsection otherwise.
+
+### Step 4: Conduct the Review
 
 Read the whole diff before forming an opinion. Get the shape of the change first — what it's trying to do, why it's doing it that way — then go back through with a critical eye. Don't start drafting comments on the first hunk you read.
 
@@ -111,7 +139,7 @@ In your head, sort what's left into:
 
 Skip true nitpicks (pure preference, no impact). But don't drop a real concern because it feels awkward to raise or the author is senior — letting a real issue ship is worse than the awkwardness of bringing it up.
 
-### Step 4: Write the Review
+### Step 5: Write the Review
 
 Each finding becomes its own inline comment anchored to a specific line. Don't roll them up into a single top-level blob. The optional top-level summary is for things that genuinely don't anchor to a line — almost everything else should be an inline comment.
 
@@ -151,7 +179,7 @@ Keep it short. Same voice rules as inline comments — no recap of the change, n
 
 After looking hard, if there's truly nothing worth raising, skip the inline comments entirely and write a single honest top-level sentence — "Read through, this looks good to me" or similar. Don't make up concerns to look thorough, and don't pad with empty praise.
 
-### Step 5: Output and Recommend a Verdict
+### Step 6: Output and Recommend a Verdict
 
 For each inline comment, write the file and line as plain text, then put the comment body inside its own fenced code block so the user can copy it with a single click. Like:
 
