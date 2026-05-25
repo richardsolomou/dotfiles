@@ -22,69 +22,25 @@
 - If code was added in the current branch, it's not legacy code. Only code in the main (or master) branch is legacy code.
 - If you need to change a method that's not legacy, you can change it instead of adding a new method and trying to maintain backwards compatibility.
 
-## Agent Orchestration Framework
-
-### When to Use Which Agent
-
-- **Complex Features (>3 stages or unclear requirements)**: Start with `implementation-planner`
-- **Test-First Development**: Use `unit-test-writer` before implementation
-- **Debugging Issues**: Use `bug-root-cause-analyzer` after 2 failed attempts
-- **Code Quality Checks**: Use `code-reviewer` before commits
-- **Complex Discoveries**: Use `note-taker` for non-obvious insights gained through exploration
-- **AI Prompt Issues**: Use `prompt-optimizer` for agent improvements
-- **Task Planning**: Use `task-orchestrator` to determine optimal agent workflow
-
-### Workflow Integration Patterns
-
-#### Pattern 1: New Feature Development
-
-1. **Task Assessment** → `task-orchestrator` determines if `implementation-planner` needed
-2. **Planning** → `implementation-planner` creates staged plan (if complex)
-3. **Test Design** → `unit-test-writer` writes tests for current stage
-4. **Implementation** → Write minimal code to pass tests
-5. **Quality Check** → `code-reviewer` reviews before commit
-6. **Internal Docs** → `note-taker` documents complex discoveries
-7. Repeat steps 3-6 for each stage
-
-#### Pattern 2: Bug Investigation
-
-1. **Initial Debugging** → Try fixing yourself (max 2 attempts)
-2. **Systematic Analysis** → `bug-root-cause-analyzer` investigates
-3. **Fix Implementation** → Implement the identified solution
-4. **Regression Prevention** → `unit-test-writer` adds tests to prevent recurrence
-5. **Quality Check** → `code-reviewer` reviews fix and tests
-6. **Knowledge Capture** → `note-taker` documents root cause if complex
-
-#### Pattern 3: Code Quality Improvement
-
-1. **Review** → `code-reviewer` identifies improvement opportunities
-2. **Test Safety Net** → `unit-test-writer` ensures comprehensive test coverage
-3. **Refactor** → Make improvements with tests passing
-4. **Final Review** → `code-reviewer` validates improvements
-
 ## Process
 
 ### 1. Planning & Staging
 
 When approaching a new repository, first read the README.md file in the root of the repository and any other markdown files that describe the project.
 
-For complex tasks, the `implementation-planner` agent creates durable, structured plans following the template and process defined in the `implementation-planner` agent documentation.
-
 ### 2. Implementation Flow
 
 1. **Understand** - Study existing patterns in codebase
-2. **Test** - Use the `unit-test-writer` agent to write tests first (red)
+2. **Test** - Write tests first (red)
 3. **Implement** - Minimal code to pass (green)
 4. **Refactor** - Clean up with tests passing
-5. **Commit** - With clear message linking to plan
+5. **Commit** - With clear message
 
 ### 3. When Stuck (After 2 Attempts)
 
 **CRITICAL**: When implementation goes sideways, immediately switch to plan mode and re-plan. Don't keep pushing forward with a broken approach.
 
-**CRITICAL**: Maximum 2 attempts per issue, then use `bug-root-cause-analyzer` agent.
-
-The agent will systematically:
+When stuck, systematically:
 
 1. **Document what failed** - What you tried, error messages, suspected causes
 2. **Research alternatives** - Find similar implementations and approaches
@@ -113,7 +69,6 @@ The agent will systematically:
     - In a Rust codebase, run `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo shear` to check for issues.
     - If bin/fmt exists, run it.
     - Otherwise, run the formatter for the language.
-  - Use `code-reviewer` agent for quality check
   - Ensure commit message explains "why"
 
 ### Error Handling
@@ -125,29 +80,7 @@ The agent will systematically:
 
 ## Decision Framework
 
-For implementation decisions, refer to the decision framework in the `implementation-planner` agent documentation. Key factors include testability, maintainability, consistency, simplicity, and reversibility.
-
-## Documentation Framework
-
-### Project Planning
-
-- **Location**: `~/dev/ai/plans/{org}/{repo}/{issue-or-pr-or-branch-name-or-plan-slug}.md`
-- **Purpose**: Durable implementation plans for complex features
-- **Owner**: `implementation-planner` agent
-- **Lifecycle**: Permanent reference for architecture decisions and implementation history
-
-### Knowledge Capture
-
-- **Location**: `~/dev/ai/notes/`
-- **Purpose**: Permanent knowledge about complex discoveries
-- **Owner**: `note-taker` agent
-- **Trigger**: Non-obvious behaviors, complex debugging insights
-
-### Code Documentation
-
-- **Location**: In-code comments and README updates
-- **Purpose**: Explain WHY decisions were made
-- **Owner**: Developer (guided by `code-reviewer`)
+For implementation decisions, weigh testability, maintainability, consistency, simplicity, and reversibility.
 
 ## Project Integration
 
@@ -200,10 +133,8 @@ For implementation decisions, refer to the decision framework in the `implementa
 **ALWAYS**:
 
 - Commit working code incrementally
-- Update implementation plan status as you progress through stages
 - Learn from existing implementations
-- Stop after 2 failed attempts and use `bug-root-cause-analyzer` agent
-- Use the `code-reviewer` agent to review code before committing
+- Stop after 2 failed attempts, document what failed, and re-plan
 
 ## Self-Improvement
 
