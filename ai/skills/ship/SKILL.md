@@ -107,9 +107,40 @@ If no PR exists, create one:
 
 **Description:**
 
-- **CRITICAL: Always check for a PR template first.** If one exists, use it as the exact structure for the PR body. Include ALL sections from the template, even if just to write "N/A" or "No" for sections that don't apply. Do not omit, rename, or reorder sections. Do not add sections that aren't in the template.
-- Fill in each section based on the actual diff, not assumptions.
-- If no template exists, use: Problem, Changes, How did you test this code?
+What good looks like. Match this density and length, do not exceed it without a real reason:
+
+```markdown
+## Problem
+
+`pytest` collection failed on master. `tools/traffic-sim/tests/__init__.py` made the directory a top-level `tests` package, shadowing the real one.
+
+## Changes
+
+Added `--ignore=tools/traffic-sim` to `pytest.ini`, matching the existing pattern for `tools/hogli`.
+
+## How did you test this code?
+
+Ran `pytest` from the repo root. Async migrations job passes locally.
+```
+
+Rules:
+
+- Use the PR template if one exists. Fill every section. Write "N/A" for sections that don't apply. Don't add, omit, rename, or reorder sections. If no template, fall back to: Problem, Changes, How did you test this code?
+- **Hard ceiling: 3 lines per section.** Including bullet points. Exceed only when there is a specific non-obvious decision a reader cannot infer from the diff (e.g. why this approach over an obvious alternative), and even then keep it tight.
+- **Don't recap the diff.** The diff is on the PR. Describe only what the diff cannot show: the why, the constraint, the alternative considered, the deferred follow-up.
+- **If you can't say something in under 15 words, you don't have a clear thought.** Cut it or rewrite it.
+- Bullets over prose when listing more than one thing. Single sentences when listing one.
+
+After drafting, re-read and delete anything that is restating the diff, padding, or scene-setting. Shorter is always better.
+
+**Voice and tone (mandatory):**
+
+Load the `tone` skill with `register: pr-description` before drafting anything. Apply that register and the common rules at the top of the doc.
+
+Overrides on top of the register:
+
+- No em-dashes. Use commas, periods, or parentheses. The `pr-description` register allows em-dashes; this skill does not.
+- No AI smell: no formulaic openers ("This PR…", "In this change…"), no marketing words ("seamlessly", "robust", "comprehensive"), no closing sign-offs, no padding.
 
 ```sh
 gh pr create --title "<title>" --body "$(cat <<'EOF'
