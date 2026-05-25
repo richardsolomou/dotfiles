@@ -1,5 +1,5 @@
 ---
-name: resolve-conflicts
+name: richard-resolve-conflicts
 description: Resolve git conflicts with AI-powered analysis, including mergiraf structural merging, lock file handling, and stacked PR duplicate detection.
 argument-hint: [--abort|--continue]
 ---
@@ -27,7 +27,7 @@ Example invocations:
 Run the status script:
 
 ```bash
-~/.claude/skills/resolve-conflicts/scripts/conflict-status.sh
+scripts/conflict-status.sh
 ```
 
 This outputs tab-separated: `context\tprogress\tbranch`
@@ -73,7 +73,7 @@ When aborting, report: "Aborted `<context>`. Back on `<branch>`."
 Run:
 
 ```bash
-~/.claude/skills/resolve-conflicts/scripts/categorize-conflicts.sh
+scripts/categorize-conflicts.sh
 ```
 
 This outputs tab-separated lines: `category\tfile_path`

@@ -1,5 +1,5 @@
 ---
-name: standup
+name: richard-standup
 description: Generate standup notes from GitHub PR activity
 disable-model-invocation: true
 ---
@@ -22,7 +22,7 @@ Every standup, you need to report:
 Run the helper script to get standup dates:
 
 ```bash
-~/.claude/skills/standup/scripts/standup-dates.sh
+scripts/standup-dates.sh
 ```
 
 This returns tab-separated: `<today>\t<last_standup_date>\t<new_file_path>`
@@ -38,7 +38,7 @@ Store these values:
 Run the helper script to find previous standup notes:
 
 ```bash
-~/.claude/skills/standup/scripts/standup-find.sh
+scripts/standup-find.sh
 ```
 
 This returns tab-separated: `<status>\t<path>\t<date>`
@@ -159,7 +159,7 @@ Create the HTML content:
 Copy to clipboard using the helper script:
 
 ```bash
-swift ~/.claude/skills/standup/scripts/copy-html-to-clipboard.swift <<'EOF'
+swift scripts/copy-html-to-clipboard.swift <<'EOF'
 <p><b>Did:</b></p>
 <p>• ...</p>
 <br>

@@ -1,5 +1,5 @@
 ---
-name: update-pr
+name: richard-update-pr
 description: "Update a pull request's title and description based on the actual changes in the PR. Uses the repo's PR template and conventional commit style titles."
 ---
 
@@ -75,7 +75,7 @@ After drafting, re-read and delete anything that is restating the diff, padding,
 
 **Voice and tone (mandatory):**
 
-Load the `tone` skill with `register: pr-description` before drafting anything. Apply that register and the common rules at the top of the doc.
+Load the `richard-tone` skill with `register: pr-description` before drafting anything. Apply that register and the common rules at the top of the doc.
 
 Overrides on top of the register:
 

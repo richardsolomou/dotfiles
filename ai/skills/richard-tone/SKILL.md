@@ -1,5 +1,5 @@
 ---
-name: tone
+name: richard-tone
 description: "Apply Richard's voice to user-facing output (Slack messages, PR descriptions, PR review comments, customer replies, standup notes). Use as a reference linked from other SKILL.md files, or invoke directly to rewrite the previous output. TRIGGER when about to send anything Richard would post under his name — Slack message, PR description, PR review comment, GitHub issue comment, customer reply, standup post — or when another skill has just produced such output. Pick a register: `slack-casual` for DMs and team chat; `slack-status` for standup, ops, incident updates; `pr-description` for PR bodies and RFC comments; `pr-review` for inline PR review comments; `external` for customer-facing or public-thread replies. SKIP for: terminal output not posted anywhere, internal tool calls, agent-to-agent messages, code comments, commit messages (use the repo's commit-message conventions instead), and any output where a neutral assistant voice is appropriate."
 argument-hint: "[slack-casual|slack-status|pr-description|pr-review|external]"
 ---
@@ -8,7 +8,7 @@ argument-hint: "[slack-casual|slack-status|pr-description|pr-review|external]"
 
 Capture Richard's voice across the contexts he writes in, so output that gets posted under his name sounds like him rather than like a tool. This skill is used three ways:
 
-1. **Reference** — other SKILL.md files link to a specific register here instead of duplicating voice rules. See [Using as a reference](#using-this-skill-as-a-reference).
+1. **Reference** — other skills point to a specific register here instead of duplicating voice rules. See [Using as a reference](#using-this-skill-as-a-reference).
 2. **Post-processor** — invoked after another skill has produced user-facing output (a generated standup, PR description, review comment, etc.) to rewrite it in the right register. See [Using as a post-processor](#using-this-skill-as-a-post-processor).
 3. **Auto-applied generator** — when a model is about to produce content that will be posted under Richard's name (a Slack reply, a PR comment, an issue reply), it should load this skill and generate in the right register from the start, rather than producing neutral-assistant prose and rewriting after.
 
@@ -143,7 +143,7 @@ PR bodies, RFC comments, internal proposal docs (e.g. `company-internal` issues)
 
 ### pr-review
 
-Inline PR review comments. Thorough rules live in [`review-pr/SKILL.md`](../review-pr/SKILL.md); this is the voice summary.
+Inline PR review comments. Thorough rules live in the `richard-review-pr` skill; this is the voice summary.
 
 **Rules:**
 
@@ -192,12 +192,12 @@ Customer-facing comments (Zendesk replies, public PR threads on partner repos, p
 
 ## Using this skill as a reference
 
-Other SKILL.md files should link to a specific register rather than duplicating rules:
+Other skills should name a specific register rather than duplicating rules:
 
 ```markdown
 ## Voice and tone
 
-See [`tone/SKILL.md`](../tone/SKILL.md), register: `pr-review`. Apply the rules under that register and the common rules at the top of the doc.
+Load the `richard-tone` skill with register `pr-review`. Apply the rules under that register and the common rules at the top of the doc.
 ```
 
 Override only when the skill needs a behavior that differs from the register — and call out the override explicitly.
@@ -209,7 +209,7 @@ Triggered either by the user (`/tone [register]`) or by a model that just produc
 1. **Identify the target output.** Read the most recent assistant message in the conversation that produced user-facing content (a standup, a PR description, a review comment, an external reply, a Slack draft). If it's ambiguous which output to rewrite, ask before rewriting.
 2. **Pick the register.**
    - If the user passed an arg, use it.
-   - Otherwise infer from the source skill or output shape: `standup` → `slack-status`, `update-pr` → `pr-description`, `review-pr` → `pr-review`, a public-thread reply → `external`, otherwise → `slack-casual`.
+   - Otherwise infer from the source skill or output shape: `richard-standup` → `slack-status`, `richard-update-pr` → `pr-description`, `richard-review-pr` → `pr-review`, a public-thread reply → `external`, otherwise → `slack-casual`.
    - If inference is shaky, ask.
 3. **Rewrite, preserving meaning.** Apply the rules for the chosen register and the common rules. Keep all factual content — PR numbers, file paths, names, decisions. Don't add new claims, don't drop concrete details, don't fabricate. If the input is wrong, say so separately rather than silently fixing it.
 4. **Output the rewritten version only.** No diff, no "here's what I changed" preamble, no commentary. The user copies the result.

@@ -1,5 +1,5 @@
 ---
-name: review-pr
+name: richard-review-pr
 description: "Review a pull request and produce inline review comments anchored to specific lines, plus an optional short top-level summary, ready to paste into GitHub one at a time."
 argument-hint: "<pr-url|pr-number>"
 disable-model-invocation: true
@@ -123,7 +123,7 @@ Pick the line that is the actual subject of the comment — the line that would 
 
 #### Voice and tone (mandatory)
 
-Before writing any comment body, load the `tone` skill via the Skill tool with `register: pr-review`. Read both the `pr-review` register section and the common rules at the top of the doc, and apply them to every comment body and to the optional top-level summary.
+Before writing any comment body, load the `richard-tone` skill via the Skill tool with `register: pr-review`. Read both the `pr-review` register section and the common rules at the top of the doc, and apply them to every comment body and to the optional top-level summary.
 
 This step is not optional. A review that is technically sound but reads like an analysis engine fails — the author should read each comment and think *that sounds like Richard*, not *that sounds like a tool*. If the tone skill has not been loaded for this turn, do that first; do not draft comment bodies from memory of the rules.
 
