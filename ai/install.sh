@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export ZSH=$HOME/.dotfiles
+export ZSH="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
 
 # Source helper functions
 . $ZSH/ai/helpers/output.sh
@@ -256,7 +256,7 @@ fi
 MCP_SERVERS="
 posthog-db|PostHog database connection|/Users/richard/.local/bin/postgres-mcp --access-mode=restricted
 memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory
-grafana|Grafana MCP server|/Users/richard/.dotfiles/bin/mcp-grafana-wrapper.sh
+grafana|Grafana MCP server|$ZSH/bin/mcp-grafana-wrapper.sh
 "
 
 # Special environment variables for specific servers
@@ -334,7 +334,7 @@ if [ "$INSTALL_HOOKS" = "true" ]; then
         "hooks": [
           {
             "type": "command",
-            "command": "~/.dotfiles/ai/bin/lang-context",
+            "command": "__ZSH__/ai/bin/lang-context",
             "timeout": 5
           }
         ]
@@ -406,6 +406,9 @@ if [ "$INSTALL_HOOKS" = "true" ]; then
 }
 EOF
         )
+
+        # Substitute the dotfiles repo root into the hook command path.
+        HOOKS_CONFIG="${HOOKS_CONFIG//__ZSH__/$ZSH}"
 
         # Merge hooks configuration using helper function
         if merge_json_settings "$SETTINGS_FILE" "$HOOKS_CONFIG" "hooks"; then

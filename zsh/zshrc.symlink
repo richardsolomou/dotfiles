@@ -37,6 +37,9 @@ if command -v direnv >/dev/null 2>&1; then
   eval "$(direnv hook zsh)"
 fi
 
+# Resolve dotfiles repo root from this file's symlink target.
+export ZSH="${${(%):-%x}:A:h:h}"
+
 # --- PATH additions ---
 
 # Go
@@ -45,7 +48,7 @@ if [ -d "$HOME/go/bin" ]; then
 fi
 
 # Dotfiles bin
-export PATH="$HOME/.dotfiles/bin:$PATH"
+export PATH="$ZSH/bin:$PATH"
 
 # Local bin (claude code, pipx, etc.)
 if [ -d "$HOME/.local/bin" ]; then
@@ -87,9 +90,9 @@ setopt HIST_REDUCE_BLANKS
 
 # --- Aliases and completions ---
 autoload -Uz compinit && compinit
-source "$HOME/.dotfiles/zsh/aliases.zsh"
-source "$HOME/.dotfiles/zsh/claude-completion.zsh"
-source "$HOME/.dotfiles/zsh/gt-completion.zsh"
+source "$ZSH/zsh/aliases.zsh"
+source "$ZSH/zsh/claude-completion.zsh"
+source "$ZSH/zsh/gt-completion.zsh"
 
 # --- Shell plugins ---
 source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh

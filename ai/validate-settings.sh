@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export ZSH=$HOME/.dotfiles
+export ZSH="$(cd "$(dirname "$0")/.." && pwd -P)"
 
 # Source helper functions
 . $ZSH/ai/helpers/output.sh

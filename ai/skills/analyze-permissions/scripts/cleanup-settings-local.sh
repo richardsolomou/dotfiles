@@ -5,7 +5,7 @@
 
 set -e
 
-export ZSH=$HOME/.dotfiles
+export ZSH="$(cd "$(dirname "$0")/../../../.." && pwd -P)"
 
 # Source helper functions if available
 if [ -f "$ZSH/ai/helpers/output.sh" ]; then

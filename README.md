@@ -6,16 +6,17 @@ They're so personal I copied basically all of them from [haacked's dotfiles](htt
 
 ## Install
 
-Run this:
+Clone the repo wherever you like, then run `script/bootstrap`:
 
 ```sh
-git clone https://github.com/richardsolomou/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
+git clone https://github.com/richardsolomou/dotfiles.git
+cd dotfiles
 script/bootstrap
 ```
 
-This will symlink the appropriate files in `.dotfiles` to your home directory.
-Everything is configured and tweaked within `~/.dotfiles`.
+`script/bootstrap` symlinks the appropriate files into your home directory.
+The repo is location-agnostic: scripts derive the dotfiles root from their
+own path, so you can keep the clone wherever fits your setup.
 
 The main file you'll want to change right off the bat is `zsh/zshrc.symlink`,
 which sets up a few paths that'll be different on your particular machine.

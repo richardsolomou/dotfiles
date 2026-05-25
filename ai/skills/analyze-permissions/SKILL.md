@@ -27,7 +27,7 @@ Read these files:
 
 1. **Project-local**: `<project-root>/.claude/settings.local.json` - accumulated "Always allow" permissions (per-project, not at `~/.claude/`)
 2. **Global**: `~/.claude/settings.json` - shared/base permissions managed by the configure script
-3. **Configure script**: `~/.dotfiles/ai/configure-tool-permissions.sh` - canonical source for global permissions
+3. **Configure script**: `$ZSH/ai/configure-tool-permissions.sh` - canonical source for global permissions
 
 Note: `settings.local.json` is project-specific. Each repo has its own at `<repo>/.claude/settings.local.json`. The global `~/.claude/settings.json` is shared across all projects.
 
@@ -110,8 +110,8 @@ When adding patterns to `configure-tool-permissions.sh`:
 
 1. Add new entries to the `PERMISSIONS_CONFIG` JSON array
 2. Add at least one new entry to the validation `if` statement so the script knows to re-run
-3. Run the script to apply changes: `~/.dotfiles/ai/configure-tool-permissions.sh`
-4. Run cleanup to remove now-redundant entries from the current project's local settings: `~/.dotfiles/ai/skills/analyze-permissions/scripts/cleanup-settings-local.sh`
+3. Run the script to apply changes: `$ZSH/ai/configure-tool-permissions.sh`
+4. Run cleanup to remove now-redundant entries from the current project's local settings: `$ZSH/ai/skills/analyze-permissions/scripts/cleanup-settings-local.sh`
 
 **Important**: The configure script *merges* new entries into `settings.json` but never removes existing ones. This means `settings.json` also accumulates "don't ask again" entries over time. The cleanup script only cleans `settings.local.json`. To fully clean `settings.json`, you'd need to manually remove redundant entries or rebuild it from the script.
 

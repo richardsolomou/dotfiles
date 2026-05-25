@@ -1,5 +1,5 @@
 #!/bin/sh
 
-export ZSH=$HOME/.dotfiles
+export ZSH="$(cd "$(dirname "$0")/.." && pwd -P)"
 
 cp $ZSH/terminal/.tmux.conf ~/.tmux.conf
