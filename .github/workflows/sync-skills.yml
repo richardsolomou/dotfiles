@@ -1,0 +1,27 @@
+name: Sync skills to PostHog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ai/skills/**"
+      - "bin/sync-skills"
+      - ".github/workflows/sync-skills.yml"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync
+        env:
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          POSTHOG_PROJECT_ID: ${{ vars.POSTHOG_PROJECT_ID }}
+          POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+        run: bin/sync-skills

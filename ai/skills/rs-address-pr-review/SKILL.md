@@ -1,5 +1,5 @@
 ---
-name: richard-address-pr-review
+name: rs-address-pr-review
 description: "Walk through PR review comments one by one, explain what each reviewer is asking for and the concepts behind it, propose a concrete fix, and offer to apply. Built for learning — surfaces Go and distributed-systems concepts when they come up, rather than blindly patching."
 argument-hint: "<pr-url|pr-number>"
 disable-model-invocation: true
@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # Address Review
 
-Read every review comment on a PR, explain what the reviewer is asking for in plain English, propose a concrete fix, and explain the underlying concept so the user learns the *why*. Then offer to apply the fixes. This skill is the inverse of `richard-review-pr` — that one generates comments, this one consumes them.
+Read every review comment on a PR, explain what the reviewer is asking for in plain English, propose a concrete fix, and explain the underlying concept so the user learns the *why*. Then offer to apply the fixes. This skill is the inverse of `rs-review-pr` — that one generates comments, this one consumes them.
 
 ## Arguments (parsed from user input)
 
@@ -150,7 +150,7 @@ Produce one section per unresolved comment, in the order they appear on the PR. 
 
 **Suggested reply** *(include when the verdict is Disagree, or when "Agree with a different fix" needs explaining on the thread)*
 
-<A short reply the user can post on the PR thread to push back politely or explain the chosen approach. This reply IS posted under the user's name, so load the `richard-tone` skill with `register: pr-review` and apply those rules to this subsection — but not to the rest of the walkthrough.>
+<A short reply the user can post on the PR thread to push back politely or explain the chosen approach. This reply IS posted under the user's name, so load the `rs-tone` skill with `register: pr-review` and apply those rules to this subsection — but not to the rest of the walkthrough.>
 
 **Proposed fix** *(skip this subsection entirely if the verdict is Disagree)*
 
@@ -212,7 +212,7 @@ For each picked thread, in order:
       -f body="<reply body>"
     ```
 
-    For "Agree, no open questions" the reply body can be as terse as `Done — <one-liner naming what changed>`. For everything else, use the **Suggested reply** drafted in the walkthrough. The Suggested reply was already written with `richard-tone` register `pr-review` applied; the terse "done" replies should follow the same rules (no severity labels, no sign-offs, lowercase informal voice is fine).
+    For "Agree, no open questions" the reply body can be as terse as `Done — <one-liner naming what changed>`. For everything else, use the **Suggested reply** drafted in the walkthrough. The Suggested reply was already written with `rs-tone` register `pr-review` applied; the terse "done" replies should follow the same rules (no severity labels, no sign-offs, lowercase informal voice is fine).
 
 3. **Resolve the thread** (only when the per-verdict rules above say to):
 
@@ -280,7 +280,7 @@ For Go concepts, link to <https://go.dev/blog/>, <https://go.dev/ref/mem>, <http
 
 Most of this output is for the user to read in the terminal — not posted under their name. Default assistant voice is fine for the bulk of each section.
 
-**Exception:** the **Suggested reply** subsection (used when Disagreeing or explaining a different fix) *is* posted under the user's name on the PR thread. Load the `richard-tone` skill with `register: pr-review` and apply those rules to that subsection only. Don't apply `richard-tone` to the rest of the walkthrough — it'd flatten the explanations.
+**Exception:** the **Suggested reply** subsection (used when Disagreeing or explaining a different fix) *is* posted under the user's name on the PR thread. Load the `rs-tone` skill with `register: pr-review` and apply those rules to that subsection only. Don't apply `rs-tone` to the rest of the walkthrough — it'd flatten the explanations.
 
 ## Security note
 

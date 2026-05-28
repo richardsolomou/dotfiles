@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""Sync local ai/skills/rs-*/ skills to the PostHog skills store.
+
+Push-only — the dotfiles repo is the source of truth. The script walks each
+skill directory, compares it against the latest version on the store, and
+publishes a new version only when something changed. Running it twice in a row
+is a no-op.
+
+Environment (read from process env, or from a `.env` next to the repo root):
+  POSTHOG_PERSONAL_API_KEY  required — needs llm_skill:read and llm_skill:write
+  POSTHOG_PROJECT_ID        optional, defaults to 2 (PostHog App + Website)
+  POSTHOG_HOST              optional, defaults to https://us.posthog.com
+
+Flags:
+  --dry-run                 report what would change without calling write APIs
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SKILLS_DIR = REPO_ROOT / "ai" / "skills"
+SKILL_GLOB = "rs-*"
+
+# Extensions and filenames found in bundled scripts. The store stores the
+# content type alongside each file so agents can render or execute it
+# appropriately, so we map common suffixes to sensible MIME types.
+CONTENT_TYPES = {
+    ".sh": "text/x-shellscript",
+    ".swift": "text/x-swift",
+    ".py": "text/x-python",
+    ".md": "text/markdown",
+    ".txt": "text/plain",
+    ".json": "application/json",
+    ".yaml": "text/yaml",
+    ".yml": "text/yaml",
+}
+
+FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+
+
+def load_dotenv(path: Path) -> None:
+    """Populate os.environ from a `.env` file if present.
+
+    Real env vars win over .env entries so CI (which sets env via repo secrets)
+    is unaffected. Format: `KEY=value` per line, with optional `export ` prefix,
+    `#` comments, and surrounding single or double quotes on the value.
+    """
+    if not path.is_file():
+        return
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export "):]
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
+def parse_skill(skill_dir: Path) -> dict[str, Any]:
+    """Read a SKILL.md plus bundled files into the API payload shape."""
+    text = (skill_dir / "SKILL.md").read_text()
+    match = FRONTMATTER_RE.match(text)
+    if not match:
+        sys.exit(f"{skill_dir.name}: SKILL.md missing YAML frontmatter")
+    fm_block = match.group(1)
+    body = text[match.end():].lstrip("\n")
+
+    fields: dict[str, str] = {}
+    for line in fm_block.splitlines():
+        if not line or line.startswith(" ") or ":" not in line:
+            continue
+        key, _, val = line.partition(":")
+        key = key.strip()
+        val = val.strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+            val = val[1:-1]
+        fields[key] = val
+
+    if "name" not in fields or "description" not in fields:
+        sys.exit(f"{skill_dir.name}: SKILL.md frontmatter must define name and description")
+
+    payload: dict[str, Any] = {
+        "name": fields["name"],
+        "description": fields["description"],
+        "body": body,
+    }
+
+    files = []
+    for sub in ("scripts", "references", "assets"):
+        sub_dir = skill_dir / sub
+        if not sub_dir.is_dir():
+            continue
+        for path in sorted(sub_dir.rglob("*")):
+            if not path.is_file() or path.name.startswith("."):
+                continue
+            # Test scripts live alongside the production scripts in some
+            # skills but are not part of the published bundle.
+            if path.name.startswith("test-"):
+                continue
+            rel = path.relative_to(skill_dir).as_posix()
+            files.append({
+                "path": rel,
+                "content": path.read_text(),
+                "content_type": CONTENT_TYPES.get(path.suffix, "text/plain"),
+            })
+    if files:
+        payload["files"] = files
+    return payload
+
+
+def api_request(
+    method: str,
+    url: str,
+    headers: dict[str, str],
+    body: dict[str, Any] | None = None,
+) -> tuple[int, Any]:
+    data = None
+    if body is not None:
+        data = json.dumps(body).encode("utf-8")
+        headers = {**headers, "Content-Type": "application/json"}
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            raw = resp.read().decode("utf-8")
+            return resp.status, json.loads(raw) if raw else None
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            return e.code, json.loads(raw)
+        except json.JSONDecodeError:
+            return e.code, raw
+
+
+def skill_url(host: str, project_id: str, name: str) -> str:
+    return f"{host}/api/environments/{project_id}/llm_skills/name/{urllib.parse.quote(name)}/"
+
+
+def collection_url(host: str, project_id: str) -> str:
+    return f"{host}/api/environments/{project_id}/llm_skills/"
+
+
+def file_url(host: str, project_id: str, name: str, file_path: str) -> str:
+    return (
+        f"{host}/api/environments/{project_id}/llm_skills/name/"
+        f"{urllib.parse.quote(name)}/files/{urllib.parse.quote(file_path)}/"
+    )
+
+
+def fetch_remote(host: str, project_id: str, name: str, headers: dict[str, str]) -> dict | None:
+    status, payload = api_request("GET", skill_url(host, project_id, name), headers)
+    if status == 404:
+        return None
+    if status != 200:
+        sys.exit(f"{name}: GET failed ({status}): {payload}")
+    return payload
+
+
+def fetch_remote_file_content(
+    host: str, project_id: str, name: str, file_path: str, headers: dict[str, str]
+) -> str:
+    status, payload = api_request("GET", file_url(host, project_id, name, file_path), headers)
+    if status != 200:
+        sys.exit(f"{name}: GET file {file_path} failed ({status}): {payload}")
+    # The endpoint returns the file record with a `content` field.
+    if isinstance(payload, dict) and "content" in payload:
+        return payload["content"]
+    sys.exit(f"{name}: file {file_path} response missing content field: {payload}")
+
+
+def diff_against_remote(
+    local: dict[str, Any],
+    remote: dict[str, Any],
+    host: str,
+    project_id: str,
+    headers: dict[str, str],
+) -> list[str]:
+    """Return a list of human-readable reasons the local and remote differ."""
+    reasons: list[str] = []
+    name = local["name"]
+
+    # Body and description comparisons ignore trailing whitespace because the
+    # store normalises trailing newlines on its end.
+    if (remote.get("body") or "").rstrip() != local["body"].rstrip():
+        reasons.append("body")
+    if (remote.get("description") or "") != local["description"]:
+        reasons.append("description")
+
+    local_files = {f["path"]: f for f in local.get("files", [])}
+    remote_files_meta = remote.get("files") or []
+    remote_by_path = {f.get("path"): f for f in remote_files_meta}
+
+    added = sorted(set(local_files) - set(remote_by_path))
+    removed = sorted(set(remote_by_path) - set(local_files))
+    if added:
+        reasons.append(f"files added: {', '.join(added)}")
+    if removed:
+        reasons.append(f"files removed: {', '.join(removed)}")
+
+    for path in sorted(set(local_files) & set(remote_by_path)):
+        local_f = local_files[path]
+        remote_f = remote_by_path[path]
+        if local_f.get("content_type") != remote_f.get("content_type"):
+            reasons.append(f"file {path}: content_type")
+            continue
+        remote_content = fetch_remote_file_content(host, project_id, name, path, headers)
+        # Strip trailing whitespace, matching the body comparison above — the
+        # store normalises trailing newlines on stored content, so a strict
+        # compare would flag a diff on every sync.
+        if local_f["content"].rstrip() != remote_content.rstrip():
+            reasons.append(f"file {path}: content")
+
+    return reasons
+
+
+def push(
+    local: dict[str, Any],
+    remote: dict[str, Any] | None,
+    host: str,
+    project_id: str,
+    headers: dict[str, str],
+    dry_run: bool,
+) -> tuple[str, str]:
+    """Create or update the remote skill, returning (action, detail)."""
+    name = local["name"]
+    if remote is None:
+        if dry_run:
+            return "would-create", "new skill"
+        status, payload = api_request("POST", collection_url(host, project_id), headers, local)
+        if status not in (200, 201):
+            sys.exit(f"{name}: create failed ({status}): {payload}")
+        return "created", f"v{payload.get('version', 1)}"
+
+    reasons = diff_against_remote(local, remote, host, project_id, headers)
+    if not reasons:
+        return "in-sync", ""
+
+    if dry_run:
+        return "would-update", "; ".join(reasons)
+
+    update_payload: dict[str, Any] = {
+        "base_version": remote["latest_version"],
+        "description": local["description"],
+        "body": local["body"],
+    }
+    if "files" in local or remote.get("files"):
+        # Always send the full files list to keep create and update symmetric.
+        # An empty list explicitly clears all bundled files.
+        update_payload["files"] = local.get("files", [])
+    status, payload = api_request("PATCH", skill_url(host, project_id, name), headers, update_payload)
+    if status not in (200, 201):
+        sys.exit(f"{name}: update failed ({status}): {payload}")
+    return "updated", f"v{payload.get('version', '?')} ({'; '.join(reasons)})"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--dry-run", action="store_true", help="report changes without writing")
+    args = parser.parse_args()
+
+    load_dotenv(REPO_ROOT / ".env")
+    api_key = os.environ.get("POSTHOG_PERSONAL_API_KEY")
+    if not api_key:
+        sys.exit(
+            "POSTHOG_PERSONAL_API_KEY not set. Add it to .env at the repo root "
+            "(locally) or to GitHub Actions repo secrets (CI)."
+        )
+    # `or` rather than a dict default — GitHub Actions sets env vars to ""
+    # when the referenced repo variable is unset, and we want the default in
+    # that case too.
+    project_id = os.environ.get("POSTHOG_PROJECT_ID") or "2"
+    host = (os.environ.get("POSTHOG_HOST") or "https://us.posthog.com").rstrip("/")
+    headers = {"Authorization": f"Bearer {api_key}"}
+
+    skill_dirs = sorted(p for p in SKILLS_DIR.glob(SKILL_GLOB) if p.is_dir())
+    if not skill_dirs:
+        print(f"No skills found under {SKILLS_DIR}/{SKILL_GLOB}")
+        return 0
+
+    counts = {"created": 0, "updated": 0, "in-sync": 0, "would-create": 0, "would-update": 0}
+    for skill_dir in skill_dirs:
+        local = parse_skill(skill_dir)
+        remote = fetch_remote(host, project_id, local["name"], headers)
+        action, detail = push(local, remote, host, project_id, headers, args.dry_run)
+        counts[action] = counts.get(action, 0) + 1
+        print(f"{action:>14}  {local['name']}" + (f"  {detail}" if detail else ""))
+
+    print()
+    summary_keys = ["created", "updated", "in-sync"] if not args.dry_run else ["would-create", "would-update", "in-sync"]
+    print("  ".join(f"{k}: {counts.get(k, 0)}" for k in summary_keys))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

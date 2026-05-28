@@ -1,5 +1,5 @@
 ---
-name: richard-standup
+name: rs-standup
 description: Generate standup notes from GitHub PR activity
 disable-model-invocation: true
 ---

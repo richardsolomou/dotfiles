@@ -17,4 +17,8 @@ Key files:
 
 ## Skills sync
 
-Every skill under `ai/skills/richard-*/` is mirrored in the PostHog skills store under the same name. The dotfiles copy is the source of truth — when editing a skill here, also publish the change to the store via the PostHog MCP (`llma-skill-update` with the matching `base_version`, or the per-file primitives for bundled scripts). When adding a new `richard-`-prefixed skill, follow the same pattern.
+Every skill under `ai/skills/rs-*/` is mirrored in the PostHog skills store under the same name. The dotfiles copy is the source of truth.
+
+A GitHub Action (`.github/workflows/sync-skills.yml`) syncs the store on every push to `main` that touches `ai/skills/**` or the script itself. The same logic lives in `bin/sync-skills` for ad-hoc local runs (and `bin/sync-skills --dry-run` to preview). Both are push-only, idempotent, and authenticate with `POSTHOG_PERSONAL_API_KEY` scoped to `llm_skill:read` + `llm_skill:write`. Locally the script reads `.env` at the repo root (gitignored); in CI the env vars come from the repo's GitHub Actions secrets.
+
+Adding a new skill: drop it under `ai/skills/rs-<slug>/` and push — the sync creates it on first run. Editing an existing skill: change the local files; the next push publishes a new version against the latest `base_version`. Bundled files under `scripts/`, `references/`, or `assets/` are picked up automatically (files named `test-*` are excluded from the published bundle).

@@ -3,6 +3,10 @@ git/gitconfig.local.symlink
 # Claude Code local settings (created when running claude from this directory)
 .claude/
 
+# Local secrets loaded by bin/sync-skills (POSTHOG_PERSONAL_API_KEY, etc.)
+.env
+.env.local
+
 # Python bytecode
 __pycache__/
 

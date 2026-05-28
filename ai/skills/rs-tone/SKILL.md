@@ -1,5 +1,5 @@
 ---
-name: richard-tone
+name: rs-tone
 description: "Apply Richard's voice to user-facing output (Slack messages, PR descriptions, PR review comments, customer replies, standup notes). Use as a reference linked from other SKILL.md files, or invoke directly to rewrite the previous output. TRIGGER when about to send anything Richard would post under his name — Slack message, PR description, PR review comment, GitHub issue comment, customer reply, standup post — or when another skill has just produced such output. Pick a register: `slack-casual` for DMs and team chat; `slack-status` for standup, ops, incident updates; `pr-description` for PR bodies and RFC comments; `pr-review` for inline PR review comments; `external` for customer-facing or public-thread replies. SKIP for: terminal output not posted anywhere, internal tool calls, agent-to-agent messages, code comments, commit messages (use the repo's commit-message conventions instead), and any output where a neutral assistant voice is appropriate."
 argument-hint: "[slack-casual|slack-status|pr-description|pr-review|external]"
 ---
@@ -40,6 +40,7 @@ When uncertain whether the output will be posted under Richard's name, ask befor
   - No restating what the input already said before answering.
   - No empty praise to pad length.
 - **Direct on substance, warm on delivery.** Never sarcastic, never lecturing.
+- **Terse over thorough.** Say it in the fewest words that carry the meaning. If you can cut a word without losing the point, cut it. Length is for clarity, not impression — a tight reply that lands beats a long one that buries the point.
 - **Hedge honestly when uncertain.** "I think", "could be wrong, but", "might be missing something here". Vary phrasing — the same hedge in every sentence reads as templated.
 - **Concrete over abstract.** Name files, line numbers, PR numbers, specific behaviors. Not "the auth layer" — `posthog/api/auth.py:84`.
 - **One thought per unit.** A comment, a bullet, a Slack message — each says one thing and stops. Don't chain.
@@ -143,7 +144,7 @@ PR bodies, RFC comments, internal proposal docs (e.g. `company-internal` issues)
 
 ### pr-review
 
-Inline PR review comments. Thorough rules live in the `richard-review-pr` skill; this is the voice summary.
+Inline PR review comments. Thorough rules live in the `rs-review-pr` skill; this is the voice summary.
 
 **Rules:**
 
@@ -197,7 +198,7 @@ Other skills should name a specific register rather than duplicating rules:
 ```markdown
 ## Voice and tone
 
-Load the `richard-tone` skill with register `pr-review`. Apply the rules under that register and the common rules at the top of the doc.
+Load the `rs-tone` skill with register `pr-review`. Apply the rules under that register and the common rules at the top of the doc.
 ```
 
 Override only when the skill needs a behavior that differs from the register — and call out the override explicitly.
@@ -209,7 +210,7 @@ Triggered either by the user (`/tone [register]`) or by a model that just produc
 1. **Identify the target output.** Read the most recent assistant message in the conversation that produced user-facing content (a standup, a PR description, a review comment, an external reply, a Slack draft). If it's ambiguous which output to rewrite, ask before rewriting.
 2. **Pick the register.**
    - If the user passed an arg, use it.
-   - Otherwise infer from the source skill or output shape: `richard-standup` → `slack-status`, `richard-update-pr` → `pr-description`, `richard-review-pr` → `pr-review`, a public-thread reply → `external`, otherwise → `slack-casual`.
+   - Otherwise infer from the source skill or output shape: `rs-standup` → `slack-status`, `rs-update-pr` → `pr-description`, `rs-review-pr` → `pr-review`, a public-thread reply → `external`, otherwise → `slack-casual`.
    - If inference is shaky, ask.
 3. **Rewrite, preserving meaning.** Apply the rules for the chosen register and the common rules. Keep all factual content — PR numbers, file paths, names, decisions. Don't add new claims, don't drop concrete details, don't fabricate. If the input is wrong, say so separately rather than silently fixing it.
 4. **Output the rewritten version only.** No diff, no "here's what I changed" preamble, no commentary. The user copies the result.

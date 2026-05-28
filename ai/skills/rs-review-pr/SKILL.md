@@ -1,6 +1,6 @@
 ---
-name: richard-review-pr
-description: "Review a pull request: first orient the reviewer with an ELI5 of what the PR actually does and the concepts in play, then produce inline review comments anchored to specific lines plus an optional short top-level summary, ready to paste into GitHub one at a time."
+name: rs-review-pr
+description: "Review a pull request: first orient the reviewer with an ELI5 of what the PR does, why, and the concepts in play, then produce inline review comments — confirmed findings only, no open questions or nits — anchored to specific lines, plus an optional short top-level summary, ready to paste into GitHub one at a time."
 argument-hint: "<pr-url|pr-number>"
 disable-model-invocation: true
 ---
@@ -80,31 +80,39 @@ Don't second feedback that another reviewer has already raised, even if it's unr
 
 ### Step 3: Orient the Reviewer
 
-Before forming opinions on what's right or wrong with the PR, lay out what it's doing and what concepts are in play, so the rest of the review lands against shared context rather than reading the diff cold. The goal here is learning — by the time the inline comments appear, the reviewer should already understand what the PR is changing and why.
+Before forming opinions on what's right or wrong with the PR, walk through what it does and why, so the rest of the review lands against shared context rather than reading the diff cold. The goal here is learning — by the time the inline comments appear, the reviewer should already understand what the PR is changing, why it exists, and what concepts are in play.
 
-This whole section is for the user's terminal. It isn't posted anywhere, so default assistant voice is fine; the tone rules kick in later when drafting actual comment bodies. Keep it tight — this is orientation, not analysis. Save the critique for the inline comments.
+This whole section is for the user's terminal. It isn't posted anywhere, so default assistant voice is fine; the tone rules kick in later when drafting actual comment bodies. Lean into teaching — explanations can run several paragraphs if the change is meaty. Save the critique for the inline comments.
+
+For trivial PRs (typo fixes, dep bumps, one-line config tweaks), compress this whole section to two or three sentences. Don't pad. The structure below is for changes substantial enough to warrant an orientation.
 
 Produce these parts:
 
 **What this PR actually does**
 
-Plain English summary of the mechanics — 2–5 sentences, no jargon. Name the entry point, the affected types, the call sites that change. Explain what code path is being introduced, removed, or rerouted. If the PR description and the diff disagree on what's happening, say so here. The diff is the source of truth.
+Walk through the change like the reader is a competent engineer who's new to this part of the codebase. Trace the code path: what triggers it, what it produces, how it differs from the previous behaviour. Name the entry point, the affected types, the call sites that change. If the change has two or three logical pieces, list them. Concrete beats abstract — "this routes events tagged `$ai_generation` to the new `LLMObservability.process()` path instead of the generic `Events.capture()` path" beats "this routes AI events differently."
 
-**Whether the approach makes sense**
+If the PR description and the diff disagree on what's happening, say so here. The diff is the source of truth.
 
-A high-level sanity check, 1–3 sentences. Is this a reasonable way to solve the problem the PR claims to be solving? Is there an obvious alternative that would also have worked, and any signal in the commits or surrounding code about why the author picked this one? Don't list line-by-line issues here — those become inline comments in Step 5. This is just "does the overall shape hold up".
+**Why this change?**
+
+Explain the motivation. Pull from the PR description, linked issue, commit messages, code comments. If those are thin, infer from the surrounding code and say you inferred. What problem does this solve, what constraint forces this approach, what previous decision is being reversed? If it's a refactor with no behaviour change, name what the refactor enables. Avoid restating the title — explain the underlying *why*, not the *what*.
 
 **Concepts in play**
 
-Name the Go / distributed-systems / domain concepts the reviewer is about to encounter while reading the diff, with one-line explanations tied to specific spots in the change. Don't force a concept in if the PR doesn't touch it. Two to four bullets is usually right. Examples:
+Name the Go / distributed-systems / domain concepts the reviewer is about to encounter while reading the diff, with two or three sentences per concept tied to specific spots in the change. Don't force a concept in if the PR doesn't touch it. Examples of the depth to aim for:
 
-- Touches goroutine coordination in `worker.go:120` — channel send to a possibly-closed `done` chan is the foot-gun to watch for here.
-- This is a hot path on every request, and `decodePayload` was allocation-free before; the new `fmt.Sprintf` will escape to the heap.
-- Changes idempotency semantics: the retry now re-fires the side effect, where the dedup key gated it before.
+- *Goroutine coordination in `worker.go:120`*: the worker spawns a goroutine that listens on `done`, but the channel is only closed by the parent on shutdown. If the parent panics, the goroutine leaks — Go's runtime won't reclaim it. Worth checking whether the spawn site has a deferred close or whether the goroutine has its own exit path.
+- *Hot-path allocation*: `decodePayload` previously took a `[]byte` and returned a pointer into the same backing buffer, so the function was allocation-free. The new `fmt.Sprintf` formats the payload as a string, which always allocates. On a request-path codepath like this one, the GC pressure scales linearly with request volume.
+- *Idempotency semantics*: the original retry logic checked the dedup key before firing the side effect; the new path fires the side effect first and dedupes on read. That's a deliberate trade-off in some systems but it means a retry will produce two side effects, not one.
 
 **Anything non-obvious about the surrounding code** *(skip unless warranted)*
 
 Context the reviewer needs that isn't in the diff — a wrapper three levels up that already handles the concern, a constant defined elsewhere, a convention the file follows. Only include this when there's something specific worth flagging; skip the subsection otherwise.
+
+**Whether the approach makes sense**
+
+A high-level sanity check, 1–3 sentences. Is this a reasonable way to solve the problem the PR is solving? Is there an obvious alternative that would also have worked, and any signal in the commits or surrounding code about why the author picked this one? This is just "does the overall shape hold up" — don't list line-by-line issues, those become inline comments in Step 5.
 
 ### Step 4: Conduct the Review
 
@@ -131,13 +139,18 @@ For each potential concern, ask: *if this shipped as-is, could it cause a bug, a
 
 Then **prioritise**. Pick the three to five things that matter most. A long list dilutes the signal — the author skims, fixes the easy ones, and the real point gets buried.
 
-In your head, sort what's left into:
+In your head, sort what survives prioritisation into two categories:
 
-- **Must-fix before merge** — strictly correctness, security, or data-loss. Nothing else qualifies. Design choices, naming, structure, convention drift, missing tests for non-critical paths, observability gaps, performance worries that aren't proven hot paths: these are all worth-considering or questions, never must-fix. When genuinely uncertain whether a correctness or security concern is real, raise it as a question and let the author decide — don't escalate it to must-fix on a guess.
-- **Worth considering** — design, naming, structure, convention drift, follow-ups, observability, tests on non-critical paths. Not blocking, but the PR is better with them.
-- **Genuine questions** — things you don't understand or want the author's reasoning on.
+- **Must-fix before merge** — strictly correctness, security, or data-loss. Nothing else qualifies. Design choices, naming, structure, convention drift, missing tests for non-critical paths, observability gaps, performance worries that aren't proven hot paths: these belong in "worth considering," never must-fix. When genuinely uncertain whether a correctness or security concern is real, return to verification rather than escalate on a guess — see below.
+- **Worth considering** — confirmed improvements where you can articulate concretely how the PR is better with the change. Design, naming, structure, convention drift, follow-ups, observability, tests on non-critical paths. Not blocking, but you can defend each one.
 
-Skip true nitpicks (pure preference, no impact). But don't drop a real concern because it feels awkward to raise or the author is senior — letting a real issue ship is worse than the awkwardness of bringing it up.
+**Don't raise open questions to the author.** If you don't understand something, that's a gap from Step 3 — go back, read the code, figure it out. Comments that amount to "why this?" without a hypothesis attached signal that you haven't done the homework yet. Only after you've tried and genuinely can't pick between two materially different interpretations does a question warrant raising — and even then, ask it as part of a finding ("I'd expect X here for reason Y; is there a constraint I'm missing?"), not a bare "what does this do?"
+
+**Verify before raising.** For each candidate concern, before it becomes a comment: re-read the actual code (not just the diff hunk), check the facts you're asserting, look for counterexamples elsewhere in the repo. If the concern doesn't survive that check, drop it. The bar is "I can defend this finding if challenged" — concerns that wouldn't survive a polite pushback shouldn't be raised in the first place.
+
+**Skip nitpicks entirely.** Pure preference items, stylistic choices with no impact, things you'd phrase differently but aren't measurably better — drop them. The point of the review is that every comment you raise is one you're confident the author should act on, even if the action is "agreed, follow-up."
+
+Don't drop a real concern because it feels awkward to raise or the author is senior — letting a real issue ship is worse than the awkwardness of bringing it up. The verification bar is for accuracy, not for politeness.
 
 ### Step 5: Write the Review
 
@@ -151,7 +164,7 @@ Pick the line that is the actual subject of the comment — the line that would 
 
 #### Voice and tone (mandatory)
 
-Before writing any comment body, load the `richard-tone` skill via the Skill tool with `register: pr-review`. Read both the `pr-review` register section and the common rules at the top of the doc, and apply them to every comment body and to the optional top-level summary.
+Before writing any comment body, load the `rs-tone` skill via the Skill tool with `register: pr-review`. Read both the `pr-review` register section and the common rules at the top of the doc, and apply them to every comment body and to the optional top-level summary.
 
 This step is not optional. A review that is technically sound but reads like an analysis engine fails — the author should read each comment and think *that sounds like Richard*, not *that sounds like a tool*. If the tone skill has not been loaded for this turn, do that first; do not draft comment bodies from memory of the rules.
 
@@ -198,8 +211,8 @@ Do not post anything to GitHub. The user copies each body from the chat and past
 Then recommend which GitHub review action to choose, with a one-line reason:
 
 - **Request changes** — choose this if there is **any blocking concern**. Default here when in doubt; it is reversible and signals the author should iterate before merge.
-- **Comment** — choose this when there are only non-blocking suggestions or genuine questions that the author should weigh, but no concerns that must be resolved before merge. Also use this when the PR is not yours to approve (e.g. you don't own the area, or you only spot-checked part of it).
-- **Approve** — choose this **only** when you've done a thorough review and found no blockers, no unresolved questions that affect correctness, and you would be comfortable merging it yourself. Do not approve a PR where you only skimmed the diff, where tests are missing for new behavior, or where prior reviewers have unresolved blocking concerns. Approval is the strongest signal you give — reserve it for PRs that genuinely warrant it.
+- **Comment** — choose this when there are only non-blocking findings the author should weigh, but no concerns that must be resolved before merge. Also use this when the PR is not yours to approve (e.g. you don't own the area, or you only spot-checked part of it).
+- **Approve** — choose this **only** when you've done a thorough review and found no blockers, and you would be comfortable merging it yourself. Do not approve a PR where you only skimmed the diff, where tests are missing for new behavior, or where prior reviewers have unresolved blocking concerns. Approval is the strongest signal you give — reserve it for PRs that genuinely warrant it.
 
 Format the recommendation like:
 

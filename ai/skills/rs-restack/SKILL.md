@@ -1,5 +1,5 @@
 ---
-name: richard-restack
+name: rs-restack
 description: "Restack dependent branches on top of the current branch using Graphite CLI and push them."
 disable-model-invocation: true
 ---
