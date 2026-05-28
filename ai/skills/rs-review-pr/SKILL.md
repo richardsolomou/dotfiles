@@ -140,6 +140,8 @@ This step is not optional. A review that is technically sound but reads like an 
 
 If a comment body, after drafting, still contains any of these tells, rewrite it before output: severity-prefixed bullets (`**Blocking:**`, `**Nit:**`), formulaic openers ("Thanks for putting this together", "Great work overall"), templated reviewer phrases ("Non-blocking, but:", "Worth flagging that…"), closing sign-offs ("Nothing blocking from me", "Hope this helps"), restating what the PR does, or AI/agent/assistant self-reference.
 
+The most common failure mode isn't on that list — it's neutral-professional polish. After drafting each comment, read it back and ask whether a polite stranger could have written it. If yes, it's off register — go back to the `pr-review` examples in `rs-tone` and rewrite to match. Don't memorise the bank from here; `rs-tone` is the source of truth and updates there should land here automatically.
+
 #### Length
 
 Aim for one to four sentences per inline comment. If you need more, it's probably actually two comments, or it belongs in the summary. Don't over-explain — if a single sentence makes the point, stop there.

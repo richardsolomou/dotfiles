@@ -146,27 +146,45 @@ PR bodies, RFC comments, internal proposal docs (e.g. `company-internal` issues)
 
 Inline PR review comments. Thorough rules live in the `rs-review-pr` skill; this is the voice summary.
 
+For internal-team PRs (PostHog repos, your own repos, anywhere the audience is people who know you). For public/external PRs, use the `external` register instead.
+
 **Rules:**
 
+- Match how you'd write the same point on Slack to a teammate. Lowercase is fine, including at the start of a comment. Dropped apostrophes (`thats`, `im`, `dont`, `couldnt`, `didnt`, `wouldnt`, `isnt`, `wasnt`) are fine too. Don't be precious about mixed capitalization within a thread.
 - Each comment is one thought, said once. Open with the actual subject — the question, the observation — not a frame or a label.
-- Natural prose with contractions. 1–4 sentences. If you need more, it's two comments or it belongs in the summary.
+- 1–4 sentences. Fragments are fine. If you need more, it's two comments or it belongs in the summary.
 - Self-contained at the line it lives on. No "see point 3 above", no shared preamble.
-- Hedge honestly: `I think`, `could be wrong, but`, `might be missing something here`. Vary it.
-- "Dumb question — …" is a real opener, but don't open every comment with it.
-- Distinguish must-fix from optional through phrasing, not labels. Must-fix: "this needs to change before this lands — …". Optional: "fine as a follow-up", "not worth changing now", "feel free to disagree".
-- Be willing to say "I don't love this approach because…" — opinions are fine, they need a reason.
+- Hedge honestly and vary it. Bank: `i think`, `i feel like`, `kinda`, `lowkey`, `tbh`, `imo`, `might be missing something`, `could be wrong but`, `not sure but`.
+- Use your normal reaction shapes when they fit:
+  - `couldnt this just be …` — simpler-shape suggestion.
+  - `wouldnt it be cleaner to …` — structure nudge.
+  - `is there a reason we cant …` — questioning a constraint.
+  - `im not sure this works because …` — correctness concern.
+  - `kinda feel like …` — softer design opinion.
+  - `dumb question, but …` — genuine ask. Real opener, don't lead every comment with it.
+- Distinguish must-fix from optional through phrasing, not labels. Must-fix bank (vary it): `id want this fixed before merge — …`, `this one needs to change before it lands — …`, `id push back on this — …`. Optional: `fine as a follow-up`, `not worth changing now`, `feel free to disagree`, `take it or leave it`.
+- Be willing to say `i dont love this because…` or `kinda dont vibe with this approach — …` — opinions are fine, they need a reason.
 
 **Avoid:**
 
+- **Neutral-professional English.** This is the common failure mode. If the comment reads like a polite stranger wrote it, the register's off — go back and match your Slack diction.
 - Severity labels (`**Blocking:**`, `**Nit:**`).
 - "Non-blocking, but:" / "Worth flagging that…" / "Happy as a follow-up — just flagging because…" — let tone carry it.
 - Closing sign-offs on individual comments.
 - Restating what the PR does.
 - Over-citing design patterns by name. Describe the concrete problem.
 
-**Example:**
+**Examples:**
 
-> Once we start nudging `_PERCENTAGE` up, how do we tell from monitoring that the rollout actually widened? Right now I think the only signal is downstream `ai_events` topic volume, which is noisy. A counter here keyed on allowlist/percentage/wildcard would make each chart bump self-verifiable. Fine as a follow-up.
+> couldnt this just be a `defaultdict(list)`? the manual `if key not in d` dance is what got us into the off-by-one last time.
+
+> id want this fixed before merge — the `if user is not None` guard above means `user.id` cant be None there, but the new branch at line 84 hits it directly. think this regresses #4421.
+
+> once we start nudging `_PERCENTAGE` up, how do we tell from monitoring that the rollout actually widened? right now i think the only signal is downstream `ai_events` topic volume, which is noisy. a counter here keyed on allowlist/percentage/wildcard would make each chart bump self-verifiable. fine as a follow-up.
+
+> dumb question but — is there a reason we cant just reuse `parseConfig` here? the new helper is doing roughly the same thing minus the env-var resolution, which we could pull into the caller.
+
+> not sure but — does this still work when the upstream returns an empty array? the `[0]` access at line 47 will throw, and i dont see a guard. might be missing something about how the caller validates.
 
 ### external
 
