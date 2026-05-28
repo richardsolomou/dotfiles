@@ -36,19 +36,15 @@ git log --oneline <base>..HEAD
 
 For each changed file, read it in the working directory — not just the diff hunk. You need the surrounding function, the callers, the type definitions to find the bugs.
 
-### Step 2: Counter your own bias
+### Step 2: Set posture
 
-You wrote this code, so your instinct is to defend it. Counter that explicitly before going further:
-
-- Assume there's at least one real issue you didn't catch while writing. The job is to find it.
-- Assume the toughest reviewer on your team is looking over your shoulder. What would they say?
-- Note any commits in the log that signal trouble — `wip`, `fix tests`, `actually fix it this time`, anything force-pushed. Those are bookmarks pointing at code that was hard to get right and is worth re-examining.
+Load the `rs-adversarial-review` skill before going further. Apply its discipline — skeptical posture, counter-bias for the *reviewing your own code* context, adversarial verification, defensibility bar, skip nitpicks — throughout the rest of this workflow.
 
 This step doesn't produce output. It sets the posture for what follows.
 
 ### Step 3: Adversarial pass
 
-For each candidate area of concern, actively try to disprove the code. The discipline is constructing the failure scenario, not listing categories. "Edge cases" is not a finding; "passing `[]byte{}` here causes a nil deref at `parse.go:84`" is.
+Apply the discipline from `rs-adversarial-review` (loaded in Step 2) — counter your bias, actively try to disprove the code, verify each candidate before it becomes a finding. The focus areas below are *where to look* for self-review specifically; rs-adversarial-review is the bar for *what survives*.
 
 Focus areas, roughly in the order they tend to bite for self-review (different from peer review — self-bias hides these differently):
 
@@ -62,13 +58,9 @@ Focus areas, roughly in the order they tend to bite for self-review (different f
 - **Convention drift.** Did you do this differently from the three other places that solve a similar problem in this repo? If yes, why — and is the reason something other than "I didn't notice"?
 - **Scope creep.** Is there a change in the diff that doesn't belong in this PR? Pull it into a follow-up rather than letting it ride.
 
-### Step 4: Verify each candidate concern
+Don't pad the list to look thorough. Three real findings beat ten weak ones.
 
-Same discipline as the verify step in `rs-review-pr`: before a candidate becomes a finding, prove it. Re-read the actual code (not the diff hunk). Construct the failing call mentally — or run it. Check the convention in the rest of the repo. If the concern doesn't survive verification, drop it. The bar is "I could defend this to the toughest reviewer on my team."
-
-Don't pad the list to look thorough. Three real findings beat ten weak ones — the same prioritisation rule as `rs-review-pr` applies.
-
-### Step 5: Write the walkthrough
+### Step 4: Write the walkthrough
 
 One section per finding, in the order they appear in the diff. Format:
 
@@ -96,7 +88,7 @@ Be specific and direct. This output is for the user's terminal — no `rs-tone` 
 
 If after a real adversarial pass there are genuinely no findings, write a single honest line — "Tried to break this, couldn't. Looks ready to push." Don't manufacture findings to look thorough.
 
-### Step 6: Offer to apply the fixes
+### Step 5: Offer to apply the fixes
 
 After all findings, summarise the planned action and ask which to apply:
 

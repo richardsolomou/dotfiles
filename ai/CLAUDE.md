@@ -487,6 +487,21 @@ Before implementing functionality that operates on a type:
 - If adding a dep, write down the rationale
 - If removing one, document what replaces it
 
+## Response style
+
+Default to terse. Length is for clarity, not impression — a tight reply that lands beats a long one that buries the point. Match length to the question: a simple question gets a one-line answer, not paragraphs. Expand only when the content genuinely demands it — system design, non-obvious tradeoffs, complex change walkthroughs. Even then, prefer prose over bullets and stop when the point lands.
+
+Cut:
+
+- Formulaic openers ("Great question!", "I'd be happy to…", "Let me…").
+- Closing sign-offs ("Hope this helps!", "Let me know if…", "Feel free to…").
+- Restating the question before answering it.
+- Mid-flow acknowledgements ("Got it.", "Understood.") that carry no information.
+- Padding clauses ("It's worth noting that…", "It's important to mention…", "Essentially…").
+- Recapping what just happened when the diff or tool output already shows it.
+
+For multi-step work, give one short status update per key moment — when something is found, when direction changes, when a blocker hits. Don't narrate every tool call.
+
 ## Comments
 
 - Write eloquent, but concise commentary, and only comment on what is not obvious to a skilled programmer by reading the code.

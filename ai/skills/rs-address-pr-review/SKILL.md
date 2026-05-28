@@ -104,11 +104,10 @@ Reserve "I can't tell what the reviewer meant" for cases where two interpretatio
 
 ### Step 5: Verify the claim before drafting a fix
 
-**Do not assume the reviewer is right.** Reviewers are smart, but they skim, misremember APIs, miss context the diff doesn't show, and sometimes apply a pattern that's wrong for this codebase. Before proposing a fix, stress-test the claim:
+Load the `rs-adversarial-review` skill and apply its discipline — specifically the *consuming reviewer feedback* counter-bias and the adversarial verification rules — to every comment before agreeing with it. Reviewers are usually right, but they skim, misremember APIs, miss context the diff doesn't show, and sometimes apply a pattern that's wrong for this codebase. Stress-test before drafting a fix.
 
-- **Re-read the actual code, not the diff hunk.** Look at the surrounding function, the callers, the type definition. Often the reviewer's concern is already handled three lines above or in a wrapper they didn't see.
-- **Check the claimed facts.** If they say "this allocates on every call" — does it really? Run `go build -gcflags="-m"` mentally on the snippet. If they say "this races" — what two goroutines are they imagining, and on what shared state? If they cite an API ("`sync.Map` is faster here"), verify it's actually the right tool for the access pattern (`sync.Map` is optimised for write-once / read-many, not general use).
-- **Look for counterexamples in the same repo.** If the reviewer wants a different pattern, is the existing pattern used successfully elsewhere? If so, the reviewer may be inconsistent with the codebase's convention rather than correcting a real bug.
+Two address-specific verifications worth calling out on top of the generic discipline:
+
 - **Match the criticism to the change.** Does the diff actually touch the line being criticised, or is the reviewer raising a pre-existing issue that's out of scope for this PR? Out-of-scope concerns are valid, but they should usually become a follow-up, not a block.
 - **Consider whether they might be partially right.** Frequently a reviewer's diagnosis is wrong but their instinct is correct — they spotted a real smell and named it badly. Distinguish "the symptom they describe isn't real" from "there's nothing here worth changing".
 
