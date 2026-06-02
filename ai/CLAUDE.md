@@ -117,9 +117,12 @@ For implementation decisions, weigh testability, maintainability, consistency, s
 
 - Test behavior, not implementation
 - One assertion per test when possible
-- Clear test names describing scenario
+- Clear test names describing the scenario
 - Use existing test utilities/helpers
 - Tests should be deterministic
+- When adding functionality, write tests for it, covering edge cases, error handling, and performance implications
+- Always run tests before marking a task complete; if they fail, fix them before proceeding
+- Update relevant documentation when changing functionality
 
 ## Important Reminders
 
@@ -144,21 +147,6 @@ After Claude makes a mistake and you correct it, end with:
 
 Claude is good at writing rules for itself. Ruthlessly edit over time until the mistake rate drops.
 
-## Advanced Prompting Patterns
-
-### Challenge Claude
-
-- "Grill me on these changes and don't make a PR until I pass your test"
-- "Prove to me this works" (have Claude diff behavior between main and feature branch)
-
-### Iterate on Solutions
-
-- After a mediocre fix: "Knowing everything you know now, scrap this and implement the elegant solution"
-
-### Use More Compute
-
-- Append "use subagents" to any request where you want Claude to work harder
-
 ## Project-specific Workflow
 
 ### posthog/posthog
@@ -171,7 +159,7 @@ When working on the <https://github.com/PostHog/posthog> repository, use the fol
 
 When working on other repositories, use the following workflow:
 
-- When taking on a new task, branch off the main branch (e.g. `main` or `master` depending on the repo), named `<type>/<slug>` or `<type>/<issue#>-<slug>` if the issue number is known. Types follow conventional commits: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`.
+- When taking on a new task, branch off the main branch (`main` or `master`, depending on the repo), named per the Git section below (use `<type>/<issue#>-<slug>` when the issue number is known).
 - When done with the task, prompt to commit changes.
 - Run `bin/fmt` to format the code if available.
   - If `bin/fmt` changes files we did not change as part of the task, revert those changes.
@@ -230,9 +218,9 @@ For detailed production configuration, consult these repos:
 
 ### SDK Repositories
 
-PostHog has a lot of client SDKs. Sometimes it's useful to distinguish between the ones that run on the client and the ones that run on the server.
+PostHog has many SDKs; it's often useful to distinguish the ones that run on the client from the ones that run on the server.
 
-### Client-side SDKs
+#### Client-side SDKs
 
 | Repository | Local Path | GitHub URL |
 | ---------- | ---------- | ---------- |
@@ -241,7 +229,7 @@ PostHog has a lot of client SDKs. Sometimes it's useful to distinguish between t
 | posthog-android | `~/dev/posthog/posthog-android` | <https://github.com/PostHog/posthog-android> |
 | posthog-flutter | `~/dev/posthog/posthog-flutter` | <https://github.com/PostHog/posthog-flutter> |
 
-### Server-side SDKs
+#### Server-side SDKs
 
 | Repository | Local Path | GitHub URL |
 | ---------- | ---------- | ---------- |
@@ -255,7 +243,7 @@ PostHog has a lot of client SDKs. Sometimes it's useful to distinguish between t
 
 ## Git
 
-- Name branches `<type>/<slug>` using conventional commit types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`.
+- Name branches `<type>/<slug>` (or `<type>/<issue#>-<slug>` when the issue number is known) using conventional commit types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`.
 - Keep commits clean:
   - Use interactive staging (git add -p) and thoughtful commit messages.
   - Squash when appropriate. Avoid "WIP" commits unless you're spiking.
@@ -267,7 +255,6 @@ PostHog has a lot of client SDKs. Sometimes it's useful to distinguish between t
 - Use imperatives: "Add", "Update", "Remove"
 - One line summary, blank line, optional body if needed
 - Keep commit messages short and concise.
-- Write clean commit messages without any AI attribution markers.
 - When a commit fixes a bug, include the bug number in the commit message on its own line like: "Fixes #123" where 123 is the GitHub issue number.
 
 ### AI Attribution Policy
@@ -305,53 +292,7 @@ When writing PR descriptions, commit messages, issue comments, or any public-fac
 - **Documentation only**: WebFetch for public GitHub documentation URLs
 - **Never**: GitHub MCP server tools (token-heavy, redundant with `gh` CLI)
 
-### Common `gh` Commands
-
-**Issues:**
-
-```bash
-gh issue list --repo owner/repo
-gh issue view 123
-gh issue create --title "Title" --body "Description"
-gh issue close 123
-gh issue comment 123 --body "Comment"
-```
-
-**Pull Requests:**
-
-```bash
-gh pr list --repo owner/repo
-gh pr view 123
-gh pr create --title "Title" --body "Description" --base main
-gh pr checkout 123
-gh pr merge 123
-gh pr review 123 --approve
-gh pr diff 123
-gh pr checks 123
-```
-
-**Repository Operations:**
-
-```bash
-gh repo view owner/repo
-gh repo clone owner/repo
-gh repo fork owner/repo
-gh api repos/owner/repo/path  # For any API endpoint
-```
-
-### When to Use Each Tool
-
-- ✅ **`gh` CLI** - All GitHub operations (default choice)
-  - Reason: Token-efficient, comprehensive API access
-  - Read operations: Auto-approved (view, list, diff, status, checks)
-  - Write operations: Require user approval (comment, review, create, merge)
-
-- ✅ **WebFetch** - Public GitHub documentation only
-  - Reason: Optimized for web content parsing
-  - Example: Fetching GitHub guides, API documentation pages
-
-- ❌ **GitHub MCP tools** - Don't use
-  - Reason: Token-heavy, redundant functionality, less efficient than `gh` CLI
+Read operations (`view`, `list`, `diff`, `status`, `checks`) are auto-approved; write operations (`comment`, `review`, `create`, `merge`) require user approval. Use `gh api` for anything the porcelain commands don't cover, including `gh api graphql` for complex queries.
 
 ### IMPORTANT: PR Review Comments
 
@@ -365,36 +306,6 @@ When posting review comments:
   - Reply to review comment: `gh api repos/owner/repo/pulls/123/comments/456/replies --method POST`
   - New review comment: `gh pr review 123 --comment --body "comment"`
   - Root PR comment: `gh issue comment 123 --body "comment"` (rarely appropriate)
-
-### Examples
-
-**Reading PR details:**
-
-```bash
-# Good (token-efficient)
-gh pr view 123 --json title,body,state,files
-
-# Bad (unnecessary tokens)
-# Using mcp__github__get_pull_request
-```
-
-**Creating issues:**
-
-```bash
-# Good
-gh issue create --repo owner/repo --title "Bug" --body "Details"
-
-# Bad
-# Using mcp__github__create_issue
-```
-
-**Complex queries:**
-
-```bash
-# Use gh api for anything not covered by gh commands
-gh api repos/owner/repo/pulls/123/comments
-gh api graphql -f query='{ ... }'
-```
 
 ## File System
 
@@ -415,18 +326,8 @@ Before implementing functionality that operates on a type:
 
 ### General Principles
 
-- When writing code, think like a principal engineer.
-  - Focus on code correctness and maintainability.
-  - Bias for simplicity: Prefer boring, maintainable solutions over clever ones.
-  - Make sure the code is idiomatic and readable.
-  - Write tests for changes and new code.
-  - Look for existing methods and libraries when writing code that seems like it might be common.
-  - Progress over polish: Make it work → make it right → make it fast.
-
-- Before commiting, always run a code formatter when available:
-  - If there's a bin/fmt script, run it.
-  - In a Rust codebase, run `cargo fmt`, `cargo clippy`, and `cargo shear` to check for issues.
-  - Otherwise, run the formatter for the language.
+- Write code like a principal engineer: correct, maintainable, idiomatic, and readable.
+- Progress over polish: make it work → make it right → make it fast.
 
 ### Rust-Specific Guidelines
 
@@ -472,14 +373,6 @@ Before implementing functionality that operates on a type:
   - Remove trailing whitespace
 - **Never add hard line breaks or wrap lines** when editing markdown files. Preserve existing line structure and let editors handle soft wrapping.
 
-### Testing & Quality
-
-- Always run tests before marking a task as complete.
-- If tests fail, fix them before proceeding.
-- When adding new functionality, write tests for it.
-- Check for edge cases, error handling, and performance implications.
-- Update relevant documentation when changing functionality.
-
 ### Dependency Philosophy
 
 - Avoid introducing new deps for one-liners
@@ -504,17 +397,14 @@ For multi-step work, give one short status update per key moment — when someth
 
 ## Comments
 
-- Write eloquent, but concise commentary, and only comment on what is not obvious to a skilled programmer by reading the code.
-- Comments should contain proper grammar and punctuation and should be prose-like, rather than choppy partial sentences. A human reading your code's comments should feel like they're reading a well-written professional whitepaper.
-- Avoid dramatic and all-caps comments.
-- IMPORTANT: Comment on the code as it is, not as it was.  For example, we recently combined two queries into one with a LEFT JOIN. Instead of saying "we combined two queries into one with a LEFT JOIN", describe what the query does now. The fact that it was combined is not important.
+- Comment only on what is not obvious to a skilled programmer reading the code. Most code needs none.
+- Be terse. State the why or the non-obvious constraint in as few words as land it — one tight sentence beats three. Cut filler ("This function…", "Here we…", "Note that…"); lead with the point.
+- Keep the context that earns its place: the reason behind a non-obvious choice, an invariant, a gotcha, a link to a spec or issue. Terse means dense, not vague — never drop the detail that makes the comment worth reading.
+- Use proper grammar and punctuation. Avoid dramatic and all-caps comments.
+- IMPORTANT: Comment on the code as it is, not as it was. Describe what the code does now, not how it got here — a comment narrating a recent refactor ("combined two queries into one") is noise once the change has landed.
 - Don't comment on code that is self-explanatory.
 
 ## Approach to work
-
-### Voice Dictation
-
-Use voice dictation (fn x2 on macOS) for prompts. You speak 3x faster than you type, and prompts get more detailed as a result.
 
 ### Simple Code
 
@@ -527,13 +417,7 @@ I like "Simple code" that means:
 
 These rules are in conflict with each other. Sometimes to express every idea we can't say everything only once. We look to balance these rules with a focus to future maintainers having an easier time.
 
-Also... it means we work in three stages
-
-- make it work
-- make it right
-- make it fast
-
-We should always pause and consider if the working code should be improved to make it simpler or to make it faster, but only once we're sure it works
+Once code works, pause and consider whether it should be made simpler or faster before moving on — but only once you're sure it works.
 
 ## Test Instructions
 
