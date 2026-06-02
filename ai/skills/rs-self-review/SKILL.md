@@ -29,9 +29,12 @@ Try, in order:
 
 Capture: base branch, head SHA (or the working tree if no PR exists), the list of changed files, the commit log on this branch.
 
+`<base>` is the PR's `baseRefName` (or the detected parent) — **not assumed to be `main`/`master`**; a stacked branch's base is another feature branch. Fetch it and diff against `origin/<base>` with three dots, so the diff is only what this branch added relative to the merge-base:
+
 ```bash
-git diff <base>...HEAD
-git log --oneline <base>..HEAD
+git fetch origin <base>
+git diff origin/<base>...HEAD
+git log --oneline origin/<base>..HEAD
 ```
 
 For each changed file, read it in the working directory — not just the diff hunk. You need the surrounding function, the callers, the type definitions to find the bugs.

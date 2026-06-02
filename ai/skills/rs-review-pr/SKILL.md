@@ -43,16 +43,12 @@ If the PR is not found or already closed/merged, report and stop.
 
 ### Step 2: Analyze the Changes
 
-Get the full diff against the base branch:
+Diff against the PR's actual base — `baseRefName` from Step 1, which is **not always `main`/`master`** (a stacked PR branches off another feature branch). Fetch it first so you compare against the current remote tip, then use three dots so the diff shows only what this branch added relative to the merge-base, not changes that landed on the base afterward:
 
 ```bash
-git diff <base-branch>...HEAD
-```
-
-Review the individual commits to understand the progression:
-
-```bash
-git log --oneline <base-branch>..HEAD
+git fetch origin <baseRefName>
+git diff origin/<baseRefName>...HEAD
+git log --oneline origin/<baseRefName>..HEAD
 ```
 
 For each changed file, read the file in the working directory to understand the full context around changes — not just the diff hunks.
