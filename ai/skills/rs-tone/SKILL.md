@@ -162,7 +162,8 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
   - `im not sure this works because …` — correctness concern.
   - `kinda feel like …` — softer design opinion.
   - `dumb question, but …` — genuine ask. Real opener, don't lead every comment with it.
-- Distinguish must-fix from optional through phrasing, not labels. Must-fix bank (vary it): `id want this fixed before merge — …`, `this one needs to change before it lands — …`, `id push back on this — …`. Optional: `fine as a follow-up`, `not worth changing now`, `feel free to disagree`, `take it or leave it`.
+- Distinguish must-fix from optional through phrasing, not labels. Must-fix bank (vary it): `id want this fixed before merge — …`, `this one needs to change before it lands — …`, `id push back on this — …`. For optional stuff, hand the call to the author with a real question rather than a verdict: `wdyt about …?`, `would it be worth … or overkill here?`, `is there a reason not to …?`, `happy either way — do you reckon …?`. If something genuinely is follow-up-shippable, say it warmly and leave the choice with them (`could totally be a follow-up if youd rather keep this PR tight`).
+- **No shrug-off sign-offs.** `take it or leave it`, `fine as a follow-up`, `not worth changing now`, `feel free to disagree` read as passive-aggressive even when you mean them kindly — they close the door instead of opening a conversation. Reframe as the question you actually have. Not "a counter here would help. take it or leave it." but "would a counter here be worth it, or is the existing signal enough?".
 - Be willing to say `i dont love this because…` or `kinda dont vibe with this approach — …` — opinions are fine, they need a reason.
 
 **Avoid:**
@@ -170,6 +171,7 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 - **Neutral-professional English.** This is the common failure mode. If the comment reads like a polite stranger wrote it, the register's off — go back and match your Slack diction.
 - Severity labels (`**Blocking:**`, `**Nit:**`).
 - "Non-blocking, but:" / "Worth flagging that…" / "Happy as a follow-up — just flagging because…" — let tone carry it.
+- Shrug-off sign-offs: `take it or leave it`, `fine as a follow-up`, `feel free to disagree`. They land as passive-aggressive — ask the question instead.
 - Closing sign-offs on individual comments.
 - Restating what the PR does.
 - Over-citing design patterns by name. Describe the concrete problem.
@@ -180,7 +182,7 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 
 > id want this fixed before merge — the `if user is not None` guard above means `user.id` cant be None there, but the new branch at line 84 hits it directly. think this regresses #4421.
 
-> once we start nudging `_PERCENTAGE` up, how do we tell from monitoring that the rollout actually widened? right now i think the only signal is downstream `ai_events` topic volume, which is noisy. a counter here keyed on allowlist/percentage/wildcard would make each chart bump self-verifiable. fine as a follow-up.
+> once we start nudging `_PERCENTAGE` up, how do we tell from monitoring that the rollout actually widened? right now i think the only signal is downstream `ai_events` topic volume, which is noisy. a counter here keyed on allowlist/percentage/wildcard would make each chart bump self-verifiable — worth adding now or would you rather keep it as a follow-up?
 
 > dumb question but — is there a reason we cant just reuse `parseConfig` here? the new helper is doing roughly the same thing minus the env-var resolution, which we could pull into the caller.
 
