@@ -128,6 +128,17 @@ Write as a colleague who's read the diff carefully — not as an analysis engine
 
 Pick the line that is the actual subject of the comment — the line that would change if the author addressed it, or the line that motivates the question. Not the start of the function, not the diff hunk header, not whichever line you happened to highlight first. If a comment is about a missing observability counter, anchor it on the branch where the counter would go. If it's about a coercion question, anchor it on the line that does (or fails to do) the coercion.
 
+#### Stay inside the diff, and verify every anchor
+
+GitHub only accepts an inline review comment on a line that is **part of this PR's diff** — an added/changed line, or a context line inside a changed hunk, in `git diff origin/<baseRefName>...HEAD`. A comment anchored outside the diff can't be posted inline; it gets silently dropped or lands on the wrong line.
+
+Before each comment goes in the output, confirm two things against the diff from Step 2:
+
+- **The path and line number are real and current.** Use the post-change line number as it appears in the head revision (the right-hand side of the diff), counted in the file as it stands at `headRefOid` — not a stale number from an earlier hunk, not the base-side line. If you're anchoring on a removed line, that's the base side — re-pick, since the reader can only act on what's still there.
+- **The line is in scope.** It must fall inside a changed hunk. If the concern is about code this PR didn't touch (a pre-existing bug, a function three files away the diff only calls), it's out of scope for an inline comment — either drop it, or if it genuinely matters, raise it once in the top-level summary framed as pre-existing / out-of-scope, not as an inline comment on an untouched line.
+
+When in doubt about whether a line is in the diff, re-grep the Step 2 diff for it rather than guessing. An inline comment on the wrong line reads as careless and makes the author hunt for what you meant.
+
 #### Voice and tone (mandatory)
 
 Before writing any comment body, load the `rs-tone` skill via the Skill tool with `register: pr-review`. Read both the `pr-review` register section and the common rules at the top of the doc, and apply them to every comment body and to the optional top-level summary.
