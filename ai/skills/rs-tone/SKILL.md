@@ -153,7 +153,7 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 
 - Match how you'd write the same point on Slack to a teammate. Lowercase is fine, including at the start of a comment. Dropped apostrophes (`thats`, `im`, `dont`, `couldnt`, `didnt`, `wouldnt`, `isnt`, `wasnt`) are fine too. Don't be precious about mixed capitalization within a thread.
 - Each comment is one thought, said once. Open with the actual subject — the question, the observation — not a frame or a label.
-- 1–4 sentences, and lean short. Keep it terse and succinct while maintaining context — cut filler words, not the detail that makes the point land (the line ref, the why, the failing case). Fragments are fine. If you still need more, it's two comments or it belongs in the summary.
+- **One sentence is the default, two is the ceiling for a normal comment.** Add the second only to carry the detail that makes it land — the line ref, the why, or the failing case. If it wants three or more, it's really two findings: split them into separate comments, or move the cross-cutting part to the summary. Fragments beat full sentences. Terse and succinct while keeping that context — cut filler, never the detail.
 - Self-contained at the line it lives on. No "see point 3 above", no shared preamble.
 - Hedge honestly and vary it. Bank: `i think`, `i feel like`, `kinda`, `lowkey`, `tbh`, `imo`, `might be missing something`, `could be wrong but`, `not sure but`.
 - Use your normal reaction shapes when they fit:
@@ -177,13 +177,13 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 - Restating what the PR does.
 - Over-citing design patterns by name. Describe the concrete problem.
 
-**Examples:**
+**Examples** (note the length — one or two sentences each, never more):
 
 > couldnt this just be a `defaultdict(list)`? the manual `if key not in d` dance is what got us into the off-by-one last time.
 
 > id want this fixed before merge — the `if user is not None` guard above means `user.id` cant be None there, but the new branch at line 84 hits it directly. think this regresses #4421.
 
-> once we start nudging `_PERCENTAGE` up, how do we tell from monitoring that the rollout actually widened? right now i think the only signal is downstream `ai_events` topic volume, which is noisy. a counter here keyed on allowlist/percentage/wildcard would make each chart bump self-verifiable — worth adding now or would you rather keep it as a follow-up?
+> once we nudge `_PERCENTAGE` up, whats the signal the rollout actually widened? a counter keyed on allowlist/percentage/wildcard would make each chart bump self-verifiable — worth adding now or a follow-up?
 
 > dumb question but — is there a reason we cant just reuse `parseConfig` here? the new helper is doing roughly the same thing minus the env-var resolution, which we could pull into the caller.
 

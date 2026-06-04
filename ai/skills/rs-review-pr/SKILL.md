@@ -151,7 +151,7 @@ The most common failure mode isn't on that list — it's neutral-professional po
 
 #### Length
 
-Aim for one to four sentences per inline comment. If you need more, it's probably actually two comments, or it belongs in the summary. Don't over-explain — if a single sentence makes the point, stop there.
+One sentence is the default; a second only if it carries the line ref, the why, or the failing case. If a comment wants three or more sentences, it's two findings — split them, or move the cross-cutting part to the summary. The teaching/explanatory voice from Steps 3–4 does not belong in inline comments; orientation already happened up top. `rs-tone` is the source of truth for length — match the brevity of its `pr-review` examples, don't exceed it.
 
 #### Self-contained comments
 
