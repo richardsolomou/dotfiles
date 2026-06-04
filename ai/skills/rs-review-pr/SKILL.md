@@ -171,6 +171,16 @@ Keep it short. Same voice rules as inline comments — no recap of the change, n
 
 After looking hard, if there's truly nothing worth raising, skip the inline comments entirely and write a single honest top-level sentence — "Read through, this looks good to me" or similar. Don't make up concerns to look thorough, and don't pad with empty praise.
 
+#### Final audit pass (mandatory, before output)
+
+Once every comment is drafted, read the whole set back as the author who'll receive it — cold, without the context you built up reviewing. For each comment, run three checks and rewrite any that fail:
+
+1. **Succinct without dropping context.** Can it be shorter without losing the line ref, the why, or the failing case? Cut the words that don't carry meaning; keep the ones that do. If a sentence survives deletion without the point changing, delete it.
+2. **Not rambling.** Is the ask in the first sentence, or buried? Is it one thread the author can follow on first read, or a chain of dash-joined clauses they have to untangle? If you trip reading it back, rewrite it shorter and clearer.
+3. **No AI smell.** Re-check against the `rs-tone` `pr-review` tells — neutral-professional polish, severity labels, formulaic openers, closing sign-offs, restating the PR, over-citing pattern names, hedges stacked on hedges. If a polite stranger could have written it, it's off register.
+
+This pass is about the set as a whole too: if two comments overlap, merge or cut one. Output only after every comment clears all three.
+
 ### Step 6: Output and Recommend a Verdict
 
 For each inline comment, write the file and line as plain text, then put the comment body inside its own fenced code block so the user can copy it with a single click. Like:

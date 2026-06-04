@@ -153,7 +153,9 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 
 - Match how you'd write the same point on Slack to a teammate. Lowercase is fine, including at the start of a comment. Dropped apostrophes (`thats`, `im`, `dont`, `couldnt`, `didnt`, `wouldnt`, `isnt`, `wasnt`) are fine too. Don't be precious about mixed capitalization within a thread.
 - Each comment is one thought, said once. Open with the actual subject — the question, the observation — not a frame or a label.
-- **One sentence is the default, two is the ceiling for a normal comment.** Add the second only to carry the detail that makes it land — the line ref, the why, or the failing case. If it wants three or more, it's really two findings: split them into separate comments, or move the cross-cutting part to the summary. Fragments beat full sentences. Terse and succinct while keeping that context — cut filler, never the detail.
+- **Lead with the point, not the buildup.** The ask or the takeaway goes first — what you want the author to do or notice. Supporting mechanism comes after. Never bury the ask at the end of a wall of reasoning; the author should know what you want by the end of the first sentence.
+- **One sentence is the default, two is the ceiling for a normal comment.** Add the second only to carry the detail that makes it land — the line ref, the why, or the failing case. If it wants more, that's usually two findings — split them, or move the cross-cutting part to the summary. The one exception: a single finding that genuinely needs a short reasoning chain to make sense (a subtle bug, a non-obvious mechanism). Keep that together — but see the next rule.
+- **Readable beats crammed.** Terse means few words, not everything jammed into one breathless sentence. Don't chain clause after clause with dashes and `so`s until the author has to re-read to follow the thread. When a finding needs a few beats, give it a few short sentences in logical order — lead → mechanism → ask. That's clarity, not padding. Fragments beat full sentences; a run-on beats neither.
 - Self-contained at the line it lives on. No "see point 3 above", no shared preamble.
 - Hedge honestly and vary it. Bank: `i think`, `i feel like`, `kinda`, `lowkey`, `tbh`, `imo`, `might be missing something`, `could be wrong but`, `not sure but`.
 - Use your normal reaction shapes when they fit:
@@ -188,6 +190,16 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 > dumb question but — is there a reason we cant just reuse `parseConfig` here? the new helper is doing roughly the same thing minus the env-var resolution, which we could pull into the caller.
 
 > not sure but — does this still work when the upstream returns an empty array? the `[0]` access at line 47 will throw, and i dont see a guard. might be missing something about how the caller validates.
+
+For a finding that needs a reasoning chain, lead with the ask and walk it in short sentences — don't cram it into a dash-chained run-on.
+
+❌ crammed, ask buried at the end:
+
+> confirmed against air's source - it spawns the gateway via sh with Setpgid, so its in a separate pgroup. the SIGKILL on 80 only hit air, never the gateway. what reaps the gateway is air catching SIGINT and forwarding under the new 30s kill_delay - thats the real fix. the catch: air's kill_delay and this poll are both 30s and start together, so on a stuck drain the poll can SIGKILL air just before air kills the gateway, re-orphaning :8080. narrow, not blocking - but worth reframing the comment so it doesnt imply the group signal reaches the gateway.
+
+✅ ask first, mechanism in short beats:
+
+> can we reword this? it reads like the group signal reaches the gateway, but it doesnt. air spawns the gateway with Setpgid, so its in its own pgroup — the SIGKILL on :80 only ever hits air. the gateway actually dies because air forwards SIGINT under the new 30s kill_delay. not blocking.
 
 ### external
 
