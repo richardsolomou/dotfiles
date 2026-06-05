@@ -401,7 +401,7 @@ For multi-step work, give one short status update per key moment — when someth
 - Be terse. State the why or the non-obvious constraint in as few words as land it — one tight sentence beats three. Cut filler ("This function…", "Here we…", "Note that…"); lead with the point.
 - Keep the context that earns its place: the reason behind a non-obvious choice, an invariant, a gotcha, a link to a spec or issue. Terse means dense, not vague — never drop the detail that makes the comment worth reading.
 - Use proper grammar and punctuation. Avoid dramatic and all-caps comments.
-- IMPORTANT: Comment on the code as it is, not as it was. Describe what the code does now, not how it got here — a comment narrating a recent refactor ("combined two queries into one") is noise once the change has landed.
+- IMPORTANT: Comment on the code as it is, not the change that produced it — it should read the same a year after the change landed. No narrating the edit ("now uses X instead of Y"), no PR/issue numbers explaining why a change was made ("#78 dropped the retry", "match django_redis (#77)"), no referencing old behavior or the bug just fixed ("this used to throw on empty"). State the invariant as it stands now; the "why" behind the change goes in the commit and PR. Linking a *still-live* spec or upstream issue is fine ("workaround for grpc/grpc#1234") — that constraint is still true today.
 - Don't comment on code that is self-explanatory.
 
 ## Approach to work
