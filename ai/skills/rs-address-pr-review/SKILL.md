@@ -2,7 +2,6 @@
 name: rs-address-pr-review
 description: "Walk through PR review comments one by one, explain what each reviewer is asking for and the concepts behind it, propose a concrete fix, and offer to apply. Built for learning — surfaces Go and distributed-systems concepts when they come up, rather than blindly patching."
 argument-hint: "<pr-url|pr-number>"
-disable-model-invocation: true
 ---
 
 # Address Review

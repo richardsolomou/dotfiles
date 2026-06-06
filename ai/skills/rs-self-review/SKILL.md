@@ -2,7 +2,6 @@
 name: rs-self-review
 description: "Adversarial review of your own PR or current branch — find the bugs, design issues, and missing tests you'd have caught reviewing someone else's code. Teaches the underlying concept behind each finding and proposes concrete fixes, with an offer to apply them. Built for learning, designed to counter self-bias."
 argument-hint: "[pr-url|pr-number]"
-disable-model-invocation: true
 ---
 
 # Self Review

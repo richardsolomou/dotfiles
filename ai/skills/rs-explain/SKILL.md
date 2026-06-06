@@ -2,7 +2,6 @@
 name: rs-explain
 description: "Walk through any piece of content — a PR, a diff, a code file at a ref, an issue or comment, an external URL, or pasted text — and explain what it is, what it does, why it exists, and the concepts in play. Pure teaching, no critique. Used by rs-review-pr (and other orientation steps) as the explanation primitive; useful standalone when someone shares something and you want to understand it before engaging."
 argument-hint: "[pr-url|pr-number|github-url|url|pasted-text|no-arg]"
-disable-model-invocation: true
 ---
 
 # Explain

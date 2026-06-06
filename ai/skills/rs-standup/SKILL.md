@@ -1,7 +1,6 @@
 ---
 name: rs-standup
-description: Generate standup notes from GitHub PR activity
-disable-model-invocation: true
+description: "Generate a daily standup entry from your GitHub PR activity — queries merged and active PRs since the last standup, composes terse Slack-canvas bullets in your house style, archives the entry locally, and copies it to the clipboard as rich text. Use when the user asks to write, generate, or prep their standup / daily update / standup notes, or asks 'what did I do yesterday?' in a standup context."
 ---
 
 # Standup Notes Generator
@@ -10,7 +9,7 @@ Generate a daily standup entry for the team's shared Slack canvas (<https://post
 
 ## Purpose
 
-Standups are daily (weekdays), written as bullets under your `@Richard` name in the canvas. Each day has a date header (e.g. "4 June"), newest at the top, and each person adds a bullet list of what they did that day. There is no "Did / Will do" split — in-flight work is flagged with "started …" or "continuing …".
+Standups are daily (weekdays), written as bullets under your `@Richard` name in the canvas. Each day has a date header (e.g. "4 June"), newest at the top, and each person adds a bullet list of what they did that day. It is purely retrospective — only what you did today/yesterday, never what you plan to do next. In-flight work is described in the past tense as "started …" or "continuing …", not as a future intention.
 
 ## Style
 
