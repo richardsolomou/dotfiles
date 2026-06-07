@@ -54,7 +54,7 @@ When stuck, systematically:
 - **Composition over inheritance** - Use dependency injection
 - **Interfaces over singletons** - Enable testing and flexibility
 - **Explicit over implicit** - Clear data flow and dependencies
-- **Test-driven when possible** - Never disable tests, fix them
+- **Test-driven when possible**
 
 ### Code Quality
 
@@ -65,10 +65,7 @@ When stuck, systematically:
   - Follow project formatting/linting
 
 - **Before committing**:
-  - Run formatters/linters
-    - In a Rust codebase, run `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo shear` to check for issues.
-    - If bin/fmt exists, run it.
-    - Otherwise, run the formatter for the language.
+  - Run the project's formatter/linter — `bin/fmt` if it exists, otherwise the language's formatter. Rust specifics under Rust-Specific Guidelines.
   - Ensure commit message explains "why"
 
 ### Error Handling
@@ -106,9 +103,7 @@ For implementation decisions, weigh testability, maintainability, consistency, s
 - [ ] Code is not dead or redundant and minimal to get the job done
 - [ ] Code follows project conventions
 - [ ] No linter/formatter warnings
-- [ ] **All dependencies are used (no cargo-shear warnings in Rust)**
-- [ ] **All Cargo features enable real functionality (Rust)**
-- [ ] **No tool warnings ignored without strong justification**
+- [ ] No tool warnings ignored without strong justification
 - [ ] Commit messages are clear
 - [ ] Implementation matches plan
 - [ ] No TODOs without issue numbers
@@ -136,8 +131,7 @@ For implementation decisions, weigh testability, maintainability, consistency, s
 **ALWAYS**:
 
 - Commit working code incrementally
-- Learn from existing implementations
-- Stop after 2 failed attempts, document what failed, and re-plan
+- Learn from existing code, and stop to re-plan after 2 failed attempts (see Process)
 
 ## Self-Improvement
 
@@ -168,53 +162,9 @@ When working on other repositories, use the following workflow:
 
 ### Production Architecture
 
-**CRITICAL**: PostHog production runs behind load balancers and proxies. Always consider this when implementing features that involve IP addresses, rate limiting, authentication, or geolocation.
+**CRITICAL**: PostHog production runs behind load balancers (AWS NLB → Contour/Envoy ingress → pods; Contour `num-trusted-hops: 1`, NLB `preserve_client_ip`). For anything touching client IPs — rate limiting, auth, geolocation — **never use the socket IP**; it's always the load balancer, not the client. Use `X-Forwarded-For`, then `X-Real-IP`, then `Forwarded` (RFC 7239), with socket IP only as a local-dev fallback. Rust: `tower_governor::key_extractor::SmartIpKeyExtractor`; look for similar "smart" extractors in other languages.
 
-#### Architecture Stack
-
-- **AWS Network Load Balancer (NLB)** → **Contour/Envoy Ingress** → **Application Pods**
-- Contour is configured with `num-trusted-hops: 1` to properly extract client IPs from headers
-- NLB preserves client IPs via `preserve_client_ip.enabled=true`
-
-#### Client IP Detection
-
-**NEVER use socket IP addresses** - they will always be the load balancer's IP, not the client's IP.
-
-**ALWAYS use X-Forwarded-For headers** in this precedence:
-
-1. `X-Forwarded-For` (primary, set by load balancer/proxy)
-2. `X-Real-IP` (fallback)
-3. `Forwarded` (RFC 7239 standard format)
-4. Socket IP (last resort only for local development)
-
-**Common Libraries:**
-
-- Rust: `tower_governor::key_extractor::SmartIpKeyExtractor`
-- Look for similar "smart" IP extractors in other languages
-
-#### Common Pitfalls to Avoid
-
-- ❌ Using socket IP for rate limiting → all requests share one rate limit
-- ❌ Using socket IP for authentication → security bypass
-- ❌ Using socket IP for geolocation → all traffic appears from one location
-- ❌ Implementing custom IP detection → reinventing the wheel, likely buggy
-
-#### Infrastructure Repository References
-
-For detailed production configuration, consult these repos:
-
-- **`~/dev/posthog/posthog-cloud-infra`** - Terraform/AWS infrastructure
-  - Contains: NLB config, VPC setup, load balancer settings
-  - See: `README.md` for architecture diagram
-
-- **`~/dev/posthog/charts`** - Helm charts and K8s deployment configs
-  - Contains: Contour/Envoy configuration, ingress rules, header policies
-  - Key files:
-    - `argocd/contour/values/values.yaml` - num-trusted-hops config
-    - `argocd/contour-ingress/values/values.prod-*.yaml` - routing and header policies
-    - `docs/CONTOUR-GEOIP-README.md` - GeoIP and header handling
-
-**When implementing networking/IP-related features**, check these repos to understand how headers flow through the infrastructure.
+For infra detail, see `~/dev/posthog/posthog-cloud-infra` (NLB/VPC/Terraform) and `~/dev/posthog/charts` (Contour/Envoy + ingress header policies — `argocd/contour/values/values.yaml`, `argocd/contour-ingress/values/values.prod-*.yaml`, `docs/CONTOUR-GEOIP-README.md`).
 
 ### SDK Repositories
 
@@ -343,7 +293,6 @@ Before implementing functionality that operates on a type:
 - **Before writing any parsing/serialization code**: Read the struct definition and check its derives
 - **If a struct has `#[derive(Deserialize)]`**: Use `serde_json::from_value()`, `from_str()`, etc. - never manually extract fields
 - **If a struct has `#[derive(Serialize)]`**: Use `serde_json::to_value()`, `to_string()`, etc.
-- **Red flag**: If you're writing >10 lines to convert JSON to a struct, stop and check the derives
 
 #### Quality Checklist for Rust
 
