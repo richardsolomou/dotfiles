@@ -1,0 +1,451 @@
+---
+name: rs-sprint-planning
+description: "Write a bi-weekly sprint planning update for the AI Gateway team, ready to post as a GitHub comment on the sprint issue. Automates sprint detection, merged-PR fetching, and plan-first retro construction from the previous sprint's comment. Use when the user asks to write/prep the sprint planning update or retro, post the sprint comment, archive the board's old Done items (`archive`), or show what the team is working on (`goals`)."
+argument-hint: "[archive|goals]"
+---
+
+# Sprint Planning
+
+Generate a bi-weekly sprint planning update for the AI Gateway team (configurable for other teams via `scripts/config.sh`), ready to post as a GitHub comment on the sprint planning issue.
+
+## Team Configuration
+
+All team-specific values live in `scripts/config.sh`. The helper scripts source it automatically; the inline `gh` commands in this skill source it too, so always run them with the leading `source` line shown.
+
+The defaults target the **AI Gateway** team:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `SPRINT_TEAM_SLUG` | `team-ai-gateway` | GitHub team slug under the org |
+| `SPRINT_TEAM_NAME` | `AI Gateway` | Display name used in prose |
+| `SPRINT_PROJECT_NUMBER` | _(unset)_ | Project board number — empty until the team has a board |
+| `SPRINT_GOALS_URL` | `https://posthog.com/teams/ai-gateway#goals` | Goals page link |
+| `SPRINT_COMMENT_HEADER` | `# Team AI Gateway` | Markdown heading identifying the team's comment |
+| `SPRINT_ORG` | `PostHog` | GitHub org |
+| `SPRINT_REPO` | `PostHog/posthog` | Repo holding sprint issues |
+| `SPRINT_FALLBACK_MEMBERS` | `richardsolomou brandonleung` | Space-separated handles used only if the members API fails |
+
+Override any value with an environment variable, or edit the defaults in `config.sh`.
+
+In the output templates below, `{SPRINT_…}` placeholders refer to these config values; read them from `config.sh` (or `source` it) and substitute the resolved values before presenting output.
+
+> **No project board yet:** the AI Gateway team does not have a project board, so `SPRINT_PROJECT_NUMBER` is empty by default. The board steps (Step 5, Step 12, and the board half of the `goals` workflow) detect this and skip cleanly — the plan is built from in-flight work and the user's input instead. When the team creates a board, set `SPRINT_PROJECT_NUMBER` in `config.sh` and these steps light up automatically.
+>
+> **Prerequisite (once a board exists):** the board scripts call `gh project`, which needs the `read:project` scope. If they fail with a missing-scope error, run `gh auth refresh -s read:project` once.
+
+## Quarter Objectives
+
+Pull the quarter goals and their statuses from the previous sprint's comment (Step 3). Carry them forward, applying any status changes the user confirms in Step 9. If no previous comment exists (the team's first sprint), ask the user for the team's current quarter objectives.
+
+## Arguments
+
+- `/rs-sprint-planning archive` — Skip the full sprint planning workflow and jump directly to archiving old Done items from the project board. When this argument is present:
+  1. Run Step 1 (Detect Sprint Context) to get `sprint_start`
+  2. Jump directly to Step 12 (Archive Previous Sprint's Done Items)
+  3. Exit after archiving
+
+- `/rs-sprint-planning goals` — Show what the team is currently working on by merging the current sprint plan with project board data, grouped by assignee. When this argument is present:
+  1. Run Step G1 (Fetch Team Members)
+  2. Run Step G2 (Determine Current User)
+  3. Run Step G3 (Fetch Current Sprint Plan)
+  4. Run Step G4 (Fetch Board Goals)
+  5. Run Step G5 (Merge and Display)
+  6. Exit after displaying
+
+## Your Task
+
+Follow these steps in order. Gather as much data automatically as possible before asking the user anything.
+
+### Step 1: Detect Sprint Context
+
+Run the helper script to find the current and previous sprint issues:
+
+```bash
+scripts/detect-sprint.sh
+```
+
+This returns tab-separated fields:
+`current_number\tcurrent_title\tsprint_start\tsprint_end\tprev_number\tprev_title\tprev_start\tprev_end`
+
+Store all these values. You need:
+
+- `current_number` and `current_title` for the issue to post on
+- `sprint_start` and `sprint_end` for the PR date range
+- `prev_number` for fetching the previous comment
+- `prev_start` and `prev_end` for the previous sprint's PR date range
+
+### Step 2: Fetch Team Members
+
+```bash
+source scripts/config.sh
+gh api "orgs/${SPRINT_ORG}/teams/${SPRINT_TEAM_SLUG}/members" --jq '.[].login'
+```
+
+If this fails (permissions, etc.), fall back to `SPRINT_FALLBACK_MEMBERS`, or ask the user for the team's members if it is empty.
+
+### Step 3: Fetch Previous Sprint Comment
+
+```bash
+scripts/fetch-previous-comment.sh <prev_number>
+```
+
+If the result is "NOT_FOUND" (e.g., the team's first sprint), skip the plan-first retro approach entirely. You'll build the retro purely from merged PRs and project board items instead, confirmed with the user.
+
+If the result is not "NOT_FOUND", parse the comment to extract:
+
+- The **Plan** section from the previous sprint (this becomes the retro skeleton)
+- Each team member's planned items
+- The quarter goal statuses
+
+### Step 4: Fetch Merged PRs
+
+For each team member, fetch their merged PRs during the **previous** sprint period. Issue all fetch calls in parallel (multiple Bash tool calls in a single response) to minimize wall-clock time:
+
+```bash
+scripts/fetch-team-prs.sh <username> <prev_start> <prev_end>
+```
+
+Store all PR data per team member.
+
+### Step 5: Fetch Project Board Items
+
+If `SPRINT_PROJECT_NUMBER` is empty (no board yet), skip this step — there are no board items to categorize. The plan in Step 9 is then drafted from the previous sprint's in-flight work and the user's input.
+
+```bash
+source scripts/config.sh
+[ -n "$SPRINT_PROJECT_NUMBER" ] && gh project item-list "$SPRINT_PROJECT_NUMBER" --owner "$SPRINT_ORG" --format json --limit 200
+```
+
+Categorize items by status column:
+
+- **Done** items inform the retro
+- **In Progress** and **Todo** items inform the plan
+- **In Review** and **Approved** items are treated as **In Progress** for planning purposes. These are PR-based items that may lack board assignees. For each, fetch the PR author with `gh pr view <number> --repo <owner/repo> --json author --jq .author.login` and use that as the assignee. Only include items whose author is a current team member.
+
+Each item's `content.url` field contains the issue or PR URL. Preserve these for linking in the output.
+
+### Step 6: First Prompt - Context
+
+Now that you have all the automated data, ask the user:
+
+> I'm writing the sprint planning update for **{current_title}** (#{current_number}).
+>
+> Team members: {list from Step 2}
+>
+> One question before I build the draft: is anyone off during the sprint?
+
+Wait for the user's response before continuing.
+
+### Step 7: Build Retro
+
+There are two paths depending on whether a previous sprint comment was found.
+
+Path A - Previous plan exists (plan-first retro):
+
+Start from what was **planned**, not what was shipped.
+
+Extract previous plan items: From the previous sprint comment (Step 3), parse each person's planned items. These become the retro checklist.
+
+Auto-resolve statuses: For each planned item, search the merged PRs (Step 4) for a match by:
+
+- Issue number or PR number overlap
+- Keyword similarity in titles
+- Explicit references
+
+If a matching merged PR is found, mark the item as done. Keep the PR's URL on hand for the rare case a reader would want to open it, but the bullet text is the outcome, not the PR title.
+
+Identify side quests: Any merged PRs that don't map to a planned item are candidate "side quests" or unplanned work.
+
+Path B - No previous plan (first sprint or NOT_FOUND):
+
+Build the retro entirely from merged PRs and project board "Done" items, grouping each person's work and presenting it for confirmation.
+
+**Synthesize, don't transcribe.** The retro audience is the wider company, not the team. Translate the raw PRs into plain-language outcomes:
+
+- Describe **what was accomplished**, in terms a reader outside the team understands — not PR titles, which are often verbose or too low-level to mean anything.
+- **Collapse several related PRs into one bullet.** A bullet like "Built the spend path end to end — ledger, real-spend settlement, pre-call admission" beats nine PRs named `feat(quota): …`.
+- **Links are the exception, not the rule.** Most bullets carry no link. Attach a single representative PR link only to a flagship item a reader might plausibly open. Never trail a bullet with a list of links.
+- Optionally group a person's bullets under a short theme when it aids reading; a small team's handful of bullets often needs no grouping at all.
+
+### Step 8: Second Prompt - Retro Review
+
+If previous plan exists (Path A), present the reconciled retro per person, each item as a plain-language outcome (not a PR title):
+
+> Here's what I've reconstructed from last sprint's plan vs. what shipped:
+>
+> **@member1**
+>
+> - ✅ Planned outcome 1
+> - ✅ Planned outcome 2
+> - ❓ Planned item 3 → no matching PR found
+>
+> **Unplanned work I found (side quests?):**
+>
+> - Plain-language outcome from an unmatched PR
+>
+> Questions:
+>
+> 1. For items marked ❓, what's the status? (done, in progress, blocked, cancelled)
+> 2. Which unplanned items should I include as side quests?
+> 3. Anything else to add or correct?
+
+If no previous plan (Path B), present the synthesized accomplishments per person:
+
+> Here's what I found shipped during the sprint:
+>
+> **@member1**
+>
+> - Plain-language outcome (synthesized from one or more PRs)
+> - Another outcome
+>
+> **@member2**
+>
+> - Plain-language outcome
+>
+> Questions:
+>
+> 1. Do these accomplishments read accurately?
+> 2. Anything missing that didn't result in PRs?
+> 3. Anything to exclude?
+
+Wait for the user's response.
+
+### Step 9: Third Prompt - Plan and Objectives
+
+If there is no board (Step 5 skipped), ask the user directly what each person is planning this sprint, seeding the prompt with any unfinished items from last sprint's plan (Step 3). Otherwise, present project board items as a draft plan:
+
+> Here's the plan I've drafted from the project board:
+>
+> **High priority:**
+> @member1 - item1, item2
+> @member2 - item3
+>
+> **Side quests:**
+>
+> - item4
+>
+> Questions:
+>
+> 1. Any adjustments to the plan?
+> 2. Any changes to quarter goal statuses?
+
+Wait for the user's response.
+
+### Step 10: Generate the Update
+
+Compose the final sprint update using all gathered and confirmed data. Write a short narrative summary paragraph for the retro that captures the team's key themes and accomplishments.
+
+**IMPORTANT**: Output the update as raw markdown inside a code block so the user can copy/paste it directly into GitHub.
+
+Substitute the configured values into the template: use `SPRINT_COMMENT_HEADER` for the top heading, `SPRINT_GOALS_URL` for the goals link, and the board URL `https://github.com/orgs/{SPRINT_ORG}/projects/{SPRINT_PROJECT_NUMBER}` for the Plan link. The quarter goals come from Step 3 (or the user, for a first sprint), not the example below.
+
+Use this exact format:
+
+````markdown
+```markdown
+{SPRINT_COMMENT_HEADER}
+
+**Off during the sprint:** [names or "Nobody!"]
+
+## Quarter goals
+
+[Link to goals]({SPRINT_GOALS_URL})
+
+1. First quarter objective 🟡
+2. Second quarter objective ⚪
+3. … (carry the goals and statuses forward from Step 3)
+
+<details>
+⚪ = Not Started
+🟡 = In Progress
+🟢 = Completed
+🔴 = Won't complete
+🔵 = Abandoned
+</details>
+
+## Retro
+
+Narrative summary paragraph describing the team's key accomplishments and themes from the sprint.
+
+<details>
+
+@member1
+
+- Plain-language outcome describing what shipped, synthesized from one or more PRs
+- Another outcome — link a flagship item only when a reader might open it ([PR](url))
+
+@member2
+
+- Plain-language outcome
+
+</details>
+
+## Plan
+
+[Project Board](https://github.com/orgs/{SPRINT_ORG}/projects/{SPRINT_PROJECT_NUMBER})
+
+### High priority
+
+@member1
+- [Work item description](https://github.com/PostHog/posthog/issues/123)
+- [Another work item](https://github.com/PostHog/posthog/pull/456)
+
+@member2
+- [Work item description](https://github.com/PostHog/posthog/issues/789)
+
+### Side quests
+
+- [Side quest item](https://github.com/PostHog/posthog/issues/101)
+- Plain text item if no link available
+```
+````
+
+### Step 11: Offer to Post
+
+After showing the output, ask:
+
+> Would you like me to post this as a comment on #{current_number}?
+
+If the user confirms, post with:
+
+```bash
+source scripts/config.sh
+gh issue comment <current_number> --repo "$SPRINT_REPO" --body "$(cat <<'EOF'
+<the markdown>
+EOF
+)"
+```
+
+### Step 12: Archive Previous Sprint's Done Items
+
+After posting the comment (or if the user declines to post), offer to clean up the project board by archiving Done items from previous sprints.
+
+1. Run the helper script to find archivable items:
+
+   ```bash
+   scripts/archive-done-items.sh <sprint_start>
+   ```
+
+2. If the result is an empty array, skip silently — no prompt needed.
+
+3. Otherwise, present the list and ask for confirmation:
+
+   > I found {N} items in the Done column that were completed before this sprint ({sprint_start}). Would you like me to archive them to keep the board clean?
+   >
+   > {list of items with titles and closed dates}
+
+4. If the user confirms, archive each item:
+
+   ```bash
+   source scripts/config.sh
+   gh project item-archive "$SPRINT_PROJECT_NUMBER" --owner "$SPRINT_ORG" --id <item-id>
+   ```
+
+## Goals Workflow
+
+These steps apply when the `goals` argument is provided. They run independently of the main sprint planning workflow.
+
+### Step G1: Fetch Team Members
+
+Follow Step 2 (Fetch Team Members) from the main workflow.
+
+### Step G2: Determine Current User
+
+```bash
+gh api user --jq .login
+```
+
+This user's section is highlighted in the output. If the API call fails, fall back to the output of `git config user.email` and match against team member handles.
+
+### Step G3: Fetch Current Sprint Plan
+
+1. Detect the current sprint using Step 1 (Detect Sprint Context) from the main workflow.
+
+2. Fetch the team's comment from the current sprint issue:
+
+   ```bash
+   scripts/fetch-previous-comment.sh <current_number>
+   ```
+
+3. If the result is "NOT_FOUND", skip this step (no sprint plan exists yet). The output will rely solely on board data from Step G4.
+
+4. If a comment is found, parse the **Plan** section to extract each team member's planned items. Each item may be plain text or a `[title](url)` link.
+
+### Step G4: Fetch Board Goals
+
+Run the helper script to fetch In Progress and Todo items with assignee data:
+
+```bash
+scripts/fetch-board-goals.sh
+```
+
+This returns a JSON array of items, each with `id`, `title`, `status`, `url`, `type`, `number`, and `assignees` fields.
+
+### Step G5: Merge and Display
+
+Merge the sprint plan (Step G3) with the project board (Step G4) into a single view per team member.
+
+**Merge strategy:**
+
+1. Start from the sprint plan items as the baseline for each person.
+2. For each board item, check if it matches a plan item by URL, issue/PR number, or keyword similarity in the title.
+3. Matched items: use the board item's status (In Progress / Todo) and URL, preserving the plan's item description.
+4. Unmatched plan items (not on the board): include as-is from the plan, without a status subheading.
+5. Unmatched board items (not in the plan): append under a **"New (not in sprint plan):"** subheading.
+6. If no sprint plan exists (Step G3 returned NOT_FOUND), display board items only, grouped by status as before.
+
+**Output format:**
+
+```markdown
+## Team Goals - {SPRINT_TEAM_NAME}
+
+[Project Board](https://github.com/orgs/{SPRINT_ORG}/projects/{SPRINT_PROJECT_NUMBER})
+
+**--> @currentuser** (you)
+
+**In Progress:**
+- [Item from plan that's in progress on board](url)
+
+**Todo:**
+- [Item from plan that's todo on board](url)
+
+**Other planned:**
+- Item from plan not on board
+
+**New (not in sprint plan):**
+- [Board item not in plan](url) - In Progress
+
+---
+
+@teammate
+
+**In Progress:**
+- [Their item](url)
+
+---
+
+### Unassigned
+- [Orphaned item](url) - In Progress
+- Draft board item title - Todo
+```
+
+**Display rules:**
+
+- Current user appears first with `**-->**` prefix and `(you)` suffix
+- Other team members in alphabetical order
+- Items with URLs use `[title](url)` links
+- DraftIssues (no URL) show plain text title
+- Unassigned items appear at bottom in a separate section
+- Items with multiple assignees appear under each assignee
+- Status subsections only shown if items exist for that status
+- Only show team members who have at least one item assigned
+- Side quests from the sprint plan appear under their own heading per person
+
+## Formatting Rules
+
+The output template in Step 10 is the authoritative format reference. These rules cover non-obvious behavior not visible in the template:
+
+- **Retro bullets are outcomes, not PR titles** — synthesize what shipped into plain language a reader outside the team understands, collapsing related PRs into one bullet. Most bullets carry no link; attach at most one representative PR link to a flagship item, and never trail a bullet with a list of links.
+- **No status emojis on retro outcomes** — the retro lists shipped work, so checkmarks or status indicators are not needed on individual entries
+- **Always include a Side quests section in the Plan** — include it even as a placeholder if there are no side quests
+- **Never post without explicit user confirmation** — always ask before running the `gh issue comment` command
