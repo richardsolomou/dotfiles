@@ -346,12 +346,17 @@ For multi-step work, give one short status update per key moment — when someth
 
 ## Comments
 
-- Comment only on what is not obvious to a skilled programmer reading the code. Most code needs none.
+- Default to no comment. Most code needs none — comment only on what is not obvious to a skilled programmer reading the code, and earn each one. When in doubt, leave it out; an unnecessary comment is noise that future readers must read, trust, and maintain.
+- Don't comment on code that is self-explanatory, and don't restate what the code already says. If a comment just narrates the line below it ("increment the counter", "loop over users"), delete it. While editing, remove existing comments that fail this bar — don't preserve clutter just because it was already there.
 - Be terse. State the why or the non-obvious constraint in as few words as land it — one tight sentence beats three. Cut filler ("This function…", "Here we…", "Note that…"); lead with the point.
 - Keep the context that earns its place: the reason behind a non-obvious choice, an invariant, a gotcha, a link to a spec or issue. Terse means dense, not vague — never drop the detail that makes the comment worth reading.
 - Use proper grammar and punctuation. Avoid dramatic and all-caps comments.
-- IMPORTANT: Comment on the code as it is, not the change that produced it — it should read the same a year after the change landed. No narrating the edit ("now uses X instead of Y"), no PR/issue numbers explaining why a change was made ("#78 dropped the retry", "match django_redis (#77)"), no referencing old behavior or the bug just fixed ("this used to throw on empty"). State the invariant as it stands now; the "why" behind the change goes in the commit and PR. Linking a *still-live* spec or upstream issue is fine ("workaround for grpc/grpc#1234") — that constraint is still true today.
-- Don't comment on code that is self-explanatory.
+- IMPORTANT: Comment on the code as it is, not the change that produced it — it should read the same a year after the change landed, with no trace of how the code got there. Telltale signs you're writing meta-commentary instead of describing the state:
+  - Narrating the edit: "now uses X instead of Y", "switched to …", "refactored to …".
+  - Referencing old behavior or the bug just fixed: "this used to throw on empty", "previously double-counted".
+  - Describing the problem the change eliminates rather than the behavior that remains: "fixes the race where …", "prevents the old deadlock". State what the code guarantees now ("holds the lock across the read so the count stays consistent"), not the defect it retired.
+  - Citing a PR/issue as the reason a change was made: "#78 dropped the retry", "match django_redis (#77)".
+  State the invariant as it stands now; the "why" behind the change goes in the commit and PR. Linking a *still-live* spec or upstream issue is fine ("workaround for grpc/grpc#1234") — that constraint is still true today.
 
 ## Approach to work
 
