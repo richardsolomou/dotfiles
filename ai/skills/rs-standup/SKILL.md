@@ -1,6 +1,6 @@
 ---
 name: rs-standup
-description: "Generate a daily standup entry from your GitHub PR activity — queries merged and active PRs since the last standup, composes terse Slack-canvas bullets in your house style, archives the entry locally, and copies it to the clipboard as rich text. Use when the user asks to write, generate, or prep their standup / daily update / standup notes, or asks 'what did I do yesterday?' in a standup context."
+description: "Generate a daily standup entry from your GitHub and Slack activity — queries everything you touched on GitHub since the last standup (PRs merged, opened, reviewed, commented; issues) plus your Slack messages (debugging, incidents, decisions, support), composes terse Slack-canvas bullets in your house style, archives the entry locally, and copies it to the clipboard as rich text. Use when the user asks to write, generate, or prep their standup / daily update / standup notes, or asks 'what did I do yesterday?' in a standup context."
 ---
 
 # Standup Notes Generator
@@ -28,7 +28,7 @@ Model entries on Brandon's approach:
 
 - **Group related PRs** into one lead bullet rather than listing each.
 - **Flag in-flight work** — "started per-product gateway routing", "continuing to try to get an e2e working in dev".
-- **Include non-PR work** the user mentions — reviews, incidents, meetings, sales calls, holidays. GitHub queries won't surface these; ask or let the user add them.
+- **Include non-code work** — reviews, incidents, debugging, support, decisions, meetings, sales calls, holidays. The GitHub and Slack passes surface a lot of this; meetings, calls, and holidays still won't show up, so ask or let the user add them.
 
 ## Your Task
 
@@ -61,39 +61,66 @@ This returns tab-separated: `<status>\t<path>\t<date>`
 
 If `status` is "found", read the previous notes — items marked "started" or "continuing" there may still be in flight and worth carrying as "continuing …" if GitHub shows more activity on them.
 
-### Step 3: Query GitHub for PR Activity
+### Step 3: Query GitHub for Activity
 
-**Merged PRs** (merged since last standup):
+GitHub only tells half the story, and within GitHub it's not just your own PRs and commits — **any** activity counts: reviewing others' PRs, commenting, opening issues, triaging. Cast a wide net, then judge what's worth a bullet.
+
+**Merged PRs** (the "landed" signal — keep this dedicated query for reliable timestamps):
 
 ```bash
-gh api search/issues --method GET -f q="author:richardsolomou is:pr is:merged merged:>=${last_standup_date}" --jq '.items[] | {number, title, url: .html_url, repo: .repository_url, merged_at: .pull_request.merged_at}'
+gh api search/issues --method GET -f q="author:richardsolomou is:pr is:merged merged:>=${last_standup_date} org:PostHog" --jq '.items[] | {number, title, url: .html_url, repo: .repository_url, merged_at: .pull_request.merged_at}'
 ```
 
 Note: `gh search prs --merged` is unreliable for date filtering — it returns stale results. Always use `gh api search/issues` with the `merged:` qualifier instead, which returns accurate `merged_at` timestamps.
 
-**Deduplication**: The `merged:>=` query includes PRs merged on the last standup day itself, which may already appear in the previous standup's notes. Exclude anything already reported.
-
-**Active PRs** (open PRs across the PostHog org):
+**Everything else you touched** (PRs and issues you authored, commented on, were mentioned in, or assigned to, updated since last standup):
 
 ```bash
-gh api search/issues --method GET -f q="author:richardsolomou is:pr is:open org:PostHog" --jq '.items[] | {number, title, url: .html_url, repo: .repository_url}'
+gh api search/issues --method GET -f q="involves:richardsolomou updated:>=${last_standup_date} org:PostHog" --jq '.items[] | {number, title, state, url: .html_url, repo: .repository_url, is_pr: (.pull_request != null)}'
 ```
 
-For each open PR found, check for commits since `last_standup_date`:
+**PRs you reviewed** (`involves:` does not cover reviews, so query separately):
+
+```bash
+gh api search/issues --method GET -f q="reviewed-by:richardsolomou is:pr updated:>=${last_standup_date} org:PostHog" --jq '.items[] | {number, title, state, url: .html_url, repo: .repository_url}'
+```
+
+For open PRs you authored, check for commits since `last_standup_date` to tell new from carried work:
 
 ```bash
 gh pr view <number> --repo <owner/repo> --json isDraft,commits
 ```
 
-Open PRs with recent commits represent work done — include them as "started …" (new this period) or "continuing …" (carried from a previous entry).
+Open PRs with recent commits → "started …" (new this period) or "continuing …" (carried from a previous entry).
 
-### Step 4: Compose the Entry
+**Deduplication**: these queries overlap — the same PR can appear in several. Dedup by `number` + repo. The date qualifiers also include the last standup day itself, which may already be in the previous standup's notes; exclude anything already reported. A heavy review/comment day is real standup material ("lots of pr reviews", "reviewed the X stack") even with no PRs of your own.
 
-Write the canvas entry: terse lowercase bullets per the Style section. Don't repeat PR titles verbatim — summarize like you'd say it out loud ("first-party gateway auth for posthog api keys", not the conventional-commit title). Group stacks of related PRs into a lead bullet with sub-bullets.
+### Step 4: Query Slack for Activity
 
-If GitHub activity looks thin (mostly reviews/meetings days), note that to the user — they likely have non-PR items to add.
+Much of what you did never reaches GitHub — debugging in a thread, incident response, design decisions, helping someone unblock, cross-team coordination, sales/support input. Search your own messages since the last standup to surface it.
 
-### Step 5: Write the Archive File
+Use the `mcp__slack__conversations_search_messages` tool with:
+
+- `filter_users_from: "@richard.s"` (Slack user ID `U0A008HMS48` as a fallback if the handle doesn't resolve)
+- `filter_date_after: <last_standup_date>`
+- `limit: 100`
+
+Then make sense of the results:
+
+- **Group by channel.** A burst of messages in one channel is usually one work stream — name it ("helped debug the gateway 5xx spike in #team-ai-gateway"), don't enumerate individual messages.
+- **Keep substantive contributions** — debugging, decisions, incident response, design discussion, support, unblocking others. These are standup-worthy even with no PR attached.
+- **Drop noise** — emoji reactions, GM/bye, social chatter, and your own standup-canvas posts.
+- **Cross-reference GitHub** — Slack threads often discuss the same work as a PR; fold them into one bullet rather than double-counting.
+
+If the Slack handle doesn't resolve or search returns nothing useful, note that and lean on GitHub plus whatever the user adds.
+
+### Step 5: Compose the Entry
+
+Write the canvas entry: terse lowercase bullets per the Style section, merging the GitHub and Slack passes into one picture of the day. Don't repeat PR titles verbatim — summarize like you'd say it out loud ("first-party gateway auth for posthog api keys", not the conventional-commit title). Group stacks of related PRs into a lead bullet with sub-bullets, and fold a Slack thread and its PR into a single bullet.
+
+If activity looks thin across both sources, note that to the user — they likely have meetings, calls, or offline work to add.
+
+### Step 6: Write the Archive File
 
 Create the plain markdown file at `new_file_path`:
 
@@ -106,7 +133,7 @@ Create the plain markdown file at `new_file_path`:
 - phcode: merged rich text → markdown paste in the composer
 ```
 
-### Step 6: Copy to Clipboard as Rich Text
+### Step 7: Copy to Clipboard as Rich Text
 
 The entries contain no links, so nested `<ul><li>` is safe (the Slack link-in-list quirk only bites when `<a>` tags are inside list items). Copy just the bullets — the date header and `@Richard` line usually already exist in the canvas or are added by hand:
 
@@ -124,7 +151,7 @@ swift scripts/copy-html-to-clipboard.swift <<'EOF'
 EOF
 ```
 
-### Step 7: Report to User
+### Step 8: Report to User
 
 Display:
 
