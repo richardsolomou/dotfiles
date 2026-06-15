@@ -257,10 +257,6 @@ When posting review comments:
   - New review comment: `gh pr review 123 --comment --body "comment"`
   - Root PR comment: `gh issue comment 123 --body "comment"` (rarely appropriate)
 
-## File System
-
-- All project-local scratch notes, REPL logs, etc., go in a .notes/ or notes/ folder — don't litter the root.
-
 ## Coding
 
 ### Read Before You Write
