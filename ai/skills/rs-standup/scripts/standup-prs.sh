@@ -1,14 +1,19 @@
 #!/bin/bash
-# Gather GitHub PR activity for a standup entry, since a given date.
+# Gather GitHub PR activity for a standup entry, since a given moment.
 #
-# Usage: standup-prs.sh <since_date>   # since_date as YYYY-MM-DD (the last standup date)
+# Usage: standup-prs.sh <since>   # since as an ISO 8601 instant, e.g. 2026-06-16T18:30:00Z
+#                                 # (the previous standup's window_start). A bare
+#                                 # YYYY-MM-DD also works (treated as that day's start).
 #
 # Emits a single JSON object:
 #   {
-#     "merged": [ {number, title, repo, merged_at}, ... ],   # merged on/after since_date
+#     "merged": [ {number, title, repo, merged_at}, ... ],   # merged at/after since
 #     "active": [ {number, title, repo, isDraft, commits: [headline, ...]}, ... ]
 #   }
-# Only open PRs with at least one commit on/after since_date appear in "active".
+# Only open PRs with at least one commit at/after since appear in "active".
+# The GitHub `merged:`/`updated:` qualifiers and commit-date compares all accept
+# a full timestamp, and ISO 8601 sorts lexicographically, so sub-day precision
+# Just Works — the window starts at the previous standup, not the start of its day.
 #
 # Why this script exists (do not regress):
 #   - `gh pr view --json commits` shells out to git and fails with
@@ -22,7 +27,7 @@
 
 set -euo pipefail
 
-since="${1:?usage: standup-prs.sh <since_date YYYY-MM-DD>}"
+since="${1:?usage: standup-prs.sh <since ISO-8601 instant, e.g. 2026-06-16T18:30:00Z>}"
 user="richardsolomou"
 
 merged=$(gh api search/issues --method GET \
