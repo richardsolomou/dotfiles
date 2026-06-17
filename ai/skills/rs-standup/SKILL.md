@@ -180,6 +180,6 @@ Display:
 
 ## Notes
 
-- The standup notes are stored in `~/dev/richardsolomou/notes/PostHog/standup/`, named `YYYY-MM-DD.md` for easy sorting.
+- The standup notes are stored in `~/dev/rs/notes/PostHog/standup/`, named `YYYY-MM-DD.md` for easy sorting.
 - The local files are the archive *and* the source of truth for the window: each entry's `generated-at:` marker is what the next run reads to find `window_start`. Don't strip the marker.
 - The window is timestamp-precise on both passes: GitHub qualifiers take the full ISO instant directly; Slack's filter is day-granular, so you post-filter by message `Time` (Step 4).

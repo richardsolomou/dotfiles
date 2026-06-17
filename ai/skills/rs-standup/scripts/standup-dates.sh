@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-STANDUP_DIR="$HOME/dev/richardsolomou/notes/PostHog/standup"
+STANDUP_DIR="$HOME/dev/rs/notes/PostHog/standup"
 mkdir -p "$STANDUP_DIR"
 
 today=$(date +%Y-%m-%d)
