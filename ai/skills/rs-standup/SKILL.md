@@ -152,6 +152,16 @@ Write the plain markdown file at `new_file_path`, ending with a `generated-at:` 
 
 **Same-day re-run** (`new_file_path` already exists): append the new bullets under the existing ones rather than overwriting the morning's work, and update the `generated-at:` marker to the new `now`. The clipboard (Step 7) still carries only the new delta — that's what you'd post.
 
+Then commit and push the entry so the archive is backed up to the private `notes` repo (`git -C` avoids depending on the working directory):
+
+```bash
+git -C ~/dev/rs/notes add -A
+git -C ~/dev/rs/notes diff --cached --quiet || git -C ~/dev/rs/notes commit -q -m "standup: ${date_header}"
+git -C ~/dev/rs/notes push -q
+```
+
+The `diff --cached --quiet` guard skips the commit when nothing changed (e.g. a no-op re-run); the push is a no-op when there's nothing new. If the push fails (offline, auth), report it but don't block the standup — the file is already written locally.
+
 ### Step 7: Copy to Clipboard as Rich Text
 
 Load the `rs-copy` skill via the Skill tool and hand it the bullets as HTML — it converts to RTF and puts a real list (not fake spacing) on the clipboard. Copy just the bullets; the date header and your name line are added wherever you post. Use nested `<ul><li>` for sub-bullets, e.g.:

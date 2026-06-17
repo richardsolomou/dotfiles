@@ -257,6 +257,10 @@ When posting review comments:
   - New review comment: `gh pr review 123 --comment --body "comment"`
   - Root PR comment: `gh issue comment 123 --body "comment"` (rarely appropriate)
 
+## File System
+
+- Durable personal and cross-project notes go in `~/dev/rs/notes` — a private, git-backed repo (<https://github.com/richardsolomou/notes>). Organize by subfolder (e.g. `PostHog/`); don't scatter notes in project roots or `$HOME`.
+
 ## Coding
 
 ### Read Before You Write
