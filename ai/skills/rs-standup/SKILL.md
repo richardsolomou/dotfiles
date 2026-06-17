@@ -45,7 +45,7 @@ This returns tab-separated: `<today>\t<last_standup_date>\t<new_file_path>\t<can
 Store these values:
 
 - `today` - Today's date (for the new standup file)
-- `last_standup_date` - Previous weekday (for PR queries)
+- `last_standup_date` - Previous weekday (for the GitHub and Slack queries)
 - `new_file_path` - Where to write the new standup notes
 - `canvas_date_header` - Date header for the canvas entry (e.g. "5 June")
 
@@ -65,13 +65,29 @@ If `status` is "found", read the previous notes — items marked "started" or "c
 
 GitHub only tells half the story, and within GitHub it's not just your own PRs and commits — **any** activity counts: reviewing others' PRs, commenting, opening issues, triaging. Cast a wide net, then judge what's worth a bullet.
 
-**Merged PRs** (the "landed" signal — keep this dedicated query for reliable timestamps):
+**Your PRs — merged and in-flight.** Run the helper script with `last_standup_date`:
 
 ```bash
-gh api search/issues --method GET -f q="author:richardsolomou is:pr is:merged merged:>=${last_standup_date} org:PostHog" --jq '.items[] | {number, title, url: .html_url, repo: .repository_url, merged_at: .pull_request.merged_at}'
+scripts/standup-prs.sh "${last_standup_date}"
 ```
 
-Note: `gh search prs --merged` is unreliable for date filtering — it returns stale results. Always use `gh api search/issues` with the `merged:` qualifier instead, which returns accurate `merged_at` timestamps.
+It emits a single JSON object:
+
+```json
+{
+  "merged": [ {"number", "title", "repo", "merged_at"}, ... ],
+  "active": [ {"number", "title", "repo", "isDraft", "commits": ["headline", ...]}, ... ]
+}
+```
+
+- `merged` — PRs you authored that merged on/after `last_standup_date` (the "landed" signal).
+- `active` — open PRs you authored with at least one commit on/after `last_standup_date`; the per-PR commit headlines tell you what was done, so treat them as "started …" (new this period) or "continuing …" (carried from a previous entry). PRs with no commits in the window are omitted.
+
+Use the script rather than reaching for `gh` directly — it bakes in lessons that are easy to regress:
+
+- It uses `gh api` throughout. `gh pr view --json commits` shells out to `git` and dies with "not a git repository" unless run from inside a clone — which the standup flow is not.
+- It paginates the commits endpoint (commits come oldest-first, so a long-lived PR's recent commits are on the last page; a single page would miss them).
+- It avoids `gh search prs --merged`, whose date filtering returns stale results.
 
 **Everything else you touched** (PRs and issues you authored, commented on, were mentioned in, or assigned to, updated since last standup):
 
@@ -85,34 +101,26 @@ gh api search/issues --method GET -f q="involves:richardsolomou updated:>=${last
 gh api search/issues --method GET -f q="reviewed-by:richardsolomou is:pr updated:>=${last_standup_date} org:PostHog" --jq '.items[] | {number, title, state, url: .html_url, repo: .repository_url}'
 ```
 
-For open PRs you authored, check for commits since `last_standup_date` to tell new from carried work:
-
-```bash
-gh pr view <number> --repo <owner/repo> --json isDraft,commits
-```
-
-Open PRs with recent commits → "started …" (new this period) or "continuing …" (carried from a previous entry).
-
-**Deduplication**: these queries overlap — the same PR can appear in several. Dedup by `number` + repo. The date qualifiers also include the last standup day itself, which may already be in the previous standup's notes; exclude anything already reported. A heavy review/comment day is real standup material ("lots of pr reviews", "reviewed the X stack") even with no PRs of your own.
+**Deduplication**: these queries overlap with `standup-prs.sh` and each other — the same PR can appear several times. Dedup by `number` + repo, and exclude anything already reported in the previous standup (the date qualifiers include the last standup day itself). A heavy review/comment day is real standup material ("lots of pr reviews", "reviewed the X stack") even with no PRs of your own.
 
 ### Step 4: Query Slack for Activity
 
 Much of what you did never reaches GitHub — debugging in a thread, incident response, design decisions, helping someone unblock, cross-team coordination, sales/support input. Search your own messages since the last standup to surface it.
 
-Use the `mcp__slack__conversations_search_messages` tool with:
+Use the `mcp__slack__conversations_search_messages` tool with its **structured filters** (not Slack search-operator syntax):
 
-- `filter_users_from: "@richard.s"` (Slack user ID `U0A008HMS48` as a fallback if the handle doesn't resolve)
-- `filter_date_after: <last_standup_date>`
+- `filter_users_from: "U0A008HMS48"` — always your **user ID**, not display name or handle; name/handle lookups don't reliably resolve in this tool.
+- `filter_date_after: <last_standup_date>` — this filter is **inclusive**, so it captures the last standup day onward, matching the GitHub `>=` qualifiers. Omit any `before`/date-on filter so the window runs through now.
 - `limit: 100`
 
 Then make sense of the results:
 
-- **Group by channel.** A burst of messages in one channel is usually one work stream — name it ("helped debug the gateway 5xx spike in #team-ai-gateway"), don't enumerate individual messages.
+- **Group by channel.** A burst of messages in one channel is usually one work stream — name it ("helped debug the gateway 5xx spike in #team-ai-gateway"), don't enumerate individual messages. For a substantive thread whose point isn't clear from your messages alone, pull the surrounding context with `conversations_replies` (channel + thread ts from the hit).
 - **Keep substantive contributions** — debugging, decisions, incident response, design discussion, support, unblocking others. These are standup-worthy even with no PR attached.
 - **Drop noise** — emoji reactions, GM/bye, social chatter, and your own standup-canvas posts.
 - **Cross-reference GitHub** — Slack threads often discuss the same work as a PR; fold them into one bullet rather than double-counting.
 
-If the Slack handle doesn't resolve or search returns nothing useful, note that and lean on GitHub plus whatever the user adds.
+If the search returns nothing useful, note that and lean on GitHub plus whatever the user adds.
 
 ### Step 5: Compose the Entry
 
@@ -135,10 +143,9 @@ Create the plain markdown file at `new_file_path`:
 
 ### Step 7: Copy to Clipboard as Rich Text
 
-The entries contain no links, so nested `<ul><li>` is safe (the Slack link-in-list quirk only bites when `<a>` tags are inside list items). Copy just the bullets — the date header and `@Richard` line usually already exist in the canvas or are added by hand:
+Load the `rs-copy` skill via the Skill tool and hand it the bullets as HTML — it converts to RTF and puts a real Slack list (not fake spacing) on the clipboard. Copy just the bullets; the date header and `@Richard` line usually already exist in the canvas or are added by hand. Use nested `<ul><li>` for sub-bullets, e.g.:
 
-```bash
-swift scripts/copy-html-to-clipboard.swift <<'EOF'
+```html
 <ul>
 <li>landed the gateway operator admin stack (5 PRs)
 <ul>
@@ -148,8 +155,9 @@ swift scripts/copy-html-to-clipboard.swift <<'EOF'
 </li>
 <li>started per-product gateway routing</li>
 </ul>
-EOF
 ```
+
+Standup entries contain no links, so nested lists are always safe here (the Slack link-in-list quirk rs-copy warns about only bites when `<a>` tags sit inside list items).
 
 ### Step 8: Report to User
 
@@ -164,4 +172,4 @@ Display:
 - The standup notes are stored in `~/dev/richardsolomou/notes/PostHog/standup/`
 - Files are named `YYYY-MM-DD.md` for easy sorting
 - The canvas is the source of truth; the local files are just an archive of your own entries
-- The Slack MCP token lacks `files:read`, so the canvas itself can't be read programmatically — ask the user to paste it if you need recent context beyond the local archive
+- Step 4 reads your Slack *messages* via the MCP, but the canvas itself is a Slack file and the MCP token lacks `files:read` — so the canvas can't be read or written programmatically. Delivery stays clipboard-paste (Step 7), and if you need prior canvas context beyond the local archive, ask the user to paste it.

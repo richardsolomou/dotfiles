@@ -1,7 +1,6 @@
 ---
 name: rs-copy
-description: "Copy the content you just generated (a prompt, draft reply, message, doc) to the macOS clipboard as rich text, so pasting into Slack, Gmail, or docs renders clean formatting with no markdown source artifacts."
-disable-model-invocation: true
+description: "Copy the content you just generated (a prompt, draft reply, message, doc) to the macOS clipboard as rich text, so pasting into Slack, Gmail, or docs renders clean formatting with no markdown source artifacts. Used by rs-standup as the rich-text-copy primitive."
 ---
 
 # Copy as Rich Text
@@ -18,7 +17,7 @@ The clipboard format apps read on paste is **RTF (rich text)**, not HTML or mark
 content you generated  →  (you author) HTML  →  script: HTML→RTF  →  clipboard (RTF + plain text)  →  paste ✓
 ```
 
-This is the same script `rs-standup` uses to paste formatted bullets into the Slack canvas, so it's proven against Slack.
+`rs-standup` delegates to this skill to paste formatted bullets into the Slack canvas, so it's proven against Slack.
 
 ## Workflow
 
