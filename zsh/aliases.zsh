@@ -32,6 +32,7 @@ alias ..='cd ..'
 # Editor
 alias c='code'
 alias cc='claude'
+alias ccc='claude --dangerously-skip-permissions'
 alias z='zed'
 
 # File listing
