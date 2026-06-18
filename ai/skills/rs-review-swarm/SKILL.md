@@ -17,17 +17,20 @@ This is the multi-agent counterpart to your existing review skills: it borrows t
 
 Resolve the mode from the PR, state it, and proceed. Only override when the user passes `as:<mode>`.
 
+`author_association` is **not** a `gh pr view --json` field — it only exists on the REST API. Fetch it with `gh api`, which also returns the author and both repo owners (for fork detection) in one call:
+
 ```bash
 me=$(gh api user --jq .login)
-gh pr view <number> --json author,authorAssociation,headRepositoryOwner,baseRefName
+gh api repos/<owner>/<repo>/pulls/<number> \
+  --jq '{author: .user.login, assoc: .author_association, head_owner: .head.repo.owner.login, base_owner: .base.repo.owner.login, base: .base.ref}'
 ```
 
-- `author.login == $me` → **self**
-- `authorAssociation ∈ {OWNER, MEMBER, COLLABORATOR}` → **teammate**
-- `authorAssociation ∈ {CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER, NONE, MANNEQUIN}` → **contributor**
+- `author == $me` → **self**
+- `assoc ∈ {OWNER, MEMBER, COLLABORATOR}` → **teammate**
+- `assoc ∈ {CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER, NONE, MANNEQUIN}` → **contributor**
 - No PR (local branch only) → **self**
 
-A fork PR (`headRepositoryOwner` differs from the base repo owner) is a strong second signal for **contributor** — if it conflicts with `authorAssociation`, treat as contributor (the stricter posture).
+A fork PR (`head_owner` differs from `base_owner`) is a strong second signal for **contributor** — if it conflicts with `assoc`, treat as contributor (the stricter posture).
 
 State the detected mode in one line before reviewing (`Detected: contributor PR (fork, author_association=NONE) — reviewing with the contributor posture.`). Posture differs enough that a silent guess is wrong; an `as:` override is the escape hatch.
 
