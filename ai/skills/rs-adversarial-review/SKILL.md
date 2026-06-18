@@ -32,7 +32,8 @@ This isn't license to be uncharitable. It's a counterweight to the bias that pus
 Bias differs by context. Name it and counter it explicitly:
 
 - **Reviewing your own code.** Instinct is to defend it. Assume there's at least one issue you didn't catch while writing. Imagine the toughest reviewer on your team is reading over your shoulder. Last-minute fixes, `wip` commits, anything force-pushed — re-look. Those are bookmarks pointing at code that was hard to get right.
-- **Reviewing someone else's code.** Instinct varies: defer to seniority, skim past unfamiliar areas, treat verbose code as authoritative, assume the author considered everything you would. Treat the change as work that needs your judgement, not as someone else's claim of correctness.
+- **Reviewing a teammate's code.** Instinct varies: defer to seniority, skim past unfamiliar areas, treat verbose code as authoritative, assume the author considered everything you would. Treat the change as work that needs your judgement, not as someone else's claim of correctness. Shared conventions and context are assumed — spend your attention on substance, not basics.
+- **Reviewing an external contributor's code.** You share no context with the author, and the code is entering a codebase you'll own long after they've moved on. Bias runs two ways: over-trusting (waving it through to be welcoming) and over-distrusting (reading unfamiliar style as wrong). Weight security higher — this is untrusted code. Flag convention drift, but *educate*: name the pattern, link it, explain why, so the fix sticks and the contributor comes back. Welcoming in tone, strict on the merge bar.
 - **Consuming reviewer feedback.** Instinct is to assume the reviewer is right. They often are — but they skim, misremember APIs, miss context the diff doesn't show, and sometimes apply a pattern that's wrong for this codebase. Stress-test the claim before agreeing.
 
 ### Adversarial verification
@@ -68,6 +69,6 @@ The defensibility bar is for accuracy, not politeness. Don't drop a real concern
 
 ## Using this skill as a reference
 
-Other skills load this and apply the discipline rather than restating it. The caller passes context implicitly (peer vs self vs address) by virtue of which skill is doing the loading — pick the relevant counter-bias from the section above and apply the rest of the rules uniformly.
+Other skills load this and apply the discipline rather than restating it. The caller passes context implicitly (self vs teammate vs contributor vs consuming-feedback) by virtue of which skill is doing the loading — pick the relevant counter-bias from the section above and apply the rest of the rules uniformly.
 
 Override only when the caller has a specific reason to differ from a rule, and call out the override explicitly.
