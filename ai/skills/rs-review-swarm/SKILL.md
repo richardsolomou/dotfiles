@@ -41,7 +41,7 @@ State the detected mode in one line before reviewing (`Detected: contributor PR 
 | Counter-bias (from `rs-adversarial-review`) | own-code | teammate | contributor |
 | `security-audit` lens | on-demand¹ | on-demand¹ | **default on** |
 | Convention drift | normal | assume shared conventions | flag **and educate** (link the pattern, explain why) |
-| Voice | none — terminal, blunt | `rs-tone` `pr-review` | `rs-tone` `pr-review`, welcoming |
+| Voice | none — terminal, blunt | `rs-tone` `pr-review` | neutral, professional, welcoming — **no `rs-tone`** (it's the user's internal voice, wrong for an outside contributor) |
 | Destination | terminal walkthrough + offer to apply fixes | drafted inline comments | drafted inline comments |
 | Bar | ship-it | merge | stricter — code you own forever |
 
@@ -128,9 +128,23 @@ You own the final bucket (lens buckets are inputs). Apply the `rs-adversarial-re
 
 **self** — terminal walkthrough in the `rs-self-review` format (`## <n>. <file>:<line> — <gist>`, what's wrong / the concept / proposed fix), then offer to apply fixes per `rs-self-review` Step 5. No `rs-tone`. `rs-ship` when the user is ready. (self mode never posts — it's your own pre-push pass.)
 
-**teammate / contributor** — render each finding as an inline comment. Load `rs-tone` with `register: pr-review` and apply it; for contributor, lean welcoming and add the "why" + a link for convention findings. Anchor each to its `file:line` on the new side. Then branch on draft-vs-post:
+**teammate / contributor** — render each finding as an inline comment, anchored to its `file:line` on the new side. Voice by mode:
 
-- **Default (one-shot) — DRAFT, do not post.** Show each comment with its exact anchor (`<file>:<line>`) and the suggested verdict, ready to paste one at a time, exactly like `rs-review-pr`. Offer to post on the user's say-so. This honours the standing rule: never post review comments without explicit approval.
+- **teammate** — load `rs-tone` with `register: pr-review` and apply it.
+- **contributor** — a neutral, professional, welcoming reviewer voice; **do not** apply `rs-tone` (its registers are the user's own internal voice, wrong for an outside contributor). Still educate: add the "why" and a link for convention findings.
+
+Then branch on draft-vs-post:
+
+- **Default (one-shot) — DRAFT, do not post.** Show each comment ready to paste one at a time, exactly like `rs-review-pr`, and offer to post on the user's say-so. Honours the standing rule: never post review comments without explicit approval. **Put each comment's body inside its own fenced code block** so the orchestrator renders a one-click copy button — the anchor (`<file>:<line>`) and bucket go on a line *outside* the fence, the copyable comment text *inside* it:
+
+  ````markdown
+  **`<file>:<line>` · <Blocker|Suggestion> · `[<lens>]`**
+
+  ```text
+  <the exact comment body to paste — nothing else in the fence>
+  ```
+  ````
+
 - **`post` argument present (loop mode) — auto-post.** Post one atomic review via the GitHub Reviews API (`event: "COMMENT"` — never APPROVE/REQUEST_CHANGES; the bot does not gate merging), inline comments plus a short top-level summary. Every posted comment starts with the bot marker so it's unmistakably automated:
 
   ```markdown
