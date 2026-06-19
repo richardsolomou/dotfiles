@@ -121,7 +121,7 @@ Be willing to disagree. The point of this skill is for the user to learn — tel
 
 ### Step 6: Write the walkthrough
 
-Produce one section per unresolved comment, in the order they appear on the PR. Format:
+Produce one section per unresolved comment, in the order they appear on the PR. Format (`<file>` is the full repo-relative path, never a bare basename):
 
 ````markdown
 ## <n>. <file>:<line> — <one-line gist>
@@ -148,7 +148,11 @@ Produce one section per unresolved comment, in the order they appear on the PR. 
 
 **Suggested reply** *(include when the verdict is Disagree, or when "Agree with a different fix" needs explaining on the thread)*
 
-<A short reply the user can post on the PR thread to push back politely or explain the chosen approach. This reply IS posted under the user's name, so load the `rs-tone` skill with `register: pr-review` and apply those rules to this subsection — but not to the rest of the walkthrough.>
+This reply IS posted under the user's name, so load the `rs-tone` skill with `register: pr-review` and apply those rules to the reply body — but not to the rest of the walkthrough. Put the reply inside a fenced code block (```), never a blockquote (`>`), so the user can copy it with one click without dragging `>` markers into the paste:
+
+```text
+<a short reply the user can post on the PR thread to push back politely or explain the chosen approach>
+```
 
 **Proposed fix** *(skip this subsection entirely if the verdict is Disagree)*
 
@@ -191,18 +195,30 @@ Plan:
 4. <file>:<line> — Disagree. No edit, post suggested reply, leave open.
 5. <file>:<line> — Unsure. No edit, ask reviewer for <X>, leave open.
 
-Reply with numbers to execute (e.g. "1, 2, 4"), "all" to do everything, or "none" to do nothing. You can also say "edits only" to apply file edits without posting replies or resolving — useful if you want to review the diffs locally first.
+Reply with numbers to execute (e.g. "1, 2, 4"), "all" to do everything, or "none" to do nothing. You can also say "edits only" to apply file edits without committing, pushing, posting replies, or resolving — useful if you want to review the diffs locally first.
 ```
 
-Default to doing nothing until the user picks. The "edits only" escape hatch matters because CLAUDE.md forbids posting PR review comments without explicit user approval — listing the planned replies above counts as approval *for those specific bodies*; if you change them, ask again before posting.
+Executing means: apply the edits, **commit and push them**, then post replies and resolve threads (Step 8). Spell this out in the plan so the user knows a "done" reply implies a push — that's the contract. Default to doing nothing until the user picks. The "edits only" escape hatch matters because CLAUDE.md forbids posting PR review comments without explicit user approval — listing the planned replies above counts as approval *for those specific bodies*; if you change them, ask again before posting.
 
 ### Step 8: Execute
 
-For each picked thread, in order:
+Execution has two parts: first apply *all* the file edits, then commit and push them, and only then post replies and resolve threads. The ordering is the whole point — **a "done" reply must never go out before the change is actually pushed.** Posting "done" while the fix sits unpushed in the working tree is the exact failure this skill exists to avoid: the user sees the reply, assumes the PR is updated, and merges stale code.
 
-1. **Apply the file edit** (if the verdict has one). Use the diff shown in the walkthrough — don't re-derive it. Stage nothing automatically; leave staging to the user.
+1. **Apply every picked file edit.** Use the diffs shown in the walkthrough — don't re-derive them. Apply all of them before moving on, so the round lands as one push.
 
-2. **Post the in-thread reply** using the comment ID of the first comment in the thread:
+2. **Commit and push the edits as one review round.** Stage the edits, commit with a message naming the round (e.g. `Address review feedback`), and push to the PR branch:
+
+    ```bash
+    git add <edited files>
+    git commit -m "<message>"
+    git push
+    ```
+
+    This is one commit per review round, which matches the repo commit strategy (a fresh commit each round so reviewers see what changed). Do not amend. If the push fails (e.g. the branch is behind), stop and surface the error — do **not** post any "done" replies, because the change isn't live.
+
+    If the user chose **"edits only"**, stop here without committing — they want to review the diffs locally first. In that case do not post replies or resolve threads.
+
+3. **Post the in-thread reply** for each picked thread, using the comment ID of the first comment in the thread:
 
     ```bash
     gh api repos/<owner>/<repo>/pulls/<number>/comments/<first-comment-databaseId>/replies \
@@ -212,7 +228,7 @@ For each picked thread, in order:
 
     For "Agree, no open questions" the reply body can be as terse as `Done — <one-liner naming what changed>`. For everything else, use the **Suggested reply** drafted in the walkthrough. The Suggested reply was already written with `rs-tone` register `pr-review` applied; the terse "done" replies should follow the same rules (no severity labels, no sign-offs, lowercase informal voice is fine).
 
-3. **Resolve the thread** (only when the per-verdict rules above say to):
+4. **Resolve the thread** (only when the per-verdict rules above say to):
 
     ```bash
     gh api graphql \
@@ -222,9 +238,7 @@ For each picked thread, in order:
 
     The thread node ID was captured in Step 2.
 
-4. **Report what happened** for each thread: `1. <file>:<line> — edit applied, reply posted, thread resolved.` Make failures visible — if the reply call returned 422, say so and stop rather than silently moving on.
-
-After execution, **do not commit** — leave staging and the commit message to the user. They may want each thread in its own commit so reviewers can see what changed per round (matches the repo commit strategy).
+5. **Report what happened** for each thread: `1. <file>:<line> — edit applied, pushed in <sha>, reply posted, thread resolved.` Make failures visible — if the push failed or the reply call returned 422, say so and stop rather than silently moving on.
 
 ## What to include vs. skip
 
