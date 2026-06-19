@@ -64,7 +64,7 @@ Don't pad the list to look thorough. Three real findings beat ten weak ones.
 
 ### Step 4: Write the walkthrough
 
-One section per finding, in the order they appear in the diff. Format:
+One section per finding, in the order they appear in the diff. Format (`<file>` is the full repo-relative path, never a bare basename — a PR can change two files with the same name):
 
 ````markdown
 ## <n>. <file>:<line> — <one-line gist>

@@ -133,7 +133,7 @@ GitHub only accepts an inline review comment on a line that is **part of this PR
 
 Before each comment goes in the output, confirm two things against the diff from Step 2:
 
-- **The path and line number are real and current.** Use the post-change line number as it appears in the head revision (the right-hand side of the diff), counted in the file as it stands at `headRefOid` — not a stale number from an earlier hunk, not the base-side line. If you're anchoring on a removed line, that's the base side — re-pick, since the reader can only act on what's still there.
+- **The path and line number are real and current.** Use the full repo-relative path (`frontend/src/config.ts`, not a bare `config.ts` — a PR can change two files with the same basename), and the post-change line number as it appears in the head revision (the right-hand side of the diff), counted in the file as it stands at `headRefOid` — not a stale number from an earlier hunk, not the base-side line. If you're anchoring on a removed line, that's the base side — re-pick, since the reader can only act on what's still there.
 - **The line is in scope.** It must fall inside a changed hunk. If the concern is about code this PR didn't touch (a pre-existing bug, a function three files away the diff only calls), it's out of scope for an inline comment — either drop it, or if it genuinely matters, raise it once in the top-level summary framed as pre-existing / out-of-scope, not as an inline comment on an untouched line.
 
 When in doubt about whether a line is in the diff, re-grep the Step 2 diff for it rather than guessing. An inline comment on the wrong line reads as careless and makes the author hunt for what you meant.
@@ -182,10 +182,10 @@ This pass is about the set as a whole too: if two comments overlap, merge or cut
 
 ### Step 6: Output and Recommend a Verdict
 
-For each inline comment, write the file and line as plain text, then put the comment body inside its own fenced code block so the user can copy it with a single click. Like:
+For each inline comment, write the file and line as plain text — the full repo-relative path, never a bare basename — then put the comment body inside its own fenced code block so the user can copy it with a single click. **Use a fenced code block (```), never a blockquote (`>`).** Only the fenced block renders a copy button; a blockquote forces the user to hand-select the text and drags the `>` markers and other markdown artifacts into the paste. Like:
 
 ````markdown
-File: path/to/file.ts:126
+File: frontend/src/config.ts:126
 
 ```
 <comment body>
