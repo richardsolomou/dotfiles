@@ -51,22 +51,40 @@ The engine below is identical across modes. Only this config block differs.
 
 ## Workflow
 
-### Step 1: Detect PR, gather diff, resolve mode
+### Step 1: Detect PR, check out its head, gather diff, resolve mode
 
 Parse `$ARGUMENTS` for a PR ref, an `as:<mode>` override, `post`, and `±security`. Resolve the PR (or fall back to the local branch vs its base, which forces `self`). Detect the mode per the rules above.
 
-Gather the changeset as one atomic diff (not commit-by-commit):
+**Check out the PR's head before anything reads a file.** The reviewers cite line numbers off the working tree, so the working tree *must* be the PR head — not `master`, not a detached merge-base. A worktree parked on the wrong commit is exactly why line numbers come out garbage: the agents read each file in its base-branch state and report those numbers. `gh pr checkout` handles fork PRs and any base branch; verify HEAD actually landed on the PR head before continuing:
 
 ```bash
-base=$(gh pr view <n> --json baseRefName -q .baseRefName)   # or the detected parent
+gh pr checkout <n> --repo <owner/repo>
+head=$(gh pr view <n> --repo <owner/repo> --json headRefOid -q .headRefOid)
+test "$(git rev-parse HEAD)" = "$head" || { echo "HEAD is not the PR head — abort"; exit 1; }
+```
+
+(Self / local-branch fallback: you're already on the branch — skip the checkout, but still record `git rev-parse HEAD`.)
+
+Then gather the changeset as one atomic diff (not commit-by-commit) against the PR's **actual base** — `baseRefName`, which is **not always `main`/`master`** (a stacked PR branches off another feature branch). The three-dot form diffs against the merge-base, so it shows only what this branch added:
+
+```bash
+base=$(gh pr view <n> --repo <owner/repo> --json baseRefName -q .baseRefName)
 git fetch origin "$base"
-parent=$(git merge-base HEAD "origin/$base")
-git diff "$parent"...HEAD --name-only
-git diff "$parent"...HEAD
-git rev-parse HEAD
+git diff "origin/$base"...HEAD --name-only
+git diff "origin/$base"...HEAD
 ```
 
 Store: PR number, `owner/repo`, base branch, changed-file list, full diff, HEAD SHA, mode.
+
+**Read the existing discussion before launching reviewers.** Skipping it means re-raising points another reviewer already made, contradicting them, or flagging something the author has already explained. Fetch all three and pass them to synthesis (Step 4):
+
+```bash
+gh pr view <n> --repo <owner/repo> --comments                              # top-level conversation
+gh api repos/<owner>/<repo>/pulls/<n>/comments --paginate                  # inline review comments
+gh api repos/<owner>/<repo>/pulls/<n>/reviews --paginate                   # submitted reviews
+```
+
+Note concerns already raised (so you can drop them — trust the other reviewer to follow their own thread), constraints the author has stated, and — in loop/`post` mode — every prior `🤖 rs-review-swarm` comment, so the next pass doesn't re-post what's already on the PR.
 
 ### Step 2: Decide which lenses run, fetch the security lens if needed
 
@@ -87,7 +105,7 @@ Conditional:
 
 Load `rs-adversarial-review` and apply the **mode's** counter-bias (own / teammate / contributor) plus the shared discipline — skeptical posture, adversarial verification, defensibility bar, skip nitpicks.
 
-Launch all selected lenses in a **single message** with multiple `Agent` tool calls (`subagent_type: "general-purpose"`, `model: "opus"`) so they run in true parallel. Pass each agent: the full diff, the changed-file list, the mode's counter-bias, and its lens brief. Tell each it is the sole reviewer, that it must **verify each candidate before raising it** (construct the failing scenario), and that it only reviews — it never edits, commits, or posts.
+Launch all selected lenses in a **single message** with multiple `Agent` tool calls (`subagent_type: "general-purpose"`, `model: "opus"`) so they run in true parallel. Pass each agent: the full diff, the changed-file list, the mode's counter-bias, and its lens brief. Tell each it is the sole reviewer, that it must **verify each candidate before raising it** (construct the failing scenario), and that it only reviews — it never edits, commits, or posts. The working tree is checked out at the PR head (Step 1), so files on disk match the diff's new side; every `line:` an agent reports must be the line number in the file **as it stands on disk** (the new side) — never a diff-hunk position or a base-side number.
 
 Lens briefs — keep each terse; the bar is `rs-adversarial-review`, these say only where to look:
 
@@ -109,20 +127,24 @@ Every reviewer ends its response in this exact format:
 
 ```text
 STRUCTURED_FINDINGS:
-- file: <path> | line: <number or "general"> | bucket: <Blocker|Suggestion> | reviewer: <lens> | body: <the comment text>
+- file: <full repo-relative path> | line: <number or "general"> | bucket: <Blocker|Suggestion> | reviewer: <lens> | body: <the comment text>
 - ...
 
 OVERALL_SUMMARY:
 <1 sentence>
 ```
 
+`file` is always the full repo-relative path (`frontend/src/config.ts`), never a bare basename — a PR can change two files with the same name.
+
 No findings → `STRUCTURED_FINDINGS:` then `(none)`.
 
 ### Step 4: Synthesise
 
-Collect all findings. **Dedup**: same `file:line` within ~5 lines, or clearly the same concern → merge into one, listing every lens that flagged it. Convergent findings are higher confidence; if any contributor called it a **Blocker**, the merged finding is a Blocker.
+Collect all findings. **Dedup**: same `file:line` within ~5 lines, or clearly the same concern → merge into one, listing every lens that flagged it. Convergent findings are higher confidence; if any contributor called it a **Blocker**, the merged finding is a Blocker. Then **drop anything already raised in the existing discussion** (Step 1) — don't second another reviewer's open thread, and in `post` mode skip findings matching a prior `🤖 rs-review-swarm` comment at the same `file:line` so loop passes don't re-post.
 
-You own the final bucket (lens buckets are inputs). Apply the `rs-adversarial-review` defensibility bar one more time across the merged set — drop anything that wouldn't survive pushback. A finding with a concrete `file:line` on the diff's new side is an inline comment; one with no anchorable line folds into the summary (keep the one or two that matter, drop the rest).
+You own the final bucket (lens buckets are inputs). Apply the `rs-adversarial-review` defensibility bar one more time across the merged set — drop anything that wouldn't survive pushback. An inline comment must anchor to a line **inside a changed hunk on the new side** — that's all GitHub will accept. A concern about code this PR didn't touch (a pre-existing bug, an untouched caller) folds into the summary framed as out-of-scope; it is never an inline comment on an unchanged line. Anything with no anchorable line also folds into the summary (keep the one or two that matter, drop the rest).
+
+**Final cold read-back (before output).** Read the surviving set as the author who'll receive it, without the context you built up. Each comment: succinct without dropping the line ref / the why / the failing case; the ask in the first sentence, not buried; no AI smell (neutral-professional polish, severity labels, formulaic openers, closing sign-offs). Rewrite any that fail; if two overlap, merge or cut one.
 
 ### Step 5: Output — by mode and by draft-vs-post
 
@@ -135,7 +157,7 @@ You own the final bucket (lens buckets are inputs). Apply the `rs-adversarial-re
 
 Then branch on draft-vs-post:
 
-- **Default (one-shot) — DRAFT, do not post.** Show each comment ready to paste one at a time, exactly like `rs-review-pr`, and offer to post on the user's say-so. Honours the standing rule: never post review comments without explicit approval. **Put each comment's body inside its own fenced code block** so the orchestrator renders a one-click copy button — the anchor (`<file>:<line>`) and bucket go on a line *outside* the fence, the copyable comment text *inside* it:
+- **Default (one-shot) — DRAFT, do not post.** Show each comment ready to paste one at a time, exactly like `rs-review-pr`, and offer to post on the user's say-so. Honours the standing rule: never post review comments without explicit approval. **Put each comment's body inside its own fenced code block (```), never a blockquote (`>`)** — only the fenced block renders a one-click copy button; a blockquote drags the `>` markers and markdown artifacts into the paste. The anchor (`<file>:<line>`) and bucket go on a line *outside* the fence, the copyable comment text *inside* it:
 
   ````markdown
   **`<file>:<line>` · <Blocker|Suggestion> · `[<lens>]`**
@@ -144,6 +166,8 @@ Then branch on draft-vs-post:
   <the exact comment body to paste — nothing else in the fence>
   ```
   ````
+
+  After the comments, recommend a GitHub review action (the user acts on it — this is draft, so you don't submit it): **Request changes** if any Blocker survives; **Comment** if only Suggestions; **Approve** only if nothing actionable remains and you'd merge it yourself. One line, with the reason — e.g. "Recommended action: Request changes — the null deref in `frontend/src/parser.ts:88` drops events for empty payloads."
 
 - **`post` argument present (loop mode) — auto-post.** Post one atomic review via the GitHub Reviews API (`event: "COMMENT"` — never APPROVE/REQUEST_CHANGES; the bot does not gate merging), inline comments plus a short top-level summary. Every posted comment starts with the bot marker so it's unmistakably automated:
 
