@@ -28,7 +28,19 @@
 
 When approaching a new repository, first read the README.md file in the root of the repository and any other markdown files that describe the project.
 
-### 2. Implementation Flow
+### 2. Investigate Before Acting
+
+When a task depends on anything external — a library, API, framework, CLI, service, or schema you don't fully control — investigate before writing code. Don't rely on memory or assume an API still works the way you remember; details drift between versions.
+
+- **Read the latest docs.** Check the current version's documentation, changelog, or release notes before using an interface. Prefer the version pinned in the project (lockfile, manifest) over the newest release.
+- **Verify against the source.** When docs are thin or stale, read the installed package's actual code, types, or signatures rather than guessing.
+- **Confirm versions.** Check what version the project actually uses before reaching for a feature — it may not exist yet, or may be deprecated.
+- **Probe live behavior when cheap.** A quick `--help`, a REPL call, or a throwaway script beats assuming how a CLI flag or endpoint behaves.
+- **Prefer primary sources.** Official docs, source code, and changelogs over blog posts or recollection.
+
+If investigation contradicts what you assumed, re-plan before continuing rather than forcing the original approach.
+
+### 3. Implementation Flow
 
 1. **Understand** - Study existing patterns in codebase
 2. **Test** - Write tests first (red)
