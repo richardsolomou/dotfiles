@@ -11,6 +11,16 @@ Environment (read from process env, or from a `.env` next to the repo root):
   POSTHOG_PROJECT_ID        optional, defaults to 2 (PostHog App + Website)
   POSTHOG_HOST              optional, defaults to https://us.posthog.com
 
+Additional targets (e.g. a second account with its own key) opt in via a
+numbered suffix — `_2`, `_3`, … — on each var. A numbered target is synced only
+when it has both `POSTHOG_PERSONAL_API_KEY_N` and `POSTHOG_PROJECT_ID_N` set;
+its host defaults to https://us.posthog.com like the primary. Skills are pushed
+identically to every active target.
+
+  POSTHOG_PERSONAL_API_KEY_2  enables a second target alongside its project id
+  POSTHOG_PROJECT_ID_2        project id for the second target
+  POSTHOG_HOST_2              optional host for the second target
+
 Flags:
   --dry-run                 report what would change without calling write APIs
 """
@@ -270,41 +280,89 @@ def push(
     return "updated", f"v{payload.get('version', '?')} ({'; '.join(reasons)})"
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--dry-run", action="store_true", help="report changes without writing")
-    args = parser.parse_args()
+DEFAULT_HOST = "https://us.posthog.com"
 
-    load_dotenv(REPO_ROOT / ".env")
+
+def discover_targets() -> list[dict[str, str]]:
+    """Collect sync targets from the environment.
+
+    The primary target uses the unsuffixed vars (PAK required). Numbered
+    targets (`_2`, `_3`, …) are appended in order and each needs both a PAK and
+    a project id; we stop at the first suffix with neither, so gaps don't strand
+    later targets silently. `or` rather than a dict default because GitHub
+    Actions sets unset repo variables to "".
+    """
+    targets: list[dict[str, str]] = []
+
     api_key = os.environ.get("POSTHOG_PERSONAL_API_KEY")
     if not api_key:
         sys.exit(
             "POSTHOG_PERSONAL_API_KEY not set. Add it to .env at the repo root "
             "(locally) or to GitHub Actions repo secrets (CI)."
         )
-    # `or` rather than a dict default — GitHub Actions sets env vars to ""
-    # when the referenced repo variable is unset, and we want the default in
-    # that case too.
-    project_id = os.environ.get("POSTHOG_PROJECT_ID") or "2"
-    host = (os.environ.get("POSTHOG_HOST") or "https://us.posthog.com").rstrip("/")
-    headers = {"Authorization": f"Bearer {api_key}"}
+    targets.append({
+        "label": "primary",
+        "api_key": api_key,
+        "project_id": os.environ.get("POSTHOG_PROJECT_ID") or "2",
+        "host": (os.environ.get("POSTHOG_HOST") or DEFAULT_HOST).rstrip("/"),
+    })
+
+    suffix = 2
+    while True:
+        key = os.environ.get(f"POSTHOG_PERSONAL_API_KEY_{suffix}")
+        project_id = os.environ.get(f"POSTHOG_PROJECT_ID_{suffix}")
+        if not key and not project_id:
+            break
+        if not (key and project_id):
+            sys.exit(
+                f"target {suffix}: set both POSTHOG_PERSONAL_API_KEY_{suffix} and "
+                f"POSTHOG_PROJECT_ID_{suffix}, or neither."
+            )
+        targets.append({
+            "label": f"target {suffix}",
+            "api_key": key,
+            "project_id": project_id,
+            "host": (os.environ.get(f"POSTHOG_HOST_{suffix}") or DEFAULT_HOST).rstrip("/"),
+        })
+        suffix += 1
+
+    return targets
+
+
+def sync_target(target: dict[str, str], skills: list[dict[str, Any]], dry_run: bool) -> None:
+    host, project_id = target["host"], target["project_id"]
+    headers = {"Authorization": f"Bearer {target['api_key']}"}
+    print(f"→ {target['label']}: {host}/project/{project_id}")
+
+    counts = {"created": 0, "updated": 0, "in-sync": 0, "would-create": 0, "would-update": 0}
+    for local in skills:
+        remote = fetch_remote(host, project_id, local["name"], headers)
+        action, detail = push(local, remote, host, project_id, headers, dry_run)
+        counts[action] = counts.get(action, 0) + 1
+        print(f"{action:>14}  {local['name']}" + (f"  {detail}" if detail else ""))
+
+    summary_keys = ["created", "updated", "in-sync"] if not dry_run else ["would-create", "would-update", "in-sync"]
+    print("  ".join(f"{k}: {counts.get(k, 0)}" for k in summary_keys))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--dry-run", action="store_true", help="report changes without writing")
+    args = parser.parse_args()
+
+    load_dotenv(REPO_ROOT / ".env")
+    targets = discover_targets()
 
     skill_dirs = sorted(p for p in SKILLS_DIR.glob(SKILL_GLOB) if p.is_dir())
     if not skill_dirs:
         print(f"No skills found under {SKILLS_DIR}/{SKILL_GLOB}")
         return 0
 
-    counts = {"created": 0, "updated": 0, "in-sync": 0, "would-create": 0, "would-update": 0}
-    for skill_dir in skill_dirs:
-        local = parse_skill(skill_dir)
-        remote = fetch_remote(host, project_id, local["name"], headers)
-        action, detail = push(local, remote, host, project_id, headers, args.dry_run)
-        counts[action] = counts.get(action, 0) + 1
-        print(f"{action:>14}  {local['name']}" + (f"  {detail}" if detail else ""))
-
-    print()
-    summary_keys = ["created", "updated", "in-sync"] if not args.dry_run else ["would-create", "would-update", "in-sync"]
-    print("  ".join(f"{k}: {counts.get(k, 0)}" for k in summary_keys))
+    skills = [parse_skill(skill_dir) for skill_dir in skill_dirs]
+    for i, target in enumerate(targets):
+        if i:
+            print()
+        sync_target(target, skills, args.dry_run)
     return 0
 
 
