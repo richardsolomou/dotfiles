@@ -24,4 +24,7 @@ jobs:
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
           POSTHOG_PROJECT_ID: ${{ vars.POSTHOG_PROJECT_ID }}
           POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+          POSTHOG_PERSONAL_API_KEY_2: ${{ secrets.POSTHOG_PERSONAL_API_KEY_2 }}
+          POSTHOG_PROJECT_ID_2: ${{ vars.POSTHOG_PROJECT_ID_2 }}
+          POSTHOG_HOST_2: ${{ vars.POSTHOG_HOST_2 }}
         run: bin/sync-skills
