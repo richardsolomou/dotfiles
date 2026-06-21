@@ -51,6 +51,7 @@ Read `transcript.txt` (it's one long line — wrap it to read, or read in offset
 - **Bugs / friction hit live** — especially against the tools being dogfooded (PostHog Code). Keep a running tally across streams.
 - **Ideas from chat** — the genuinely good/funny/clippable ones (these are gold for both the next stream and the posts).
 - **Stated next steps** — what the user said they'd do next; turn it into a recommended next-stream spine.
+- **The broadcast itself (don't skip this — it's half the value).** Assess the stream *as a stream*, not just the code: pacing (how long before real work started; did he lose track of time; preamble length), tangent control (charming-about-the-work vs meandering off it), chat engagement (how early he checked the room, whether he welcomed/prompted lurkers, rapport quality), on-screen legibility (multi-agent panes that even he got lost in; fonts/flashbang), the open and the ending (did it land on a high or drag), and ops/tooling failures (multistream, dictation, audio, capture). The transcript is full of tells — time-surprise asides ("oh my god it's been 4 hours"), "am I talking to the void?", "which one did it open?", long shout-out wind-downs. Be honest and specific; this is craft feedback, give a verdict plus concrete fixes.
 
 ### 3. Write the note
 
@@ -62,7 +63,7 @@ Create `~/dev/rs/notes/<project>/streams/YYYY-MM-DD-stream-N-<slug>.md`. Match t
 4. **Bugs filed** (running tally).
 5. **Ideas from chat** (keep).
 6. **Next-stream plan** — an opinionated spine, not a laundry list. Lead with closing loops the audience watched break; give it a hook.
-7. **Production fixes** (stream rig: capture, audio, multistream, Discord).
+7. **The stream as a broadcast** — a verdict, then what worked / what dragged / fixes, covering pacing, tangents, chat engagement, on-screen legibility, the open and ending, and ops/tooling. Treat the stream rig (capture, audio, multistream, Discord) as the actionable tail of this section, not a separate one.
 8. **Open questions** — explicitly "answered in the repo docs, not tracked here."
 
 Run `markdownlint <file>` (the notes repo's `.markdownlint.json` allows long lines). Commit with a terse message; **do not** add AI attribution. Leave `.obsidian/workspace.json` churn unstaged.
