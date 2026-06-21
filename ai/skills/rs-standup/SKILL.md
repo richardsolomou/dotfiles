@@ -23,22 +23,24 @@ Standups are retrospective — only what you did in the window, never what you p
 
 ## Style
 
-Model entries on Brandon's approach:
+Write it like you'd say it out loud to a teammate — what you actually got done and why it matters — **not** a list of the PRs you merged. The GitHub/Slack passes are how you *find* the work; they are not the shape of the output. Reading back as a changelog ("landed X (4 PRs): a, b, c") is the failure mode to avoid.
 
-- **Terse, lowercase phrases** — "phc PRs", "rate limits", "lots of pr reviews". No full sentences, no trailing punctuation.
-- **No links.** Refer to PR counts instead — "put up 6 PRs to build out better status classifiers".
-- **Lead bullet names the work stream or outcome**, sub-bullets enumerate the concrete pieces:
+- **Lead with the outcome, in plain language.** Say what changed for the world, not which artifacts you touched. "keys no longer get revoked while in use, and session admission is O(1) instead of summing every in-flight hold" beats "landed the credential last-used drain (4 PRs)". The reader should learn what's true now that wasn't before.
+- **One work stream, one bullet — told as a sentence or two**, not a header with a bulleted parts list. Fold the concrete pieces into the prose ("wired RED metrics across the hot path, admission, upstreams, emitter, and billing, plus OTel tracing and alerts"). Reach for sub-bullets only when a stream genuinely has distinct strands worth separating — default to a single flowing bullet.
+- **Terse and lowercase**, but full thoughts are fine — a bullet can be a sentence. Trailing punctuation is optional; be consistent within an entry.
+- **Drop the PR counting and the conventional-commit titles.** "(5 PRs)" and "feat(gateway): …" are changelog tells. Describe the thing, not the paperwork. No links.
+- **Flag in-flight work** in the past tense — "started …", "continuing …", "now writing the invariants down by hand". Never a future intention.
+- **Include non-code work** — reviews, incidents, debugging, support, decisions, design discussions, meetings, calls, streams, holidays. The GitHub and Slack passes surface a lot of this; meetings, calls, and holidays still won't show up, so ask or let the user add them.
 
-  ```text
-  - landed the gateway operator admin stack (5 PRs)
-    - per-team rate-limit overrides
-    - force pricing refresh
-    - provider host health overrides
-  ```
+Example of the target voice:
 
-- **Group related PRs** into one lead bullet rather than listing each.
-- **Flag in-flight work** — "started per-product gateway routing", "continuing to try to get an e2e working in dev".
-- **Include non-code work** — reviews, incidents, debugging, support, decisions, meetings, sales calls, holidays. The GitHub and Slack passes surface a lot of this; meetings, calls, and holidays still won't show up, so ask or let the user add them.
+```text
+- shipped the gateway credential plumbing that was in flight — keys no longer get revoked while in use, and session admission is O(1) instead of summing every in-flight hold
+- figured out how to stop the gateway double-billing AIO — sorted the provenance design with ingestion so a customer can't forge their way to free usage, landed on emitter-signed events that capture verifies inline
+- spent most of the day on observability — RED metrics across the hot path, admission, upstreams, and billing, plus OTel tracing and alerts. built it overnight with an autopilot loop, now writing the invariants down by hand
+- unbroke master
+- ran the posthog code stream — 4.5hrs building tro.gg live, socials with marketing, caught a few minor code bugs along the way
+```
 
 ## Your Task
 
@@ -131,7 +133,7 @@ If the search returns nothing useful, note that and lean on GitHub plus whatever
 
 ### Step 5: Compose the Entry
 
-Write the entry: terse lowercase bullets per the Style section, merging the GitHub and Slack passes into one picture of the window. Don't repeat PR titles verbatim — summarize like you'd say it out loud ("first-party gateway auth for posthog api keys", not the conventional-commit title). Group stacks of related PRs into a lead bullet with sub-bullets, and fold a Slack thread and its PR into a single bullet.
+Write the entry per the Style section, merging the GitHub and Slack passes into one picture of the window. Lead each bullet with the outcome in plain language — what's true now that wasn't before — not the PRs you merged to get there. A stack of related PRs becomes one bullet describing the thing they add, with the pieces folded into the prose, not enumerated as sub-bullets. Fold a Slack thread and its PR into a single bullet. If it reads back like a changelog (PR counts, conventional-commit titles, header-plus-parts-list), rewrite it as something you'd say out loud.
 
 If activity looks thin across both sources, note that to the user — they likely have meetings, calls, or offline work to add.
 
@@ -142,10 +144,10 @@ Write the plain markdown file at `new_file_path`, ending with a `generated-at:` 
 ```text
 # 4 June
 
-- first-party gateway auth for posthog api keys (phx_/pha_)
-- per-product attribution via X-PostHog-Product header
-- started per-product gateways via /g/{slug} routing
-- phcode: merged rich text → markdown paste in the composer
+- posthog api keys can now auth straight through the gateway (phx_/pha_), no separate credential to mint
+- spend is attributed per-product now via the X-PostHog-Product header
+- started routing per-product gateways under /g/{slug}
+- phcode: rich text now pastes as markdown in the composer
 
 <!-- generated-at: 2026-06-04T17:30:00Z -->
 ```
@@ -164,17 +166,12 @@ The `diff --cached --quiet` guard skips the commit when nothing changed (e.g. a 
 
 ### Step 7: Copy to Clipboard as Rich Text
 
-Load the `rs-copy` skill via the Skill tool and hand it the bullets as HTML — it converts to RTF and puts a real list (not fake spacing) on the clipboard. Copy just the bullets; the date header and your name line are added wherever you post. Use nested `<ul><li>` for sub-bullets, e.g.:
+Load the `rs-copy` skill via the Skill tool and hand it the bullets as HTML — it converts to RTF and puts a real list (not fake spacing) on the clipboard. Copy just the bullets; the date header and your name line are added wherever you post. Most entries are a flat `<ul>` of one-bullet-per-work-stream; use nested `<ul><li>` only on the rare bullet that genuinely needs sub-strands:
 
 ```html
 <ul>
-<li>landed the gateway operator admin stack (5 PRs)
-<ul>
-<li>per-team rate-limit overrides</li>
-<li>force pricing refresh</li>
-</ul>
-</li>
-<li>started per-product gateway routing</li>
+<li>shipped the gateway operator admin stack — per-team rate-limit overrides, force pricing refresh, and provider host health overrides</li>
+<li>started routing per-product gateways under /g/{slug}</li>
 </ul>
 ```
 
