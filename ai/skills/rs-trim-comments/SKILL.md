@@ -32,7 +32,11 @@ While editing, hold existing comments to the same bar. Delete the ones that fail
 
 ## How to write the ones that stay
 
-- **Terse means dense, not vague.** Say the why or the constraint in the fewest words that land it — one tight sentence beats three. But never drop the detail that makes the comment worth reading.
+Earning a place is not all-or-nothing. A comment can deserve to exist and still be twice as long as it needs to be. Once you've decided to keep one, compress it:
+
+- **Apply the bar word by word, not just comment by comment.** Cut every clause a skilled reader doesn't need: throat-clearing ("for the same reason as above"), mechanics the code already shows, hedges, and asides. Keep the load-bearing facts — the number, the constraint, the name of the trap — and drop the connective prose around them.
+- **Terse means dense, not vague.** Say the why or the constraint in the fewest words that land it — one tight sentence beats three. "Never drop the detail that makes a comment worth reading" means keep the *facts*, not the *words* — the same facts almost always fit in half the lines.
+- **Treat length as a smell.** A comment that runs many lines or reads like a paragraph is a candidate to halve, not a finished product. Default target: a keeper is one to three dense lines. Past that you're usually narrating mechanics the code already shows — find the two or three facts doing the work and cut the rest.
 - **Proper grammar and punctuation.** No dramatic phrasing, no all-caps.
 - **No three-dot ellipses (`...`)** — use a real ellipsis (`…`) if you need one, but a period usually serves.
 
@@ -92,12 +96,35 @@ function displayName(u: User): string {
 function displayName(u: User): string {
 ```
 
+❌ Earns its place but bloated — eight lines of prose for three facts:
+
+```ts
+//
+// pixi.js (and subpaths like pixi.js/unsafe-eval) is externalized for
+// the same single-instance reason: pixi is already a dependency, so
+// consumers resolve one shared copy from their tree rather than a ~1.3MB
+// duplicate welded into this bundle. Inlining it also makes pixi
+// unreachable — consumers can't apply `pixi.js/unsafe-eval` (needed under
+// strict-CSP / MV3 hosts that forbid `new Function`) or otherwise
+// configure the renderer, because the patch can't see the bundled copy.
+external: [/^react($|\/)/, /^react-dom($|\/)/, /^pixi\.js($|\/)/],
+```
+
+✅ Same three facts — shared instance, ~1.3MB saved, stays patchable — in three lines:
+
+```ts
+// Externalize pixi.js for the same single-instance reason as React: it's already
+// a consumer dependency, so they share one copy (~1.3MB) and can still patch it
+// (e.g. pixi.js/unsafe-eval, required under strict-CSP/MV3 hosts that ban new Function).
+external: [/^react($|\/)/, /^react-dom($|\/)/, /^pixi\.js($|\/)/],
+```
+
 ## Sweep mode
 
 When invoked directly:
 
 1. **Resolve the target.** If the user named a file, use it. Otherwise sweep the current diff (`git diff` for unstaged work, or the branch against its base).
-2. **Find the offenders.** Comments that restate code, narrate edits, pad with filler, or reference retired behavior. Flag any comment that fails [the bar](#the-bar-does-this-comment-earn-its-place).
-3. **Fix in place.** Delete the noise; tighten the keepers (terser, state-not-change). Don't touch comments that already earn their place.
+2. **Find the offenders.** Comments that restate code, narrate edits, pad with filler, or reference retired behavior — flag any that fail [the bar](#the-bar-does-this-comment-earn-its-place). Also flag the **verbose keepers**: comments whose content earns a place but that sprawl across more lines than their facts need.
+3. **Fix in place.** Delete the noise; compress the keepers. Earning a place is not a pass on length — apply the [length smell](#how-to-write-the-ones-that-stay) to every comment you keep, including ones already in the file. A legitimate multi-line why-block is still a target: keep the load-bearing facts, cut the prose around them. Leave a comment untouched only when it's already at its densest.
 4. **Preserve required doc comments.** Leave docstrings / doc comments that a public API or doc generator needs — those follow the language's own conventions, not this skill.
 5. **Report briefly** — what was cut and what was tightened, no diff recap beyond what's useful.
