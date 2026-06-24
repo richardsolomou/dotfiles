@@ -5,7 +5,7 @@ description: "Turn a finished build-in-public stream VOD into a frozen per-strea
 
 # Stream Recap & Plan
 
-Turn a finished stream VOD into a **frozen, one-file-per-stream note** — what shipped, what changed vs the plan, bugs hit, ideas from chat, and the next-stream plan — and optionally the recap social posts.
+Turn a finished stream VOD into a **frozen, one-folder-per-stream record** — the VOD, the transcript + chat, a recap (what shipped, what changed vs the plan, bugs hit, ideas from chat, the next-stream plan), and the stream's social posts — all in a single `streams/<stream>/` folder.
 
 This is for Richard's build-in-public streams (currently **tro.gg**). It is retrospective: it records what happened, in the past tense, as of when you run it.
 
@@ -17,30 +17,36 @@ Consequences you must respect:
 
 - **Never write the recap as if it were the current spec.** Architecture, schema, milestones — those live in the repo. The note captures *the snapshot and the deltas*, then points at the repo.
 - **A stream almost always diverges from the pre-stream plan.** The most valuable section is usually "what changed vs the plan" — capture it precisely, but frame it as "this changed; the repo docs are now authoritative," not "update the plan."
-- **The note is frozen.** Don't promise to keep it in sync. Future runs write new per-stream files; they don't edit old ones.
+- **The note is frozen.** Don't promise to keep it in sync. Future runs write new per-stream folders; they don't edit old ones.
 
 ## Where things live
 
 - **Notes repo:** `~/dev/rs/notes/` (private, git-backed). Per-project folder, e.g. `~/dev/rs/notes/tro.gg/`.
   - `README.md` — **the single home for the workspace's conventions** (frozen-truth rule, source-of-truth = repo `docs/`, folder layout, cadence summary) and the **stream index table**. Individual files do NOT repeat these conventions — they carry only their own facts. Read it first, and add a row to its index when you write a new note.
   - `initial-plan.md` — the frozen pre-stream thinking (defers to the repo too).
-  - `streams/YYYY-MM-DD-stream-N-<slug>.md` — **one frozen recap per stream.** This is what you write.
-  - `posts/YYYY-MM-DD-stream-N.md` — one file per stream's social posts (see step 4).
+  - `streams/YYYY-MM-DD-stream-N-<slug>/` — **one folder per stream**, holding everything for it:
+    - `stream.md` — the entry note: the VOD (embedded + linked) and pointers to the rest.
+    - `recap.md` — **the frozen recap.** The main thing you write (step 3).
+    - `posts.md` — the stream's social posts (step 4).
+    - `transcript.txt`, `chat.txt` — the fetched spoken-word transcript + live chat the recap is built from (step 1 writes these here; they're committed with the note).
   - `social-playbook.md` — the one **living** doc: cadence, voice, and templates for the posts.
 - **Project repo (source of truth):** `~/dev/tro.gg/` with `docs/`. Read it to know what's *currently* true; cite it in the note.
-- Read the most recent `streams/*.md` before writing so the new note picks up where the last left off (open questions, the previous "next stream" plan).
+- Read the most recent stream's `recap.md` before writing so the new note picks up where the last left off (open questions, the previous "next stream" plan).
 
 ## Workflow
 
 ### 1. Get the transcript + chat
 
-Run the fetch script on the VOD URL:
+Create the stream's folder, fetch the VOD, then copy the transcript + chat into it (they're committed with the note, not throwaway):
 
 ```bash
-scripts/fetch-captions.sh "<youtube-url>"
+dir=~/dev/rs/notes/<project>/streams/YYYY-MM-DD-stream-N-<slug>
+mkdir -p "$dir"
+scripts/fetch-captions.sh "<youtube-url>"        # prints an outdir in its === summary ===
+cp <outdir>/transcript.txt <outdir>/chat.txt "$dir"/
 ```
 
-It prints a `=== summary ===` block with the output dir and whether `transcript.txt` and `chat.txt` are present.
+The script prints a `=== summary ===` block with the output dir and whether `transcript.txt` and `chat.txt` are present. (It nests output under `<outdir>/<video-id>/`, hence the copy step — copy the two `.txt` files into the stream folder; an absent transcript copies nothing, which is fine.)
 
 - **Transcript ABSENT?** YouTube hasn't generated auto-captions yet — normal for a long, freshly-uploaded VOD (can take a day+). You still get `chat.txt`. Tell the user, offer to (a) proceed from chat + their own recollection now, or (b) retry in a day for the full transcript. Don't fake spoken content you don't have.
 - The transcript is auto-caption text: expect mis-hearings (names, product terms, "PostHog" → "Poshog/Bosok", "Colyseus" → "Colus/Kissios", "Fable", "meep"). Read through them; don't quote them verbatim if garbled.
@@ -58,9 +64,11 @@ Read `transcript.txt` (it's one long line — wrap it to read, or read in offset
 
 ### 3. Write the note
 
-Create `~/dev/rs/notes/<project>/streams/YYYY-MM-DD-stream-N-<slug>.md`. Match the structure of the most recent stream file (read it first):
+Write into the stream folder from step 1. Match the structure of the most recent stream's files (read them first).
 
-1. **Header: a one-line blockquote of this file's own facts only** — e.g. `> Frozen as of <date>. Stream aired <date> (<duration>, <platforms>). VOD: <url>`. Do NOT re-explain frozen-truth or source-of-truth here; those conventions live in the folder `README.md` and must not be duplicated per file.
+**`recap.md`** — the recap proper:
+
+1. **Header: a one-line blockquote of this file's own facts only** — e.g. `> Frozen as of <date>. The VOD, transcript, chat, and posts are in [stream.md](stream.md).` The VOD/aired/platform metadata lives in `stream.md`, not here; do NOT duplicate it. Do NOT re-explain frozen-truth or source-of-truth either — those conventions live in the folder `README.md`.
 2. **What shipped.**
 3. **What changed vs the plan** (defer to repo for current truth).
 4. **Bugs filed** (running tally).
@@ -69,11 +77,13 @@ Create `~/dev/rs/notes/<project>/streams/YYYY-MM-DD-stream-N-<slug>.md`. Match t
 7. **The stream as a broadcast** — a verdict, then what worked / what dragged / fixes, covering pacing, tangents, chat engagement, on-screen legibility, the open and ending, and ops/tooling. Treat the stream rig (capture, audio, multistream, Discord) as the actionable tail of this section, not a separate one.
 8. **Open questions** — explicitly "answered in the repo docs, not tracked here."
 
-Add a row for the new stream to the `README.md` index table (recap link — and the posts link too if you draft posts in step 4). Run `markdownlint <file> README.md` (the notes repo's `.markdownlint.json` allows long lines). Commit with a terse message; **do not** add AI attribution. Leave `.obsidian/workspace.json` churn unstaged. (Commits are SSH-signed via 1Password; if signing errors, retry — never disable it.)
+**`stream.md`** — the folder's entry note. Title (`# <project> — Stream N (<date>, <day>)`), a one-line blockquote with the aired date/duration/platforms and a one-line summary, the **VOD embedded** as `![Stream N VOD](<youtube-url>)` (Obsidian renders the player; the alt text keeps markdownlint happy) followed by a plain `VOD: <url>` line, then an **"In this stream"** list linking `recap.md`, `posts.md`, `transcript.txt`, `chat.txt`.
+
+Add a row for the new stream to the `README.md` index table (link the folder's `stream.md`). Run `markdownlint <files> README.md` (the notes repo's `.markdownlint.json` allows long lines). Commit with a terse message; **do not** add AI attribution. Leave `.obsidian/workspace.json` churn unstaged. (Commits are SSH-signed via 1Password; if signing errors, retry — never disable it.)
 
 ### 4. Optionally draft the social posts
 
-If the user wants the recap posts, draft **X** and **LinkedIn** versions into `~/dev/rs/notes/<project>/posts/YYYY-MM-DD-stream-N.md` (one file per stream, mirroring `streams/`). First read `social-playbook.md` (cadence, voice, templates) and the **previous** `posts/` file's **"story state after stream N"** footer, so the serialized story stays continuous. The new file's header is a one-liner (VOD link only — conventions live in the README), and it ends with a fresh **"story state after stream N"** footer for the next run. Apply `rs-tone` (register: casual/`external`). House notes for these specifically:
+If the user wants the recap posts, draft **X** and **LinkedIn** versions into `posts.md` in the same stream folder. First read `social-playbook.md` (cadence, voice, templates) and the **previous** stream's `posts.md` **"story state after stream N"** footer, so the serialized story stays continuous. The new file's header is a one-liner (VOD link only — conventions live in the README), and it ends with a fresh **"story state after stream N"** footer for the next run. Apply `rs-tone` (register: casual/`external`). House notes for these specifically:
 
 - PostHog brand voice: opinionated, concrete, no marketing-speak, honest to the point of self-deprecation — lean *into* the bugs and the chaos. James-Hawkins-shitposter energy works for LinkedIn (fake-corporate-flex opener, then undercut it).
 - Be accurate to what shipped (the transcript is the fact-check). Don't claim products that weren't wired up.
