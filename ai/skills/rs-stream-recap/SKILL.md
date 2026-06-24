@@ -22,8 +22,11 @@ Consequences you must respect:
 ## Where things live
 
 - **Notes repo:** `~/dev/rs/notes/` (private, git-backed). Per-project folder, e.g. `~/dev/rs/notes/tro.gg/`.
+  - `README.md` — **the single home for the workspace's conventions** (frozen-truth rule, source-of-truth = repo `docs/`, folder layout, cadence summary) and the **stream index table**. Individual files do NOT repeat these conventions — they carry only their own facts. Read it first, and add a row to its index when you write a new note.
   - `initial-plan.md` — the frozen pre-stream thinking (defers to the repo too).
-  - `streams/YYYY-MM-DD-stream-N-<slug>.md` — **one file per stream.** This is what you write.
+  - `streams/YYYY-MM-DD-stream-N-<slug>.md` — **one frozen recap per stream.** This is what you write.
+  - `posts/YYYY-MM-DD-stream-N.md` — one file per stream's social posts (see step 4).
+  - `social-playbook.md` — the one **living** doc: cadence, voice, and templates for the posts.
 - **Project repo (source of truth):** `~/dev/tro.gg/` with `docs/`. Read it to know what's *currently* true; cite it in the note.
 - Read the most recent `streams/*.md` before writing so the new note picks up where the last left off (open questions, the previous "next stream" plan).
 
@@ -55,9 +58,9 @@ Read `transcript.txt` (it's one long line — wrap it to read, or read in offset
 
 ### 3. Write the note
 
-Create `~/dev/rs/notes/<project>/streams/YYYY-MM-DD-stream-N-<slug>.md`. Match the structure of the existing stream-1 file (read it first):
+Create `~/dev/rs/notes/<project>/streams/YYYY-MM-DD-stream-N-<slug>.md`. Match the structure of the most recent stream file (read it first):
 
-1. Intro blockquote: what this is, frozen, **source-of-truth = the project repo `docs/`**, VOD link.
+1. **Header: a one-line blockquote of this file's own facts only** — e.g. `> Frozen as of <date>. Stream aired <date> (<duration>, <platforms>). VOD: <url>`. Do NOT re-explain frozen-truth or source-of-truth here; those conventions live in the folder `README.md` and must not be duplicated per file.
 2. **What shipped.**
 3. **What changed vs the plan** (defer to repo for current truth).
 4. **Bugs filed** (running tally).
@@ -66,11 +69,11 @@ Create `~/dev/rs/notes/<project>/streams/YYYY-MM-DD-stream-N-<slug>.md`. Match t
 7. **The stream as a broadcast** — a verdict, then what worked / what dragged / fixes, covering pacing, tangents, chat engagement, on-screen legibility, the open and ending, and ops/tooling. Treat the stream rig (capture, audio, multistream, Discord) as the actionable tail of this section, not a separate one.
 8. **Open questions** — explicitly "answered in the repo docs, not tracked here."
 
-Run `markdownlint <file>` (the notes repo's `.markdownlint.json` allows long lines). Commit with a terse message; **do not** add AI attribution. Leave `.obsidian/workspace.json` churn unstaged.
+Add a row for the new stream to the `README.md` index table (recap link — and the posts link too if you draft posts in step 4). Run `markdownlint <file> README.md` (the notes repo's `.markdownlint.json` allows long lines). Commit with a terse message; **do not** add AI attribution. Leave `.obsidian/workspace.json` churn unstaged. (Commits are SSH-signed via 1Password; if signing errors, retry — never disable it.)
 
 ### 4. Optionally draft the social posts
 
-If the user wants the recap posts, draft **X** and **LinkedIn** versions. Apply `rs-tone` (register: casual/`external`). House notes for these specifically:
+If the user wants the recap posts, draft **X** and **LinkedIn** versions into `~/dev/rs/notes/<project>/posts/YYYY-MM-DD-stream-N.md` (one file per stream, mirroring `streams/`). First read `social-playbook.md` (cadence, voice, templates) and the **previous** `posts/` file's **"story state after stream N"** footer, so the serialized story stays continuous. The new file's header is a one-liner (VOD link only — conventions live in the README), and it ends with a fresh **"story state after stream N"** footer for the next run. Apply `rs-tone` (register: casual/`external`). House notes for these specifically:
 
 - PostHog brand voice: opinionated, concrete, no marketing-speak, honest to the point of self-deprecation — lean *into* the bugs and the chaos. James-Hawkins-shitposter energy works for LinkedIn (fake-corporate-flex opener, then undercut it).
 - Be accurate to what shipped (the transcript is the fact-check). Don't claim products that weren't wired up.
