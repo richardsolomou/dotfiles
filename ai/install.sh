@@ -45,6 +45,18 @@ uninstall_claude_config() {
             success "Removed skill symlinks"
         fi
 
+        if [ -d ~/.agents/skills ]; then
+            for skill_dir in "$ZSH"/ai/skills/*/; do
+                [ -d "$skill_dir" ] || continue
+                skill_name=$(basename "$skill_dir")
+                target="$HOME/.agents/skills/$skill_name"
+                if [ -L "$target" ]; then
+                    rm -f "$target"
+                fi
+            done
+            success "Removed Codex skill symlinks"
+        fi
+
         if [ -L ~/.claude/contexts ]; then
             rm -f ~/.claude/contexts
             success "Removed contexts symlink"
@@ -231,6 +243,24 @@ if [ "$INSTALL_SKILLS" = "true" ]; then
         ln -sf "$skill_dir" ~/.claude/skills/"$skill_name"
     done
     success "Symlinked skills"
+
+    # Symlink Codex skills (user scope). Codex follows symlinked skill folders
+    # from ~/.agents/skills, so ai/skills remains the source of truth.
+    mkdir -p ~/.agents/skills
+    for skill_dir in "$ZSH"/ai/skills/*/; do
+        [ -d "$skill_dir" ] || continue
+        skill_name=$(basename "$skill_dir")
+        target="$HOME/.agents/skills/$skill_name"
+
+        if [ -e "$target" ] && [ ! -L "$target" ]; then
+            warning "$target exists and is not a symlink - skipping"
+            continue
+        fi
+
+        rm -f "$target"
+        ln -sf "$skill_dir" "$target"
+    done
+    success "Symlinked Codex skills"
 
     # Symlink contexts (for language-specific writing guidelines)
     rm -f ~/.claude/contexts
