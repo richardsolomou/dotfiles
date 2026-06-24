@@ -28,7 +28,7 @@ Consequences you must respect:
     - `stream.md` — the entry note: the VOD (embedded + linked) and pointers to the rest.
     - `recap.md` — **the frozen recap.** The main thing you write (step 3).
     - `posts.md` — the stream's social posts (step 4).
-    - `transcript.txt`, `chat.txt` — the fetched spoken-word transcript + live chat the recap is built from (step 1 writes these here; they're committed with the note).
+    - `transcript.txt`, `transcript-timestamped.txt`, `chat.txt` — the fetched spoken-word transcript (prose for cheap full-context reading, plus a `[HH:MM:SS]`-per-line version to pin a moment to the VOD) and live chat the recap is built from (step 1 writes these here; they're committed with the note).
   - `social-playbook.md` — the one **living** doc: cadence, voice, and templates for the posts.
 - **Project repo (source of truth):** `~/dev/tro.gg/` with `docs/`. Read it to know what's *currently* true; cite it in the note.
 - Read the most recent stream's `recap.md` before writing so the new note picks up where the last left off (open questions, the previous "next stream" plan).
@@ -43,17 +43,17 @@ Create the stream's folder, fetch the VOD, then copy the transcript + chat into 
 dir=~/dev/rs/notes/<project>/streams/YYYY-MM-DD-stream-N-<slug>
 mkdir -p "$dir"
 scripts/fetch-captions.sh "<youtube-url>"        # prints an outdir in its === summary ===
-cp <outdir>/transcript.txt <outdir>/chat.txt "$dir"/
+cp <outdir>/transcript.txt <outdir>/transcript-timestamped.txt <outdir>/chat.txt "$dir"/
 ```
 
-The script prints a `=== summary ===` block with the output dir and whether `transcript.txt` and `chat.txt` are present. (It nests output under `<outdir>/<video-id>/`, hence the copy step — copy the two `.txt` files into the stream folder; an absent transcript copies nothing, which is fine.)
+The script prints a `=== summary ===` block with the output dir and what's present. It writes `transcript.txt` (deduped prose, one line), `transcript-timestamped.txt` (the same lines, one per line, each prefixed `[HH:MM:SS]` cue start), and `chat.txt`. (It nests output under `<outdir>/<video-id>/`, hence the copy step — copy those three files into the stream folder; an absent transcript copies nothing, which is fine.)
 
 - **Transcript ABSENT?** YouTube hasn't generated auto-captions yet — normal for a long, freshly-uploaded VOD (can take a day+). You still get `chat.txt`. Tell the user, offer to (a) proceed from chat + their own recollection now, or (b) retry in a day for the full transcript. Don't fake spoken content you don't have.
 - The transcript is auto-caption text: expect mis-hearings (names, product terms, "PostHog" → "Poshog/Bosok", "Colyseus" → "Colus/Kissios", "Fable", "meep"). Read through them; don't quote them verbatim if garbled.
 
 ### 2. Mine it
 
-Read `transcript.txt` (it's one long line — wrap it to read, or read in offsets) and `chat.txt`. Pull out:
+Read `transcript.txt` (it's one long line — wrap it to read, or read in offsets) and `chat.txt`. Pull out the below. To pin any quote or moment to its place in the VOD, grep the text in `transcript-timestamped.txt` and read off the `[HH:MM:SS]` — cheaper than feeding the whole timestamped file to the model.
 
 - **What actually shipped** — concrete, working-at-end-of-stream outcomes. Be honest about how far it got (don't under- or over-sell).
 - **What changed vs the plan** — diff against `initial-plan.md` and the previous stream note. Backend/stack/scope pivots are the high-value ones. Frame as deltas that the repo docs now own.
@@ -77,7 +77,7 @@ Write into the stream folder from step 1. Match the structure of the most recent
 7. **The stream as a broadcast** — a verdict, then what worked / what dragged / fixes, covering pacing, tangents, chat engagement, on-screen legibility, the open and ending, and ops/tooling. Treat the stream rig (capture, audio, multistream, Discord) as the actionable tail of this section, not a separate one.
 8. **Open questions** — explicitly "answered in the repo docs, not tracked here."
 
-**`stream.md`** — the folder's entry note. Title (`# <project> — Stream N (<date>, <day>)`), a one-line blockquote with the aired date/duration/platforms and a one-line summary, the **VOD embedded** as `![Stream N VOD](<youtube-url>)` (Obsidian renders the player; the alt text keeps markdownlint happy) followed by a plain `VOD: <url>` line, then an **"In this stream"** list linking `recap.md`, `posts.md`, `transcript.txt`, `chat.txt`.
+**`stream.md`** — the folder's entry note. Title (`# <project> — Stream N (<date>, <day>)`), a one-line blockquote with the aired date/duration/platforms and a one-line summary, the **VOD embedded** as `![Stream N VOD](<youtube-url>)` (Obsidian renders the player; the alt text keeps markdownlint happy) followed by a plain `VOD: <url>` line, then an **"In this stream"** list linking `recap.md`, `posts.md`, `transcript.txt`, `transcript-timestamped.txt`, `chat.txt`.
 
 Add a row for the new stream to the `README.md` index table (link the folder's `stream.md`). Run `markdownlint <files> README.md` (the notes repo's `.markdownlint.json` allows long lines). Commit with a terse message; **do not** add AI attribution. Leave `.obsidian/workspace.json` churn unstaged. (Commits are SSH-signed via 1Password; if signing errors, retry — never disable it.)
 

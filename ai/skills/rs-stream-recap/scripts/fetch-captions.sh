@@ -5,7 +5,8 @@
 #   output-dir defaults to a per-video temp dir; the resolved path is printed at the end.
 #
 # Writes into output-dir:
-#   transcript.txt   cleaned spoken-word transcript (auto-captions, dedup'd, one line)
+#   transcript.txt              cleaned spoken-word transcript (auto-captions, dedup'd, one line) — cheap full-context read
+#   transcript-timestamped.txt  the same lines, one per line, each prefixed [HH:MM:SS] (cue start) — to locate a moment in the VOD
 #   chat.txt         live chat as "author: message", in order (past livestreams only)
 #   <id>.en*.vtt     raw caption track(s), kept for reference
 #   <id>.live_chat.json
@@ -58,12 +59,18 @@ for cand in "$outdir/$id.en.vtt" "$outdir/$id.en-orig.vtt"; do
 done
 
 transcript="$outdir/transcript.txt"
+transcript_ts="$outdir/transcript-timestamped.txt"
 if [ -n "$vtt" ]; then
-  python3 - "$vtt" "$transcript" <<'PY'
+  python3 - "$vtt" "$transcript" "$transcript_ts" <<'PY'
 import re, html, sys
-src, dst = sys.argv[1], sys.argv[2]
-out, seen = [], set()
+src, dst, dst_ts = sys.argv[1], sys.argv[2], sys.argv[3]
+prose, stamped, seen = [], [], set()
+cur = None                                       # start time of the current cue, "HH:MM:SS"
 for line in open(src, encoding="utf-8").read().splitlines():
+    m = re.match(r"(\d{2}:\d{2}:\d{2})\.\d{3}\s+-->", line)
+    if m:
+        cur = m.group(1)
+        continue
     if "-->" in line or line.startswith(("WEBVTT", "Kind:", "Language:")):
         continue
     line = re.sub(r"<[^>]+>", "", line)          # strip <00:00:00.000>, <c> tags
@@ -71,12 +78,14 @@ for line in open(src, encoding="utf-8").read().splitlines():
     if not line or line in seen:                 # drop blanks + rolling-window repeats
         continue
     seen.add(line)
-    out.append(line)
-text = re.sub(r"\s+", " ", " ".join(out)).strip()
-open(dst, "w", encoding="utf-8").write(text)
+    prose.append(line)
+    stamped.append(f"[{cur}] {line}" if cur else line)
+open(dst, "w", encoding="utf-8").write(re.sub(r"\s+", " ", " ".join(prose)).strip())
+open(dst_ts, "w", encoding="utf-8").write("\n".join(stamped) + ("\n" if stamped else ""))
 PY
 else
   : > "$transcript"
+  : > "$transcript_ts"
 fi
 
 chatjson="$outdir/$id.live_chat.json"
@@ -122,7 +131,9 @@ echo "=== summary ==="
 echo "video_id:   $id"
 echo "outdir:     $outdir"
 if [ -s "$transcript" ]; then
+  ts_lines=$(grep -c '' "$transcript_ts" 2>/dev/null || echo 0)
   echo "transcript: present ($words words) -> $transcript"
+  echo "timestamped: present ($ts_lines lines) -> $transcript_ts"
 else
   echo "transcript: ABSENT — auto-captions not generated yet (normal for a fresh long VOD; retry in a day)"
 fi
