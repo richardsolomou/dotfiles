@@ -238,6 +238,8 @@ CRITICAL: NEVER add AI attribution to commits or PRs
 
 When creating PRs, **always check for `.github/pull_request_template.md`** in the repository and use it as the PR body structure. This overrides the default built-in PR template format. If the repo has no PR template, fall back to: Problem, Changes, How did you test this code?
 
+**A PR's title and description must reflect the current diff, not the diff at creation time.** Whenever you push to a branch that already has an open PR — addressing review, follow-up commits, rebasing, restacking, or any later push — re-check the title and body against the new full diff (`git diff <base>...HEAD`) and update them in the same pass if anything no longer matches. This is automatic: PR-body edits are not review comments, so the approval gate under "PR Review Comments" does not apply — refresh without asking. The single source of truth for *how* to write the title and body is the `rs-update-pr` skill; apply it, don't restate its rules.
+
 ## GitHub Operations
 
 ### Voice & Attribution

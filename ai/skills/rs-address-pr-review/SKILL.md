@@ -198,11 +198,11 @@ Plan:
 Reply with numbers to execute (e.g. "1, 2, 4"), "all" to do everything, or "none" to do nothing. You can also say "edits only" to apply file edits without committing, pushing, posting replies, or resolving — useful if you want to review the diffs locally first.
 ```
 
-Executing means: apply the edits, **commit and push them**, then post replies and resolve threads (Step 8). Spell this out in the plan so the user knows a "done" reply implies a push — that's the contract. Default to doing nothing until the user picks. The "edits only" escape hatch matters because CLAUDE.md forbids posting PR review comments without explicit user approval — listing the planned replies above counts as approval *for those specific bodies*; if you change them, ask again before posting.
+Executing means: apply the edits, **commit and push them**, refresh the PR title and description against the new diff, then post replies and resolve threads (Step 8). Spell this out in the plan so the user knows a "done" reply implies a push — that's the contract. Default to doing nothing until the user picks. The "edits only" escape hatch matters because CLAUDE.md forbids posting PR review comments without explicit user approval — listing the planned replies above counts as approval *for those specific bodies*; if you change them, ask again before posting.
 
 ### Step 8: Execute
 
-Execution has two parts: first apply *all* the file edits, then commit and push them, and only then post replies and resolve threads. The ordering is the whole point — **a "done" reply must never go out before the change is actually pushed.** Posting "done" while the fix sits unpushed in the working tree is the exact failure this skill exists to avoid: the user sees the reply, assumes the PR is updated, and merges stale code.
+Execution has three parts: first apply *all* the file edits, then commit and push them, then refresh the PR body and only then post replies and resolve threads. The ordering is the whole point — **a "done" reply must never go out before the change is actually pushed.** Posting "done" while the fix sits unpushed in the working tree is the exact failure this skill exists to avoid: the user sees the reply, assumes the PR is updated, and merges stale code.
 
 1. **Apply every picked file edit.** Use the diffs shown in the walkthrough — don't re-derive them. Apply all of them before moving on, so the round lands as one push.
 
@@ -216,9 +216,11 @@ Execution has two parts: first apply *all* the file edits, then commit and push 
 
     This is one commit per review round, which matches the repo commit strategy (a fresh commit each round so reviewers see what changed). Do not amend. If the push fails (e.g. the branch is behind), stop and surface the error — do **not** post any "done" replies, because the change isn't live.
 
-    If the user chose **"edits only"**, stop here without committing — they want to review the diffs locally first. In that case do not post replies or resolve threads.
+    If the user chose **"edits only"**, stop here without committing — they want to review the diffs locally first. In that case do not refresh the PR body, post replies, or resolve threads.
 
-3. **Post the in-thread reply** for each picked thread, using the comment ID of the first comment in the thread:
+3. **Refresh the PR title and description.** A review round changes the code, so the PR body written at creation time is now potentially stale. Apply the `rs-update-pr` skill to re-check the title and description against the full diff and update them if anything no longer matches. This is automatic — PR-body edits are not review comments, so do it without asking (per CLAUDE.md → Pull Request Descriptions). Do this *after* the push succeeds and *before* posting any "done" replies, so the reply and the body land together.
+
+4. **Post the in-thread reply** for each picked thread, using the comment ID of the first comment in the thread:
 
     ```bash
     gh api repos/<owner>/<repo>/pulls/<number>/comments/<first-comment-databaseId>/replies \
@@ -228,7 +230,7 @@ Execution has two parts: first apply *all* the file edits, then commit and push 
 
     For "Agree, no open questions" the reply body can be as terse as `Done — <one-liner naming what changed>`. For everything else, use the **Suggested reply** drafted in the walkthrough. The Suggested reply was already written with `rs-tone` register `pr-review` applied; the terse "done" replies should follow the same rules (no severity labels, no sign-offs, lowercase informal voice is fine).
 
-4. **Resolve the thread** (only when the per-verdict rules above say to):
+5. **Resolve the thread** (only when the per-verdict rules above say to):
 
     ```bash
     gh api graphql \
@@ -238,7 +240,7 @@ Execution has two parts: first apply *all* the file edits, then commit and push 
 
     The thread node ID was captured in Step 2.
 
-5. **Report what happened** for each thread: `1. <file>:<line> — edit applied, pushed in <sha>, reply posted, thread resolved.` Make failures visible — if the push failed or the reply call returned 422, say so and stop rather than silently moving on.
+6. **Report what happened** for each thread: `1. <file>:<line> — edit applied, pushed in <sha>, reply posted, thread resolved.` Make failures visible — if the push failed or the reply call returned 422, say so and stop rather than silently moving on.
 
 ## What to include vs. skip
 

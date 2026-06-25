@@ -47,6 +47,10 @@ For each branch that was restacked, force-push:
 git push --force-with-lease origin <branch>
 ```
 
-### Step 4: Report
+### Step 4: Refresh PRs whose scope changed
+
+For each restacked branch with an open PR, if the restack changed what that PR's own diff contains (conflict resolutions that altered behaviour, dropped commits), apply the `rs-update-pr` skill to that branch to re-check its title and description and update them if stale. A pure restack that only rewrites parent commits, leaving each branch's own diff unchanged, needs no refresh. Refresh without asking (per CLAUDE.md → Pull Request Descriptions).
+
+### Step 5: Report
 
 Display which branches were restacked and pushed.

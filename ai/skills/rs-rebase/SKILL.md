@@ -48,6 +48,10 @@ If there are conflicts:
 git push origin HEAD
 ```
 
-### Step 5: Report
+### Step 5: Refresh the PR if the merge changed its scope
+
+If the current branch has an open PR and pulling the parent in changed what this PR actually does (conflict resolutions that altered behaviour, now-redundant commits, a shifted diff), apply the `rs-update-pr` skill to re-check the title and description against the new diff and update them if stale. A clean merge that doesn't change the branch's own diff needs no refresh. Refresh without asking (per CLAUDE.md → Pull Request Descriptions).
+
+### Step 6: Report
 
 Display what was merged, whether any conflicts were resolved, and how.
