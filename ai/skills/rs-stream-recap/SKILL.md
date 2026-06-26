@@ -81,13 +81,15 @@ Write into the stream folder from step 1. Match the structure of the most recent
 
 Add a row for the new stream to the `README.md` index table (link the folder's `stream.md`). Run `markdownlint <files> README.md` (the notes repo's `.markdownlint.json` allows long lines). Commit with a terse message; **do not** add AI attribution. Leave `.obsidian/workspace.json` churn unstaged. (Commits are SSH-signed via 1Password; if signing errors, retry — never disable it.)
 
-### 4. Optionally draft the social posts
+### 4. Draft the social posts
 
-If the user wants the recap posts, draft **X** and **LinkedIn** versions into `posts.md` in the same stream folder. First read `social-playbook.md` (cadence, voice, templates) and the **previous** stream's `posts.md` **"story state after stream N"** footer, so the serialized story stays continuous. The new file's header is a one-liner (VOD link only — conventions live in the README), and it ends with a fresh **"story state after stream N"** footer for the next run. Apply `rs-tone` (register: casual/`external`). House notes for these specifically:
+Always draft the recap posts — **X** and **LinkedIn** versions into `posts.md` in the same stream folder (no need to ask first). First read `social-playbook.md` (cadence, voice, templates) and the **previous** stream's `posts.md` **"story state after stream N"** footer, so the serialized story stays continuous. The new file's header is a one-liner (VOD link only — conventions live in the README), and it ends with a fresh **"story state after stream N"** footer for the next run. Apply `rs-tone` (register: casual/`external`). House notes for these specifically:
 
+- **Structure that works (match it):** for each format — X recap, LinkedIn recap, deadpan shitpost — pick **one chosen** post and follow it with a labelled **alternatives** block (`[A1 …]`, `[L1 …]`, `[S1 …]`) spanning distinct angles, so the user can swap. Lead the file with a drafting note: the date, "pending — not yet live", the story-continuity carry-over, and the **honest holds** (what *not* to claim — products not wired, bugs not fixed).
+- **Formats that have landed:** the **by-the-numbers** list (`— 50 PRs / — 1 pathfinder one-shot in ~10 min / — 0 idea what the game is`) reads great on X *and* LinkedIn — but don't run the same one on both; differentiate. For LinkedIn, the **fake-corporate-flex opener → hard undercut** (PMF parody, "milestone to report", "what I learned") is the house move; keep the hook tight enough to land above LinkedIn's ~140-char "…see more" fold.
 - PostHog brand voice: opinionated, concrete, no marketing-speak, honest to the point of self-deprecation — lean *into* the bugs and the chaos. James-Hawkins-shitposter energy works for LinkedIn (fake-corporate-flex opener, then undercut it).
 - Be accurate to what shipped (the transcript is the fact-check). Don't claim products that weren't wired up.
-- Keep the strongest chat idea as the hook. Match the format of the previous stream's posts if the user liked them.
+- Keep the strongest chat idea / hook leading. **VOD links use the YouTube URL on every platform, LinkedIn included** (`youtube.com/watch?v=<id>`) — not an `lnkd.in` shortener.
 
 ## Notes
 
