@@ -12,10 +12,13 @@
 ### Simplicity Means
 
 - Single responsibility per function/class
-- Avoid premature abstractions
+- Avoid premature abstractions and superfluous parts
 - No clever tricks - choose the boring solution
 - If you need to explain it, it's too complex
+- Express every idea, but say it once and only once - these two pull against each other, so balance them in favour of whoever maintains the code next
 - If the type already supports an operation (via derives, traits, or methods), use it - don't reimplement
+
+Once code works, pause and consider whether it should be made simpler or faster before moving on — but only once you're sure it works.
 
 ## Backwards compatibility
 
@@ -48,7 +51,7 @@ If investigation contradicts what you assumed, re-plan before continuing rather 
 4. **Refactor** - Clean up with tests passing
 5. **Commit** - With clear message
 
-### 3. When Stuck (After 2 Attempts)
+### 4. When Stuck (After 2 Attempts)
 
 **CRITICAL**: When implementation goes sideways, immediately switch to plan mode and re-plan. Don't keep pushing forward with a broken approach.
 
@@ -79,6 +82,7 @@ When stuck, systematically:
 - **Before committing**:
   - Run the project's formatter/linter — `bin/fmt` if it exists, otherwise the language's formatter. Rust specifics under Rust-Specific Guidelines.
   - Ensure commit message explains "why"
+  - Never use `--no-verify` to bypass commit hooks
 
 ### Error Handling
 
@@ -130,20 +134,6 @@ For implementation decisions, weigh testability, maintainability, consistency, s
 - When adding functionality, write tests for it, covering edge cases, error handling, and performance implications
 - Always run tests before marking a task complete; if they fail, fix them before proceeding
 - Update relevant documentation when changing functionality
-
-## Important Reminders
-
-**NEVER**:
-
-- Use `--no-verify` to bypass commit hooks
-- Disable tests instead of fixing them
-- Commit code that doesn't compile
-- Make assumptions - verify with existing code
-
-**ALWAYS**:
-
-- Commit working code incrementally
-- Learn from existing code, and stop to re-plan after 2 failed attempts (see Process)
 
 ## Self-Improvement
 
@@ -371,21 +361,6 @@ For multi-step work, give one short status update per key moment — when someth
   - Describing the problem the change eliminates rather than the behavior that remains: "fixes the race where …", "prevents the old deadlock". State what the code guarantees now ("holds the lock across the read so the count stays consistent"), not the defect it retired.
   - Citing a PR/issue as the reason a change was made: "#78 dropped the retry", "match django_redis (#77)".
   State the invariant as it stands now; the "why" behind the change goes in the commit and PR. Linking a *still-live* spec or upstream issue is fine ("workaround for grpc/grpc#1234") — that constraint is still true today.
-
-## Approach to work
-
-### Simple Code
-
-I like "Simple code" that means:
-
-- Passes all the tests.
-- Expresses every idea that we need to express.
-- Says everything OnceAndOnlyOnce.
-- has no superfluous parts
-
-These rules are in conflict with each other. Sometimes to express every idea we can't say everything only once. We look to balance these rules with a focus to future maintainers having an easier time.
-
-Once code works, pause and consider whether it should be made simpler or faster before moving on — but only once you're sure it works.
 
 ## Test Instructions
 
