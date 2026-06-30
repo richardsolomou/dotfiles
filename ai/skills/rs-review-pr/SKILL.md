@@ -2,6 +2,7 @@
 name: rs-review-pr
 description: "Review a pull request: first orient the reviewer with an ELI5 of what the PR does, why, and the concepts in play, then produce inline review comments — confirmed findings only, no open questions or nits — anchored to specific lines, plus an optional short top-level summary, ready to paste into GitHub one at a time."
 argument-hint: "<pr-url|pr-number>"
+user-invocable: false
 ---
 
 # Review PR

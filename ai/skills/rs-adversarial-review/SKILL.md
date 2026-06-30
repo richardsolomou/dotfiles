@@ -1,6 +1,7 @@
 ---
 name: rs-adversarial-review
 description: "The reviewer discipline shared across rs-review-pr, rs-self-review, and rs-address-pr-review: skeptical posture, counter-bias framing per context, adversarial verification, and the defensibility bar for raising findings. Load this when another skill says to apply adversarial review, then apply the rules to every candidate finding before it becomes output."
+user-invocable: false
 ---
 
 # Adversarial Review
