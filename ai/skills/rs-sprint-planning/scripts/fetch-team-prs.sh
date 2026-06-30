@@ -9,7 +9,9 @@
 #   start_date  - Start of date range, inclusive (YYYY-MM-DD)
 #   end_date    - End of date range, inclusive (YYYY-MM-DD, defaults to today)
 #
-# Output: JSON array of merged PRs with title, url, closedAt, and repository fields.
+# Output: JSON array of merged PRs with title, body, url, closedAt, and
+# repository fields. The body is the PR description — synthesize the retro from
+# it, not the title alone, which often undersells or miscolors the work.
 
 set -euo pipefail
 
@@ -42,4 +44,4 @@ gh search prs \
   --merged \
   --merged-at="${start_date}..${end_date}" \
   --limit=200 \
-  --json title,url,closedAt,repository
+  --json title,body,url,closedAt,repository
