@@ -106,3 +106,6 @@ eval "$(zoxide init zsh)"
 
 # --- Starship prompt ---
 eval "$(starship init zsh)"
+
+# PostHog infra scripts (grafana-region, grafana-token, mcp wrapper)
+export PATH="$HOME/dev/posthog/posthog/tools/infra-scripts/mcp:$PATH"

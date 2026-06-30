@@ -273,7 +273,7 @@ fi
 MCP_SERVERS="
 posthog-db|PostHog database connection|/Users/richard/.local/bin/postgres-mcp --access-mode=restricted
 memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory
-grafana|Grafana MCP server|$ZSH/bin/mcp-grafana-wrapper.sh
+grafana|Grafana MCP server|$HOME/dev/posthog/posthog/tools/infra-scripts/mcp/mcp-grafana-wrapper.sh
 "
 
 # Special environment variables for specific servers
