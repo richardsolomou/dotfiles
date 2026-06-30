@@ -158,9 +158,9 @@ Write plain markdown at `new_file_path`: the `# {week_header}` line, the two `##
 Then back up to the private `notes` repo:
 
 ```bash
-git -C ~/dev/rs/notes add -A
-git -C ~/dev/rs/notes diff --cached --quiet || git -C ~/dev/rs/notes commit -q -m "ai-gateway-sync: ${week_header}"
-git -C ~/dev/rs/notes push -q
+git -C ~/dev/notes add -A
+git -C ~/dev/notes diff --cached --quiet || git -C ~/dev/notes commit -q -m "ai-gateway-sync: ${week_header}"
+git -C ~/dev/notes push -q
 ```
 
 The `diff --cached --quiet` guard skips a no-op commit; the push is a no-op when there's nothing new. If the push fails (offline, auth), report it but don't block — the file is written locally.
@@ -175,7 +175,7 @@ Display:
 
 ## Notes
 
-- Entries live in `~/dev/rs/notes/PostHog/ai-gateway-sync/`, named `YYYY-MM-DD.md` for sorting.
+- Entries live in `~/dev/notes/PostHog/ai-gateway-sync/`, named `YYYY-MM-DD.md` for sorting.
 - The local files are the archive *and* the window source: each `generated-at:` marker is what the next run reads for `window_start`. Don't strip it.
 - The window is timestamp-precise on both passes: GitHub qualifiers take the full ISO instant; Slack's filter is day-granular, so you post-filter by message `Time` (Step 4).
 - The **This week** section is never fully machine-derived — always close the loop with the user before considering the entry done.

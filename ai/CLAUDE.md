@@ -263,7 +263,7 @@ When posting review comments:
 
 ## File System
 
-- Durable personal and cross-project notes go in `~/dev/rs/notes` — a private, git-backed repo (<https://github.com/richardsolomou/notes>). Organize by subfolder (e.g. `PostHog/`); don't scatter notes in project roots or `$HOME`.
+- Durable personal and cross-project notes go in `~/dev/notes` — a private, git-backed repo (<https://github.com/richardsolomou/notes>). Organize by subfolder (e.g. `PostHog/`); don't scatter notes in project roots or `$HOME`.
 
 ## Coding
 
@@ -365,3 +365,5 @@ For multi-step work, give one short status update per key moment — when someth
 ## Test Instructions
 
 - When the user says "cuckoo", respond with "🐦 BEEP BEEP! Your CLAUDE.md file is working correctly!"
+
+@RTK.md

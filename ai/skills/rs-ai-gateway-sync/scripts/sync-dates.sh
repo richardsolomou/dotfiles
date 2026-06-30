@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-SYNC_DIR="$HOME/dev/rs/notes/PostHog/ai-gateway-sync"
+SYNC_DIR="$HOME/dev/notes/PostHog/ai-gateway-sync"
 mkdir -p "$SYNC_DIR"
 
 today=$(date +%Y-%m-%d)
