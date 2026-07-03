@@ -1,7 +1,7 @@
 ---
 name: rs-tone
-description: "Apply Richard's voice to user-facing output (Slack messages, PR descriptions, PR review comments, customer replies, standup notes). Use as a reference linked from other SKILL.md files, or invoke directly to rewrite the previous output. TRIGGER when about to send anything Richard would post under his name — Slack message, PR description, PR review comment, GitHub issue comment, customer reply, standup post — or when another skill has just produced such output. Pick a register: `slack-casual` for DMs and team chat; `slack-status` for standup, ops, incident updates; `pr-description` for PR bodies and RFC comments; `pr-review` for inline PR review comments; `external` for customer-facing or public-thread replies. SKIP for: terminal output not posted anywhere, internal tool calls, agent-to-agent messages, code comments, commit messages (use the repo's commit-message conventions instead), and any output where a neutral assistant voice is appropriate."
-argument-hint: "[slack-casual|slack-status|pr-description|pr-review|external]"
+description: "Apply Richard's voice to user-facing output (Slack messages, PR descriptions, PR review comments, customer replies, standup notes, social posts). Use as a reference linked from other SKILL.md files, or invoke directly to rewrite the previous output. TRIGGER when about to send anything Richard would post under his name — Slack message, PR description, PR review comment, GitHub issue comment, customer reply, standup post, X/LinkedIn post — or when another skill has just produced such output. Pick a register: `slack-casual` for DMs and team chat; `slack-status` for standup, ops, incident updates; `pr-description` for PR bodies and RFC comments; `pr-review` for inline PR review comments; `external` for customer-facing or public-thread replies; `social-post` for X/LinkedIn one-liners. SKIP for: terminal output not posted anywhere, internal tool calls, agent-to-agent messages, code comments, commit messages (use the repo's commit-message conventions instead), and any output where a neutral assistant voice is appropriate."
+argument-hint: "[slack-casual|slack-status|pr-description|pr-review|external|social-post]"
 ---
 
 # Tone
@@ -20,6 +20,7 @@ Apply this skill when the output will be posted, sent, or pasted under Richard's
 - Posted to a PR description, RFC comment, or internal proposal → `pr-description`.
 - Posted as an inline PR review comment → `pr-review`.
 - Posted to a customer-facing thread (Zendesk, public partner repo, public GitHub issue) → `external`.
+- Posted to X or LinkedIn as a social post → `social-post`.
 
 Skip this skill when:
 
@@ -237,6 +238,31 @@ Customer-facing comments (Zendesk replies, public PR threads on partner repos, p
 
 > Hey, [GitHub PR link] examples were running with the pinned versions on each example. Not sure if Anthropic bumped a major version of their SDK in the meantime or the docs are not up to date with the examples, but last time I ran the examples using `llm-analytics-apps`, it worked fine.
 
+### social-post
+
+Short public posts on X and LinkedIn; one version runs identically on both, no platform variants. The `generate-social-posts` skill owns *what* to say (sourcing, the transferable-lesson bar, PostHog safety); this register owns how it sounds.
+
+**Rules:**
+
+- Full sentence case, correct punctuation and grammar. No lowercase affectation, no dropped apostrophes — this is a public register, not `slack-casual`.
+- One real sentence, two at most; cap around 25-30 words.
+- **Funny is the default register, not a garnish.** The ideal post is a joke that happens to be true: absurd-but-accurate imagery ("it's not persistence, it's cardio"), deadpan personification, self-implication. A flat advice-column delivery ("If X, do Y.") is this register's failure mode.
+- **One emoji, occasionally two, placed where the feeling peaks** (🫠 💸 🔋 🙃) — usually punctuating the absurdity or the sigh. Standard Unicode only, no Slack custom emoji, never emoji-bulleted lists or a decorative row.
+- **Punchlines yes, morals no.** A funny final clause earns its place; a profound-sounding one ("X was never about Y, it's Z") is the influencer aphorism and gets cut. The test for the last few words: smirk stays, sage nod goes.
+- Positive and energized by building, never doom, never job-anxiety. If a line reads like a warning, rewrite it as a discovery.
+- No em dashes — period, comma, colon, or a fresh sentence (overrides the common-rule preference for em-dashes).
+- State the observation plainly; skip the hedges the other registers use (overrides the common hedging rule — "I think" deflates a one-liner).
+- No hashtags. No links unless the post is *about* one. Never the word "load-bearing" — name the specific thing.
+
+**Avoid:**
+
+- Diary framing ("today", "this week", "shipped X") — the post is for the reader, not about Richard's day.
+- Wind-up before the point; the first clause should already be the observation.
+
+**Example:**
+
+> That localStorage write in your drag handler runs sixty times a second. It's not persistence, it's cardio 🏃
+
 ## Using this skill as a reference
 
 Other skills should name a specific register rather than duplicating rules:
@@ -256,7 +282,7 @@ Triggered either by the user (`/tone [register]`) or by a model that just produc
 1. **Identify the target output.** Read the most recent assistant message in the conversation that produced user-facing content (a standup, a PR description, a review comment, an external reply, a Slack draft). If it's ambiguous which output to rewrite, ask before rewriting.
 2. **Pick the register.**
    - If the user passed an arg, use it.
-   - Otherwise infer from the source skill or output shape: `rs-standup` → `slack-status`, `rs-update-pr` → `pr-description`, `rs-review-pr` → `pr-review`, a public-thread reply → `external`, otherwise → `slack-casual`.
+   - Otherwise infer from the source skill or output shape: `rs-standup` → `slack-status`, `rs-update-pr` → `pr-description`, `rs-review-pr` → `pr-review`, a public-thread reply → `external`, `generate-social-posts` → `social-post`, otherwise → `slack-casual`.
    - If inference is shaky, ask.
 3. **Rewrite, preserving meaning.** Apply the rules for the chosen register and the common rules. Keep all factual content — PR numbers, file paths, names, decisions. Don't add new claims, don't drop concrete details, don't fabricate. If the input is wrong, say so separately rather than silently fixing it.
 4. **Output the rewritten version only.** No diff, no "here's what I changed" preamble, no commentary. The user copies the result.
