@@ -244,14 +244,14 @@ Short public posts on X and LinkedIn; one version runs identically on both, no p
 
 **Rules:**
 
-- Full sentence case, correct punctuation and grammar. No lowercase affectation, no dropped apostrophes — this is a public register, not `slack-casual`.
-- One real sentence, two at most; cap around 25-30 words.
+- **Diction is `slack-casual`** — write it like a Slack message to the team, not like marketing copy. Lowercase by default (capitals for proper nouns and emphasis), dropped apostrophes (`dont`, `thats`, `cant` — keep them on collisions, `it's`/`we're`/`let's`), slang welcome where it's natural.
+- Differences from `slack-casual`, because a post isn't a chat:
+  - **One self-contained post**, one or two sentences, cap around 25-30 words. No fragmenting across messages, no acknowledgement openers (`yeah`, `gotcha`) — the first clause is already the observation.
+  - **Standard Unicode emoji only** (🫠 💸 🔋 🙃), never Slack custom emojis — one per post, occasionally two, placed where the feeling peaks. Never emoji-bulleted lists or a decorative row.
+  - State the observation plainly; skip the soft framing (`my take is…`, `i feel like…`) — hedging deflates a one-liner.
 - **Funny is the default register, not a garnish.** The ideal post is a joke that happens to be true: absurd-but-accurate imagery ("it's not persistence, it's cardio"), deadpan personification, self-implication. A flat advice-column delivery ("If X, do Y.") is this register's failure mode.
-- **One emoji, occasionally two, placed where the feeling peaks** (🫠 💸 🔋 🙃) — usually punctuating the absurdity or the sigh. Standard Unicode only, no Slack custom emoji, never emoji-bulleted lists or a decorative row.
 - **Punchlines yes, morals no.** A funny final clause earns its place; a profound-sounding one ("X was never about Y, it's Z") is the influencer aphorism and gets cut. The test for the last few words: smirk stays, sage nod goes.
 - Positive and energized by building, never doom, never job-anxiety. If a line reads like a warning, rewrite it as a discovery.
-- No em dashes — period, comma, colon, or a fresh sentence (overrides the common-rule preference for em-dashes).
-- State the observation plainly; skip the hedges the other registers use (overrides the common hedging rule — "I think" deflates a one-liner).
 - No hashtags. No links unless the post is *about* one. Never the word "load-bearing" — name the specific thing.
 
 **Avoid:**
@@ -261,7 +261,7 @@ Short public posts on X and LinkedIn; one version runs identically on both, no p
 
 **Example:**
 
-> That localStorage write in your drag handler runs sixty times a second. It's not persistence, it's cardio 🏃
+> that localStorage write in your drag handler runs sixty times a second. it's not persistence, it's cardio 🏃
 
 ## Using this skill as a reference
 
