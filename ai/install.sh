@@ -10,13 +10,19 @@ export ZSH="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
 uninstall_claude_config() {
     info "Uninstalling Claude configuration…"
 
-    # Remove CLAUDE.md symlink
+    # Remove CLAUDE.md symlink and its imports
     if [ "$INSTALL_CLAUDE_MD" = "true" ]; then
         if [ -L ~/.claude/CLAUDE.md ]; then
             rm -f ~/.claude/CLAUDE.md
             success "Removed CLAUDE.md symlink"
         elif [ -f ~/.claude/CLAUDE.md ]; then
             warning "~/.claude/CLAUDE.md is a regular file, not a symlink - skipping"
+        fi
+        if [ -L ~/.claude/RTK.md ]; then
+            rm -f ~/.claude/RTK.md
+            success "Removed RTK.md symlink"
+        elif [ -f ~/.claude/RTK.md ]; then
+            warning "~/.claude/RTK.md is a regular file, not a symlink - skipping"
         fi
     fi
 
@@ -215,10 +221,12 @@ info "Installing Claude configuration…"
 # Ensure ~/.claude directory exists
 mkdir -p ~/.claude
 
-# Symlink CLAUDE.md
+# Symlink CLAUDE.md and its imports
 if [ "$INSTALL_CLAUDE_MD" = "true" ]; then
     rm -f ~/.claude/CLAUDE.md
     ln -sf $ZSH/ai/CLAUDE.md ~/.claude/CLAUDE.md
+    rm -f ~/.claude/RTK.md
+    ln -sf $ZSH/ai/RTK.md ~/.claude/RTK.md
     success "Symlinked CLAUDE.md"
 fi
 

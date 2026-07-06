@@ -2,23 +2,10 @@
 
 ## Philosophy
 
-### Core Beliefs
-
-- **Incremental progress over big bangs** - Small changes that compile and pass tests
-- **Learning from existing code** - Study and plan before implementing
-- **Pragmatic over dogmatic** - Adapt to project reality
-- **Clear intent over clever code** - Be boring and obvious
-
-### Simplicity Means
-
-- Single responsibility per function/class
-- Avoid premature abstractions and superfluous parts
-- No clever tricks - choose the boring solution
-- If you need to explain it, it's too complex
-- Express every idea, but say it once and only once - these two pull against each other, so balance them in favour of whoever maintains the code next
-- If the type already supports an operation (via derives, traits, or methods), use it - don't reimplement
-
-Once code works, pause and consider whether it should be made simpler or faster before moving on — but only once you're sure it works.
+- Incremental progress over big bangs — small changes that compile and pass tests.
+- Choose the boring, obvious solution — if you need to explain it, it's too complex.
+- Avoid premature abstractions and superfluous parts; keep code minimal, with nothing dead or redundant.
+- Express every idea, but say it once and only once — these two pull against each other, so balance them in favour of whoever maintains the code next.
 
 ## Backwards compatibility
 
@@ -27,11 +14,7 @@ Once code works, pause and consider whether it should be made simpler or faster 
 
 ## Process
 
-### 1. Planning & Staging
-
-When approaching a new repository, first read the README.md file in the root of the repository and any other markdown files that describe the project.
-
-### 2. Investigate Before Acting
+### Investigate Before Acting
 
 When a task depends on anything external — a library, API, framework, CLI, service, or schema you don't fully control — investigate before writing code. Don't rely on memory or assume an API still works the way you remember; details drift between versions.
 
@@ -43,97 +26,20 @@ When a task depends on anything external — a library, API, framework, CLI, ser
 
 If investigation contradicts what you assumed, re-plan before continuing rather than forcing the original approach.
 
-### 3. Implementation Flow
+### When Stuck (After 2 Attempts)
 
-1. **Understand** - Study existing patterns in codebase
-2. **Test** - Write tests first (red)
-3. **Implement** - Minimal code to pass (green)
-4. **Refactor** - Clean up with tests passing
-5. **Commit** - With clear message
+**CRITICAL**: When implementation goes sideways, immediately switch to plan mode and re-plan — don't keep pushing forward with a broken approach. Document what failed, research alternative approaches, and question whether the abstraction level and problem breakdown are right.
 
-### 4. When Stuck (After 2 Attempts)
+## Code Quality
 
-**CRITICAL**: When implementation goes sideways, immediately switch to plan mode and re-plan. Don't keep pushing forward with a broken approach.
-
-When stuck, systematically:
-
-1. **Document what failed** - What you tried, error messages, suspected causes
-2. **Research alternatives** - Find similar implementations and approaches
-3. **Question fundamentals** - Evaluate abstraction level and problem breakdown
-4. **Systematic investigation** - Use proven debugging methodologies
-
-## Technical Standards
-
-### Architecture Principles
-
-- **Composition over inheritance** - Use dependency injection
-- **Interfaces over singletons** - Enable testing and flexibility
-- **Explicit over implicit** - Clear data flow and dependencies
-- **Test-driven when possible**
-
-### Code Quality
-
-- **Every commit must**:
-  - Compile successfully
-  - Pass all existing tests
-  - Include tests for new functionality
-  - Follow project formatting/linting
-
-- **Before committing**:
-  - Run the project's formatter/linter — `bin/fmt` if it exists, otherwise the language's formatter. Rust specifics under Rust-Specific Guidelines.
-  - Ensure commit message explains "why"
-  - Never use `--no-verify` to bypass commit hooks
-
-### Error Handling
-
-- Fail fast with descriptive messages
-- Include context for debugging
-- Handle errors at appropriate level
-- Never silently swallow exceptions
-
-## Decision Framework
-
-For implementation decisions, weigh testability, maintainability, consistency, simplicity, and reversibility.
-
-## Project Integration
-
-### Learning the Codebase
-
-- Find 3 similar features/components
-- Identify common patterns and conventions
-- Use same libraries/utilities when possible
-- Follow existing test patterns
-
-### Tooling
-
-- Use project's existing build system
-- Use project's test framework
-- Use project's formatter/linter settings
-- Don't introduce new tools without strong justification
-
-## Quality Gates
-
-### Definition of Done
-
-- [ ] Tests written and passing and are not redundant or unnecessary
-- [ ] Code is not dead or redundant and minimal to get the job done
-- [ ] Code follows project conventions
-- [ ] No linter/formatter warnings
-- [ ] No tool warnings ignored without strong justification
-- [ ] Commit messages are clear
-- [ ] Implementation matches plan
-- [ ] No TODOs without issue numbers
-
-### Test Guidelines
-
-- Test behavior, not implementation
-- One assertion per test when possible
-- Clear test names describing the scenario
-- Use existing test utilities/helpers
-- Tests should be deterministic
-- When adding functionality, write tests for it, covering edge cases, error handling, and performance implications
-- Always run tests before marking a task complete; if they fail, fix them before proceeding
-- Update relevant documentation when changing functionality
+- Write tests first when practical, and always include tests for new functionality — cover edge cases and error handling. Run them before marking a task complete; if they fail, fix them before proceeding.
+- Test behavior, not implementation: one assertion per test when possible, deterministic, clear scenario-describing names, using existing test utilities. Don't write redundant or unnecessary tests.
+- Every commit must compile, pass all existing tests, and follow project formatting/linting.
+- Before committing, run the project's formatter/linter — `bin/fmt` if it exists, otherwise the language's formatter. Rust specifics under Rust-Specific Guidelines.
+- Never use `--no-verify` to bypass commit hooks.
+- No TODOs without issue numbers. No tool warnings ignored without strong justification.
+- Use the project's existing build system, test framework, and formatter/linter settings; don't introduce new tools without strong justification.
+- Update relevant documentation when changing functionality.
 
 ## Self-Improvement
 
@@ -172,6 +78,8 @@ For infra detail, see `~/dev/posthog/posthog-cloud-infra` (NLB/VPC/Terraform) an
 
 PostHog has many SDKs; it's often useful to distinguish the ones that run on the client from the ones that run on the server.
 
+Local paths are the conventional clone locations — not all repos are cloned. If a path is missing, clone the GitHub repo there first.
+
 #### Client-side SDKs
 
 | Repository | Local Path | GitHub URL |
@@ -186,7 +94,7 @@ PostHog has many SDKs; it's often useful to distinguish the ones that run on the
 | Repository | Local Path | GitHub URL |
 | ---------- | ---------- | ---------- |
 | posthog-python | `~/dev/posthog/posthog-python` | <https://github.com/PostHog/posthog-python> |
-| posthog-node | `~/dev/posthog/posthog-js` | <https://github.com/PostHog/posthog-node> |
+| posthog-node (lives in the posthog-js monorepo) | `~/dev/posthog/posthog-js` | <https://github.com/PostHog/posthog-node> |
 | posthog-php | `~/dev/posthog/posthog-php` | <https://github.com/PostHog/posthog-php> |
 | posthog-ruby | `~/dev/posthog/posthog-ruby` | <https://github.com/PostHog/posthog-ruby> |
 | posthog-go | `~/dev/posthog/posthog-go` | <https://github.com/PostHog/posthog-go> |
@@ -206,7 +114,7 @@ PostHog has many SDKs; it's often useful to distinguish the ones that run on the
 - Present tense: "Fix bug", not "Fixed bug"
 - Use imperatives: "Add", "Update", "Remove"
 - One line summary, blank line, optional body if needed
-- Keep commit messages short and concise.
+- Keep commit messages short and concise; explain the "why", not just the "what".
 - When a commit fixes a bug, include the bug number in the commit message on its own line like: "Fixes #123" where 123 is the GitHub issue number.
 
 ### AI Attribution Policy
