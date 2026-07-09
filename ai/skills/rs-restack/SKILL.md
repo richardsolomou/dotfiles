@@ -33,11 +33,7 @@ If there are no dependent branches, stop and tell the user there is nothing to r
 gt restack
 ```
 
-If restack reports conflicts, resolve them:
-
-1. Read each conflicted file and resolve
-2. Stage resolved files with `git add`
-3. Continue the rebase: `git rebase --continue`
+If restack reports conflicts, apply the `rs-resolve-conflicts` skill — it owns the full flow (mergiraf verification, lock files, migrations, stacked-PR duplicates) and finishes with `git rebase --continue`.
 
 ### Step 3: Push Restacked Branches
 
@@ -49,7 +45,7 @@ git push --force-with-lease origin <branch>
 
 ### Step 4: Refresh PRs whose scope changed
 
-For each restacked branch with an open PR, if the restack changed what that PR's own diff contains (conflict resolutions that altered behaviour, dropped commits), apply the `rs-update-pr` skill to that branch to re-check its title and description and update them if stale. A pure restack that only rewrites parent commits, leaving each branch's own diff unchanged, needs no refresh. Refresh without asking (per CLAUDE.md → Pull Request Descriptions).
+For each restacked branch whose own diff changed (conflict resolutions that altered behaviour, dropped commits), apply `rs-update-pr` — automatic, no ask (per CLAUDE.md → Pull Request Descriptions). A pure restack that only rewrites parent commits needs no refresh.
 
 ### Step 5: Report
 

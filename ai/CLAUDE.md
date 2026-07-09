@@ -30,6 +30,26 @@ If investigation contradicts what you assumed, re-plan before continuing rather 
 
 **CRITICAL**: When implementation goes sideways, immediately switch to plan mode and re-plan — don't keep pushing forward with a broken approach. Document what failed, research alternative approaches, and question whether the abstraction level and problem breakdown are right.
 
+If the task needs a system you can't reach (MCP server, VPN-gated service, missing credential), say so and ask for access — don't cycle through alternative methods hoping one sticks.
+
+### Rendered Output
+
+For anything rendered (web page, game scene, OBS overlay), don't report a fix as done from code-reasoning alone — screenshot the running thing and look at it first, and after fixing a reported visual bug, re-screenshot the exact thing the user showed. Apply the change everywhere it appears (all scenes/variants), not just the first instance.
+
+A single frame proves nothing for behavior that unfolds over time or across contexts — timers, cross-tab state, background routines. Trigger the real condition and observe a full cycle (wait out the interval, open the second tab) before reporting it works.
+
+### Setup and Ops Walkthroughs
+
+Execute every step you can from the terminal yourself (env files, migrations, ssh checks); hand back only steps that genuinely require the user — browser logins, 2FA, physical devices — as a short numbered list. Before hand-rolling an ops command, check the repo's `bin/` and `scripts/` for a script that already does it.
+
+### Before Merging or Closing a Tracker Item
+
+**CRITICAL**: Tests passing and code review approval are not "done" for anything production-facing (alerting, dashboards, feature launches, fallback/failover paths). Don't merge a PR or close a tracker item on "the code looks fine" alone — stop and check:
+
+- The actual behavior, verified where it will run: an alert fires and routes somewhere real, a dashboard shows live data, a fallback path actually dispatches. Not just that the code to do so exists.
+- Every related PR, if the work spans multiple repos (app code plus infra config, alert rules, or dashboards in a separate repo) — a green check in one repo says nothing about the others.
+- Backwards compatibility with existing callers, confirmed before marking anything done, not assumed after.
+
 ## Code Quality
 
 - Write tests first when practical, and always include tests for new functionality — cover edge cases and error handling. Run them before marking a task complete; if they fail, fix them before proceeding.
@@ -49,6 +69,8 @@ After Claude makes a mistake and you correct it, end with:
 
 Claude is good at writing rules for itself. Ruthlessly edit over time until the mistake rate drops.
 
+When a correction targets behavior a skill produced, edit that skill's SKILL.md under `~/dev/dotfiles/ai/skills/` — never store it as a memory or project-local note. Memories don't travel across projects, and the skill keeps prescribing the old behavior.
+
 ## Project-specific Workflow
 
 ### posthog/posthog
@@ -58,10 +80,15 @@ When working on the <https://github.com/PostHog/posthog> repository, use the fol
 - Read the README.md file in the root of the repository and the <https://github.com/PostHog/posthog/blob/master/docs/published/handbook/engineering/flox-multi-instance-workflow.md> file.
 - When completing a task, automatically run these checks and fix any issues:
   - `mypy --version && mypy -p posthog | mypy-baseline filter || (echo "run 'pnpm run mypy-baseline-sync' to update the baseline" && exit 1)`
+- The local stack runs via `./bin/hogli start` under OrbStack; Rust services take minutes to build. Don't launch your own copy — ask to have it started and test against the running instance. For anything measured against master, use `~/dev/posthog/posthog`, not a stale worktree.
+
+### posthog/hedgehog-mode
+
+After a change, don't stop at the diff: build and package the extension for local Chrome install, or link the build into the locally running posthog checkout (`~/dev/posthog/posthog`) without publishing to npm, and hand back only the install/reload step.
 
 When working on other repositories, use the following workflow:
 
-- When taking on a new task, branch off the main branch (`main` or `master`, depending on the repo), named per the Git section below (use `<type>/<issue#>-<slug>` when the issue number is known).
+- When taking on a new task, fetch first and branch off `origin/<main>` (not a possibly-stale local main), named per the Git section below (use `<type>/<issue#>-<slug>` when the issue number is known). If the code you see looks like an older direction of the project, stop and confirm before building on it.
 - When done with the task, prompt to commit changes.
 - Run `bin/fmt` to format the code if available.
   - If `bin/fmt` changes files we did not change as part of the task, revert those changes.
@@ -73,6 +100,12 @@ When working on other repositories, use the following workflow:
 **CRITICAL**: PostHog production runs behind load balancers (AWS NLB → Contour/Envoy ingress → pods; Contour `num-trusted-hops: 1`, NLB `preserve_client_ip`). For anything touching client IPs — rate limiting, auth, geolocation — **never use the socket IP**; it's always the load balancer, not the client. Use `X-Forwarded-For`, then `X-Real-IP`, then `Forwarded` (RFC 7239), with socket IP only as a local-dev fallback. Rust: `tower_governor::key_extractor::SmartIpKeyExtractor`; look for similar "smart" extractors in other languages.
 
 For infra detail, see `~/dev/posthog/posthog-cloud-infra` (NLB/VPC/Terraform) and `~/dev/posthog/charts` (Contour/Envoy + ingress header policies — `argocd/contour/values/values.yaml`, `argocd/contour-ingress/values/values.prod-*.yaml`, `docs/CONTOUR-GEOIP-README.md`).
+
+Alerting and dashboards for a PostHog service almost never live in the service's own repo. Alert specs, routing (`team:` label), and runbooks live in `~/dev/posthog/charts` (`alerts/specs/<service>.yaml`, `alerts/runbooks/`); Grafana dashboards live in the separate `PostHog/grafana-dashboards` repo, synced into Grafana via git-sync. A tracker item claiming "alerting done" or "dashboard done" for a service needs a merged PR in the correct one of these, not just a merged PR in the service's own repo.
+
+### AI Gateway
+
+A fix isn't ready for review until exercised end-to-end through a running gateway with real provider traffic — ask for live keys rather than settling for unit tests alone. Failover work must actually force a failover (force flag / httpapi test kit) and observe the degradation.
 
 ### SDK Repositories
 
@@ -108,6 +141,8 @@ Local paths are the conventional clone locations — not all repos are cloned. I
   - Use interactive staging (git add -p) and thoughtful commit messages.
   - Squash when appropriate. Avoid "WIP" commits unless you're spiking.
 - Don't add yourself as a contributor to commits.
+- Commit, push, and PR creation happen only on explicit request. During exploratory or visual iteration, hold all commits until the user says the result is good — treat "don't commit until I'm happy" as standing for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
+- Stacked PRs in PostHog repos are managed with Graphite (`gt`). When PRs form a dependency chain, track them parent-first (`gt track`) and submit the stack (`gt submit --stack`) — tracking alone doesn't register it. After changing a mid-stack branch, restack via `rs-restack`.
 
 ### Commit messages
 
@@ -144,6 +179,8 @@ When creating PRs, **always check for `.github/pull_request_template.md`** in th
 
 When writing PR descriptions, commit messages, issue comments, or any public-facing content, write as the user — never refer to yourself as an AI, agent, or assistant. Use first person ("I") to represent the user, not yourself.
 
+Anything drafted for the user to post — Slack messages, PR/issue comments, review replies — is `rs-tone`-governed by default: apply the right register without being asked, default terse, and never restate what the thread or PR already says.
+
 ### Tool Priority
 
 **ALWAYS use `gh` CLI** (via Bash tool) for all GitHub operations - it's token-efficient, fully-featured, and has auto-approval configured.
@@ -155,6 +192,13 @@ When writing PR descriptions, commit messages, issue comments, or any public-fac
 - **Never**: GitHub MCP server tools (token-heavy, redundant with `gh` CLI)
 
 Read operations (`view`, `list`, `diff`, `status`, `checks`) are auto-approved; write operations (`comment`, `review`, `create`, `merge`) require user approval. Use `gh api` for anything the porcelain commands don't cover, including `gh api graphql` for complex queries.
+
+### Issues
+
+- When adding context to an issue that has no discussion from others yet, edit the issue body — don't append comments.
+- Issues carry context and evidence, never a prescribed solution.
+- When a PR addresses an issue, link it with a closing keyword ("Fixes #123") and assign the issue to me when the PR is mine.
+- Before filing issues or proposing follow-up work, search open and recently merged PRs/issues across every involved repo for duplicates. Merge state learned earlier in a session goes stale — re-check with `gh` before stating what's merged or remaining.
 
 ### IMPORTANT: PR Review Comments
 
@@ -214,24 +258,16 @@ Before implementing functionality that operates on a type:
 4. **Verify new Cargo features enable real functionality**
 5. **Check that new dependencies are actually imported/used in code**
 
-- When writing human friendly messages, don't use three dots (...) for an ellipsis, use an actual ellipsis (…).
-
 ### Bash Scripts
 
 - Don't add custom logging methods to bash scripts, use the standard `echo` command.
+- Commands for the user to paste must survive line-by-line pasting: no inline `#` comments, no variables carried over from an earlier paste, and destructive paths fail closed (`${var:?}`).
+- When verifying a process is stopped, `pgrep -f` matches your own command line — use `pgrep -x` or exclude your own pattern.
 - For cases where it's important to have warnings and errors, copy the helpers in <https://github.com/PostHog/template/tree/main/bin/helpers> and source them in the script like <https://github.com/PostHog/template/blob/main/bin/fmt> does.
 
 ### Markdown Files
 
-- When editing markdown files (.md, .markdown), always run markdownlint after making changes:
-  - Run: `markdownlint <filename>`
-  - Fix any errors or warnings before marking the task complete
-  - Common fixes: proper heading hierarchy, consistent list markers, trailing spaces
-- Follow markdown best practices:
-  - Use consistent heading levels (don't skip from h1 to h3)
-  - Add blank lines around headings and code blocks
-  - Use consistent list markers (either all `-` or all `*`)
-  - Remove trailing whitespace
+- A PostToolUse hook runs `markdownlint` on every markdown file you edit — fix any errors it reports before marking the task complete.
 - **Never add hard line breaks or wrap lines** when editing markdown files. Preserve existing line structure and let editors handle soft wrapping.
 
 ### Dependency Philosophy
@@ -256,19 +292,16 @@ Cut:
 
 For multi-step work, give one short status update per key moment — when something is found, when direction changes, when a blocker hits. Don't narrate every tool call.
 
+In human-friendly messages, use an actual ellipsis (…), not three dots (...).
+
+When an offered action is declined or deferred ("not yet", "don't"), drop it for the rest of the session — don't re-offer it or quietly do it later; the user will ask explicitly.
+
 ## Comments
 
-- Default to no comment. Most code needs none — comment only on what is not obvious to a skilled programmer reading the code, and earn each one. When in doubt, leave it out; an unnecessary comment is noise that future readers must read, trust, and maintain.
-- Don't comment on code that is self-explanatory, and don't restate what the code already says. If a comment just narrates the line below it ("increment the counter", "loop over users"), delete it. While editing, remove existing comments that fail this bar — don't preserve clutter just because it was already there.
-- Be terse. State the why or the non-obvious constraint in as few words as land it — one tight sentence beats three. Cut filler ("This function…", "Here we…", "Note that…"); lead with the point.
-- Keep the context that earns its place: the reason behind a non-obvious choice, an invariant, a gotcha, a link to a spec or issue. Terse means dense, not vague — never drop the detail that makes the comment worth reading.
-- Use proper grammar and punctuation. Avoid dramatic and all-caps comments.
-- IMPORTANT: Comment on the code as it is, not the change that produced it — it should read the same a year after the change landed, with no trace of how the code got there. Telltale signs you're writing meta-commentary instead of describing the state:
-  - Narrating the edit: "now uses X instead of Y", "switched to …", "refactored to …".
-  - Referencing old behavior or the bug just fixed: "this used to throw on empty", "previously double-counted".
-  - Describing the problem the change eliminates rather than the behavior that remains: "fixes the race where …", "prevents the old deadlock". State what the code guarantees now ("holds the lock across the read so the count stays consistent"), not the defect it retired.
-  - Citing a PR/issue as the reason a change was made: "#78 dropped the retry", "match django_redis (#77)".
-  State the invariant as it stands now; the "why" behind the change goes in the commit and PR. Linking a *still-live* spec or upstream issue is fine ("workaround for grpc/grpc#1234") — that constraint is still true today.
+- Default to no comment; comment only what isn't obvious to a skilled reader, and earn each one — when in doubt, leave it out. While editing, remove existing comments that fail this bar.
+- Be terse: state the why, the invariant, or the gotcha in one dense sentence; cut filler and lead with the point. Proper grammar; no dramatic or all-caps comments.
+- IMPORTANT: Describe the code as it is, not the change that produced it — no "now uses X", no references to old behavior or the bug just fixed, no citing a PR/issue as the reason for a change. The "why" behind the change goes in the commit and PR; linking a *still-live* spec or upstream issue is fine.
+- Full rules, telltale signs, and worked examples live in the `rs-trim-comments` skill — load it when writing comments in earnest or sweeping a diff for comment noise.
 
 ## Test Instructions
 

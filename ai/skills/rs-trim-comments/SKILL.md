@@ -4,14 +4,14 @@ description: "Keep in-code comments brief, terse, and only where they earn their
 argument-hint: "[file-path | diff (default)]"
 ---
 
-# Comments
+# Trim Comments
 
 Most code needs no comment. Comment only on what a skilled reader can't get from the code itself, and earn each one — every comment is a line future readers must read, trust, and keep true. When in doubt, leave it out.
 
 Two ways to use this skill:
 
 1. **Reference** — load it before writing or editing code so comments come out right the first time. This is the default and the cheapest path: not writing noise beats deleting it later.
-2. **Sweep** — invoked directly (`/rs-comments`, optionally with a file path) to scan the current diff or named file for comment noise and fix it in place.
+2. **Sweep** — invoked directly (`/rs-trim-comments`, optionally with a file path) to scan the current diff or named file for comment noise and fix it in place.
 
 ## The bar: does this comment earn its place?
 
@@ -82,20 +82,6 @@ mu.Lock()
 mu.Lock()
 ```
 
-❌ Filler opener, says nothing:
-
-```ts
-// This function takes a user and returns their display name
-function displayName(u: User): string {
-```
-
-✅ No comment — the signature says it. Comment only if there's a gotcha:
-
-```ts
-// falls back to email local-part; SSO users have no displayName set
-function displayName(u: User): string {
-```
-
 ❌ Earns its place but bloated — eight lines of prose for three facts:
 
 ```ts
@@ -128,3 +114,5 @@ When invoked directly:
 3. **Fix in place.** Delete the noise; compress the keepers. Earning a place is not a pass on length — apply the [length smell](#how-to-write-the-ones-that-stay) to every comment you keep, including ones already in the file. A legitimate multi-line why-block is still a target: keep the load-bearing facts, cut the prose around them. Leave a comment untouched only when it's already at its densest.
 4. **Preserve required doc comments.** Leave docstrings / doc comments that a public API or doc generator needs — those follow the language's own conventions, not this skill.
 5. **Report briefly** — what was cut and what was tightened, no diff recap beyond what's useful.
+
+One pass is final: apply full strictness the first time — the user should never have to re-run with "be stricter". When invoked after a multi-PR review round, sweep every PR touched in the round, not just the current branch.

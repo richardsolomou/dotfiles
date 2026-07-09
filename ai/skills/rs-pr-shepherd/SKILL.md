@@ -39,14 +39,8 @@ Resolve each sub-skill local-first, then from the skills store — the same patt
 Emit a one-line, present-tense narration before every step so the user can follow without reading tool output. Format: `[shepherd] <step> — <what and why>`. A silent 30-second gap is the failure mode.
 
 ```text
-[shepherd] step 1 — resolving PR from current branch
-[shepherd] step 1 — no change since a1b2c3d, skipping iteration
 [shepherd] step 2 — 2 checks failing, reading logs for lint
-[shepherd] step 2 — base moved and PR conflicts, running rs-rebase
 [shepherd] step 3 — 3 new review comments, dispatching rs-address-pr-review
-[shepherd] step 4 — substantive push since last swarm, running rs-review-swarm self
-[shepherd] step 5 — net state changed, running rs-update-pr
-[shepherd] step 6 — applying stamphog at def4567; verdict: changes requested
 [shepherd] iter done — handing back; /loop drives the next pass
 ```
 
@@ -93,7 +87,7 @@ For each failing check, in order of likely payoff:
 
 **Branch currency** — act only when it matters; don't churn merge commits every iteration:
 
-- `mergeable == CONFLICTING` → resolve `rs-rebase` and follow it (it merges the parent branch in — that's the convention here, not an actual rebase — and uses `rs-resolve-conflicts` for conflicts). If conflict resolution hits a genuine judgement call (both sides changed behaviour and the right merge isn't derivable), abort the merge cleanly, defer with the file list, and skip to Step 3.
+- `mergeable == CONFLICTING` → resolve `rs-rebase` and follow it. If conflict resolution hits a genuine judgement call (both sides changed behaviour and the right merge isn't derivable), abort the merge cleanly, defer with the file list, and skip to Step 3.
 - CI failing *because* the branch is stale (a required "branch up to date" check, or failures that don't reproduce on the merged tree) → same.
 - Otherwise leave the branch alone.
 - If the branch has dependent branches stacked on it (Graphite), follow `rs-restack` after any push so the stack stays coherent.

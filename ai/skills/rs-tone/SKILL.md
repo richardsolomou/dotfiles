@@ -1,6 +1,6 @@
 ---
 name: rs-tone
-description: "Apply Richard's voice to user-facing output (Slack messages, PR descriptions, PR review comments, customer replies, standup notes, social posts). Use as a reference linked from other SKILL.md files, or invoke directly to rewrite the previous output. TRIGGER when about to send anything Richard would post under his name — Slack message, PR description, PR review comment, GitHub issue comment, customer reply, standup post, X/LinkedIn post — or when another skill has just produced such output. Pick a register: `slack-casual` for DMs and team chat; `slack-status` for standup, ops, incident updates; `pr-description` for PR bodies and RFC comments; `pr-review` for inline PR review comments; `external` for customer-facing or public-thread replies; `social-post` for X/LinkedIn one-liners. SKIP for: terminal output not posted anywhere, internal tool calls, agent-to-agent messages, code comments, commit messages (use the repo's commit-message conventions instead), and any output where a neutral assistant voice is appropriate."
+description: "Apply Richard's voice to anything posted under his name — Slack messages, PR descriptions and review comments, issue comments, customer replies, standup notes, X/LinkedIn posts. Use as a reference linked from other skills, or invoke directly to rewrite the previous output. TRIGGER when about to send anything Richard would post under his name, or when another skill has just produced such output; pick a register from the argument hint (defined in the body). SKIP for terminal-only output, internal tool calls, agent-to-agent messages, code comments, and commit messages."
 argument-hint: "[slack-casual|slack-status|pr-description|pr-review|external|social-post]"
 ---
 
@@ -187,11 +187,19 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 
 > couldnt this just be a `defaultdict(list)`? the manual `if key not in d` dance is what got us into the off-by-one last time.
 
+<!-- separate example -->
+
 > id want this fixed before merge — the `if user is not None` guard above means `user.id` cant be None there, but the new branch at line 84 hits it directly. think this regresses #4421.
+
+<!-- separate example -->
 
 > once we nudge `_PERCENTAGE` up, whats the signal the rollout actually widened? a counter keyed on allowlist/percentage/wildcard would make each chart bump self-verifiable — worth adding now or a follow-up?
 
+<!-- separate example -->
+
 > dumb question but — is there a reason we cant just reuse `parseConfig` here? the new helper is doing roughly the same thing minus the env-var resolution, which we could pull into the caller.
+
+<!-- separate example -->
 
 > not sure but — does this still work when the upstream returns an empty array? the `[0]` access at line 47 will throw, and i dont see a guard. might be missing something about how the caller validates.
 
@@ -277,7 +285,7 @@ Override only when the skill needs a behavior that differs from the register —
 
 ## Using this skill as a post-processor
 
-Triggered either by the user (`/tone [register]`) or by a model that just produced user-facing output and recognises it should be on-register before being posted.
+Triggered either by the user (`/rs-tone [register]`) or by a model that just produced user-facing output and recognises it should be on-register before being posted.
 
 1. **Identify the target output.** Read the most recent assistant message in the conversation that produced user-facing content (a standup, a PR description, a review comment, an external reply, a Slack draft). If it's ambiguous which output to rewrite, ask before rewriting.
 2. **Pick the register.**
@@ -292,6 +300,8 @@ Triggered either by the user (`/tone [register]`) or by a model that just produc
 
 If the previous output had multiple parts (e.g. a standup with both plain text and HTML, or a review with several inline comments), rewrite each part in place and preserve the structure. Don't merge them.
 
+A rewrite never changes delivery format: review comments stay one fenced code block per `file:line`, paste-ready — rewrite the text inside the blocks.
+
 ### Length
 
-Match the original length where possible. Don't pad to look thorough; don't compress past the point where the meaning is intact.
+Default to cutting: a rewrite should land noticeably shorter than the original — "brief, terse, succinct" is the standing default, not something the user should have to ask for. Don't pad to look thorough; don't compress past the point where the meaning is intact.

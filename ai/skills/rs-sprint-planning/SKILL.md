@@ -1,6 +1,6 @@
 ---
 name: rs-sprint-planning
-description: "Write a bi-weekly sprint planning update for the AI Gateway team, ready to post as a GitHub comment on the sprint issue. Automates sprint detection, merged-PR fetching, and plan-first retro construction from the previous sprint's comment. Use when the user asks to write/prep the sprint planning update or retro, post the sprint comment, archive the board's old Done items (`archive`), or show what the team is working on (`goals`)."
+description: "Write the bi-weekly sprint planning update for the AI Gateway team, ready to post as a GitHub comment on the sprint issue. Use when the user asks to write/prep the sprint planning update or retro, post the sprint comment, archive the board's old Done items (`archive`), or show what the team is working on (`goals`)."
 argument-hint: "[archive|goals]"
 ---
 
@@ -102,7 +102,8 @@ If the result is not "NOT_FOUND", parse the comment to extract:
 For each team member, fetch their merged PRs during the **previous** sprint period. Issue all fetch calls in parallel (multiple Bash tool calls in a single response) to minimize wall-clock time:
 
 ```bash
-scripts/fetch-team-prs.sh <username> <prev_start> <prev_end>
+source scripts/config.sh
+~/.claude/skills/rs-activity-harvest/scripts/team-merged-prs.sh <username> "$SPRINT_ORG" <prev_start> <prev_end> 200 body
 ```
 
 Store all PR data per team member. The script returns each PR's `body` (the
@@ -187,7 +188,8 @@ Build the retro from merged PRs and project board "Done" items, grouping each pe
 **Synthesize, don't transcribe.** The retro audience is the wider company, not the team. Read each PR's description (Step 4 fetches it) and translate the raw PRs into plain-language outcomes:
 
 - Describe **what was accomplished**, in terms a reader outside the team understands — grounded in the PR body, not the title alone, which is often verbose, too low-level, or undersells the actual change.
-- **Collapse several related PRs into one bullet.** A bullet like "Built the spend path end to end — ledger, real-spend settlement, pre-call admission" beats nine PRs named `feat(quota): …`.
+- **Collapse several related PRs into one bullet — but one distinct item per bullet.** "Built the spend path end to end — ledger, real-spend settlement, pre-call admission" beats nine PRs named `feat(quota): …`; two different efforts are two bullets, never a comma-joined list. Side quests get a `Side quests:` parent line with one emoji-prefixed sub-bullet per quest.
+- **Every retro item carries a status emoji, both paths** — don't mix bare bullets with emoji'd ones; it reads half-finished.
 - **Links are the exception, not the rule.** Most bullets carry no link. Attach a single representative PR link only to a flagship item a reader might plausibly open. Never trail a bullet with a list of links.
 - **Describe what was built or shipped, not ownership.** Avoid "owns" / "now owns" framing — the team doesn't claim ownership of components. "Built the model catalog", not "Built and now owns the model catalog".
 - **Keep each bullet to one punchy line.** Headline outcome plus at most one short clause of the most telling specifics — not an exhaustive comma-list of every sub-detail. "Built the prepaid wallet & ledger — O(1) balances, bounded overspend, admin top-up", not a clause naming all six PRs' worth of detail. The reader skims; trim hard.
@@ -195,14 +197,13 @@ Build the retro from merged PRs and project board "Done" items, grouping each pe
 
 ### Step 8: Second Prompt - Retro Review
 
-If previous plan exists (Path A), present the reconciled retro per person, each item as a plain-language outcome (not a PR title):
+Present the retro per person, each item as a plain-language outcome (not a PR title):
 
 > Here's what I've reconstructed from last sprint's plan vs. what shipped:
 >
 > **@member1**
 >
 > - ✅ Planned outcome 1
-> - ✅ Planned outcome 2
 > - ❓ Planned item 3 → no matching PR found
 >
 > **Unplanned work I found (side quests?):**
@@ -215,24 +216,7 @@ If previous plan exists (Path A), present the reconciled retro per person, each 
 > 2. Which unplanned items should I include as side quests?
 > 3. Anything else to add or correct?
 
-If no previous plan (Path B), present the synthesized accomplishments per person:
-
-> Here's what I found shipped during the sprint:
->
-> **@member1**
->
-> - Plain-language outcome (synthesized from one or more PRs)
-> - Another outcome
->
-> **@member2**
->
-> - Plain-language outcome
->
-> Questions:
->
-> 1. Do these accomplishments read accurately?
-> 2. Anything missing that didn't result in PRs?
-> 3. Anything to exclude?
+For Path B (no previous plan), the same prompt minus the reconciliation: lead with "Here's what I found shipped during the sprint", list the synthesized outcomes per person, and ask instead whether the accomplishments read accurately, what's missing that didn't result in PRs, and what to exclude.
 
 Wait for the user's response.
 
@@ -264,11 +248,16 @@ Wait for the user's response.
 
 ### Step 10: Generate the Update
 
-**Fact-check the draft against the PR bodies first.** Synthesis from titles drifts — bullets overstate, miscategorize a 🟢 that's actually still open, or miss a whole workstream. Before finalizing, verify every retro and plan bullet against the merged + open PR data (titles *and* descriptions) from Step 4. For a non-trivial sprint, spawn one verification agent per team member (in parallel) that reads the PR bodies and returns, per bullet, a verdict: SUPPORTED (cite PR numbers), OVERSTATED (how to reword), WRONG, or MISCATEGORIZED (claimed 🟢 but PR still open/draft, or 🟡 but actually merged) — plus any substantial merged work MISSING from every bullet, and a status check that each 🟢 has a merged PR and each 🟡 is genuinely still open. Apply the corrections before presenting. This pass routinely catches real omissions and overstatements; don't skip it.
+**Fact-check the draft against the PR bodies first.** Synthesis from titles drifts. For a non-trivial sprint, spawn one verification agent per team member (in parallel) that reads the merged + open PR data from Step 4 and returns:
+
+- Per bullet: SUPPORTED (cite PR numbers), OVERSTATED (how to reword), WRONG, or MISCATEGORIZED (claimed 🟢 but still open/draft, or 🟡 but actually merged).
+- Any substantial merged work MISSING from every bullet.
+
+Apply the corrections before presenting. This pass routinely catches real omissions and overstatements; don't skip it.
 
 Then compose the final sprint update using all gathered and confirmed data.
 
-**Write it in Richard's voice.** This comment gets posted under his name, so apply the [`rs-tone`](../rs-tone/SKILL.md) skill in the **`slack-status`** register (the closest fit for a status post — never `slack-casual` here). Generate in that register from the start, don't write neutral-assistant prose and rewrite. In practice: past tense for shipped retro items, future tense for plan items, no formulaic openers or sign-offs, no AI tells, terse bullets that each say one thing, concrete specifics over abstractions.
+**Write it in Richard's voice.** This comment gets posted under his name, so load `rs-tone` with register **`slack-status`** (never `slack-casual` here) and generate in that register from the start — don't write neutral-assistant prose and rewrite.
 
 **IMPORTANT**: Output the update as raw markdown inside a code block so the user can copy/paste it directly into GitHub.
 
@@ -284,7 +273,7 @@ Substitute the configured values: `SPRINT_COMMENT_HEADER` for the top heading, `
 Retro shape depends on the path from Step 7:
 
 - **Path A** (previous plan existed): grab last sprint's High priority and Low priority / side-quest items, tag each `@person`, and prefix each with a status emoji marking whether it completed — this matches the template's "grab the items from last time and add whether that item was completed" note.
-- **Path B** (first sprint / NOT_FOUND): synthesized per-person outcome bullets with **no** status emoji.
+- **Path B** (first sprint / NOT_FOUND): synthesized per-person outcome bullets, each prefixed `🟢`/`🟡` per Step 7.
 
 Use this format (Path B retro shown; for Path A, replace the per-person outcomes with status-emoji'd plan items grouped by priority):
 
@@ -311,12 +300,12 @@ Use this format (Path B retro shown; for Path A, replace the per-person outcomes
 
 @member1
 
-- Plain-language outcome describing what shipped, synthesized from one or more PRs
-- Another outcome — link a flagship item only when a reader might open it ([PR](url))
+- 🟢 Plain-language outcome describing what shipped, synthesized from one or more PRs
+- 🟡 An in-progress workstream — link a flagship item only when a reader might open it ([PR](url))
 
 @member2
 
-- Plain-language outcome
+- 🟢 Plain-language outcome
 
 🟢 =finished 🟡=in progress 🔴=won't finish ⚪=not started
 
@@ -348,15 +337,7 @@ Use this format (Path B retro shown; for Path A, replace the per-person outcomes
 
 ### Step 11: Archive the Update Locally
 
-Write the final markdown to `~/dev/notes/PostHog/sprint-planning/<sprint_start>.md` (e.g. `2026-06-29.md` — sortable, one file per sprint), then commit and push so it's backed up to the private `notes` repo:
-
-```bash
-git -C ~/dev/notes add -A
-git -C ~/dev/notes diff --cached --quiet || git -C ~/dev/notes commit -q -m "sprint-planning: <current_title>"
-git -C ~/dev/notes push -q
-```
-
-The `diff --cached --quiet` guard skips the commit when nothing changed (e.g. a regenerated draft that matched). If the file already exists (re-run for the same sprint), overwrite it — the latest draft wins. If the push fails (offline, auth), report it but don't block. This is the pre-meeting draft; the user edits live after pasting, so the archive is a record of what was prepared, not the final posted comment.
+Write the final markdown to `~/dev/notes/PostHog/sprint-planning/<sprint_start>.md` (e.g. `2026-06-29.md` — sortable, one file per sprint), then commit and push per `rs-activity-harvest` § _Archive to notes_, commit prefix `sprint-planning:`. If the file already exists (re-run for the same sprint), overwrite it — the latest draft wins; this is the pre-meeting draft, a record of what was prepared, not the final posted comment.
 
 ### Step 12: Offer to Post
 
@@ -489,26 +470,8 @@ Merge the sprint plan (Step G3) with the project board (Step G4) into a single v
 
 **Display rules:**
 
-- Current user appears first with `**-->**` prefix and `(you)` suffix
-- Other team members in alphabetical order
-- Items with URLs use `[title](url)` links
-- DraftIssues (no URL) show plain text title
-- Unassigned items appear at bottom in a separate section
-- Items with multiple assignees appear under each assignee
-- Status subsections only shown if items exist for that status
-- Only show team members who have at least one item assigned
-- Side quests from the sprint plan appear under their own heading per person
+- Current user appears first with `**-->**` prefix and `(you)` suffix; other members alphabetical; only members with at least one item.
+- Items with URLs use `[title](url)` links; DraftIssues show plain text; items with multiple assignees appear under each.
+- Unassigned items at the bottom in their own section; side quests from the sprint plan under their own heading per person.
 
-## Formatting Rules
-
-The output template in Step 10 is the authoritative format reference. These rules cover non-obvious behavior not visible in the template:
-
-- **Retro bullets are outcomes, not PR titles** — synthesize what shipped into plain language a reader outside the team understands, collapsing related PRs into one bullet. Most bullets carry no link; attach at most one representative PR link to a flagship item, and never trail a bullet with a list of links.
-- **Every retro item carries a status emoji** — both paths. Path A reconciles last sprint's plan items, each prefixed with whether it completed. Path B prefixes shipped outcomes with `🟢` and each distinct in-flight workstream with `🟡`. Don't mix bare bullets with emoji'd ones — it reads half-finished.
-- **One distinct item per bullet** — split what would otherwise be a comma-joined list (separate in-progress workstreams, each impacted team, distinct plan items, each side quest) into its own bullet. This is the opposite of the synthesis rule, which only collapses PRs that are genuinely the same piece of work; two different efforts are two bullets. Side quests get a `Side quests:` parent line with one emoji-prefixed sub-bullet per quest, not a single comma-joined line.
-- **Quarter-goal statuses prefix the line, not trail it** — `- 🟢 Goal 1: …`, with nested sub-items each carrying their own emoji.
-- **The emoji legend is one inline line at the bottom of the Retro `<details>`** — `🟢 =finished 🟡=in progress 🔴=won't finish ⚪=not started`. Don't add a separate legend block under Quarter goals.
-- **Plan always has all three subsections** — `### High priority`, `### Low priority / side quests`, and `### Are any other teams impacted by this plan? If so, tag them here` — even if a section is just `-`.
-- **Include the Support hero line** — `**Support hero:**` sits above `**Off during the sprint:**`; use "N/A" when a small team has no rotation.
-- **Project Board link only when a board exists** — omit the line entirely when `SPRINT_PROJECT_NUMBER` is unset.
-- **Never post without explicit user confirmation** — always ask before running the `gh issue comment` command
+The output template in Step 10 is the authoritative format reference (synthesis and bullet rules live in Step 7). Never post without explicit user confirmation — always ask before running the `gh issue comment` command.

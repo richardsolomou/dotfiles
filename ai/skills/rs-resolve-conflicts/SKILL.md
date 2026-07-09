@@ -134,25 +134,13 @@ Read the file contents and resolve using AI analysis (see Step 2c).
 
 #### 2c: AI Conflict Analysis
 
-For conflicts that remain after mergiraf (or for `other` category files), read the file and analyze each conflict hunk. Conflict markers may appear in diff3 style (with a base section) or standard style (without). Handle both:
-
-diff3 style (preferred, enabled via `merge.conflictStyle = diff3`):
+For conflicts that remain after mergiraf (or for `other` category files), read the file and analyze each conflict hunk. Handle both marker styles — diff3 (preferred, enabled via `merge.conflictStyle = diff3`) and standard, which is identical except the base section is absent:
 
 ```text
 <<<<<<< HEAD
 [head_code]
 ||||||| base
-[base_code]
-=======
-[incoming_code]
->>>>>>> commit message
-```
-
-Standard style (no base section):
-
-```text
-<<<<<<< HEAD
-[head_code]
+[base_code]        <- this section absent in standard style
 =======
 [incoming_code]
 >>>>>>> commit message

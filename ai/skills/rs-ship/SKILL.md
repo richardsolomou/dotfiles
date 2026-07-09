@@ -41,22 +41,7 @@ If all changes are clearly related to one logical change, stage everything. If t
 
 ### Step 4: Commit
 
-Write a commit message following conventional commit format:
-
-**Title rules:**
-
-- Format: `<type>(<scope>): <description>`
-- Keep under 72 characters
-- Use lowercase description, no period at the end
-- Present tense imperative: "Add", "Fix", "Update", not "Added", "Fixed"
-- Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`
-- Scope is optional but encouraged
-
-**Body rules (if needed):**
-
-- Blank line after title
-- Explain why, not what (the diff shows what)
-- Keep it concise
+Write a conventional-commit message (`<type>(<scope>): <description>`, under 72 characters, lowercase description, no trailing period) per CLAUDE.md → Git → Commit messages — that section owns the type list and body rules.
 
 ```sh
 git commit -m "$(cat <<'EOF'

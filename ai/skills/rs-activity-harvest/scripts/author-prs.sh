@@ -1,19 +1,24 @@
 #!/bin/bash
-# Gather GitHub PR activity for a standup entry, since a given moment.
+# Gather authored GitHub PR activity since a given moment.
 #
-# Usage: standup-prs.sh <since>   # since as an ISO 8601 instant, e.g. 2026-06-16T18:30:00Z
-#                                 # (the previous standup's window_start). A bare
-#                                 # YYYY-MM-DD also works (treated as that day's start).
+# Usage: author-prs.sh <since> <open-key> <untouched: skip|include>
+#
+#   since      ISO 8601 instant, e.g. 2026-06-16T18:30:00Z (a bare YYYY-MM-DD
+#              also works — treated as that day's start).
+#   open-key   JSON key for the open-PR list ("active" for rs-standup,
+#              "open" for rs-ai-gateway-sync).
+#   untouched  skip    -> drop open PRs with no commits in the window
+#              include -> keep them all (the in-flight backlog)
 #
 # Emits a single JSON object:
 #   {
-#     "merged": [ {number, title, repo, merged_at}, ... ],   # merged at/after since
-#     "active": [ {number, title, repo, isDraft, commits: [headline, ...]}, ... ]
+#     "merged":     [ {number, title, repo, merged_at}, ... ],   # merged at/after since
+#     "<open-key>": [ {number, title, repo, isDraft, commits: [headline, ...]}, ... ]
 #   }
-# Only open PRs with at least one commit at/after since appear in "active".
+#
 # The GitHub `merged:`/`updated:` qualifiers and commit-date compares all accept
 # a full timestamp, and ISO 8601 sorts lexicographically, so sub-day precision
-# Just Works — the window starts at the previous standup, not the start of its day.
+# Just Works — the window starts at the previous entry, not the start of its day.
 #
 # Why this script exists (do not regress):
 #   - `gh pr view --json commits` shells out to git and fails with
@@ -21,13 +26,14 @@
 #     Everything here uses `gh api`, which has no working-directory dependency.
 #   - `gh search prs --merged` returns stale date filtering; the search/issues
 #     API with the `merged:` qualifier is accurate.
-#   - Hand-rolling the per-PR commit loop in the agent's shell is error-prone
-#     (zsh does not word-split unquoted vars, so naive `set -- $pair` breaks).
-#     Keeping it in this bash script sidesteps that entirely.
+#   - The per-PR commits endpoint pages oldest-first, so recent commits land on
+#     the last page — must paginate.
 
 set -euo pipefail
 
-since="${1:?usage: standup-prs.sh <since ISO-8601 instant, e.g. 2026-06-16T18:30:00Z>}"
+since="${1:?usage: author-prs.sh <since ISO-8601 instant> <open-key> <skip|include>}"
+open_key="${2:?open-key required, e.g. active or open}"
+untouched="${3:?untouched mode required: skip|include}"
 user="richardsolomou"
 
 merged=$(gh api search/issues --method GET \
@@ -38,7 +44,7 @@ open_prs=$(gh api search/issues --method GET \
     -f q="author:${user} is:pr is:open org:PostHog" \
     --jq '.items[] | "\(.number)\t\(.repository_url | sub("https://api.github.com/repos/"; ""))\t\(.title)"')
 
-active="[]"
+open="[]"
 while IFS=$'\t' read -r number repo title; do
     [ -z "${number:-}" ] && continue
     # Commits come oldest-first, so recent ones land on the last page — must
@@ -47,19 +53,19 @@ while IFS=$'\t' read -r number repo title; do
     # flattens them before filtering.
     commits=$(gh api "repos/${repo}/pulls/${number}/commits?per_page=100" --paginate --slurp \
         | jq "[(add // []) | .[] | select(.commit.committer.date >= \"${since}\") | .commit.message | split(\"\n\")[0]]")
-    # Skip PRs with no commits in the window — no work done on them this period.
-    if [ "$(echo "$commits" | jq 'length')" -eq 0 ]; then
+    if [[ "$untouched" == "skip" && "$(echo "$commits" | jq 'length')" -eq 0 ]]; then
         continue
     fi
     isdraft=$(gh api "repos/${repo}/pulls/${number}" --jq '.draft')
-    active=$(jq -n \
-        --argjson active "$active" \
+    open=$(jq -n \
+        --argjson open "$open" \
         --argjson number "$number" \
         --arg title "$title" \
         --arg repo "$repo" \
         --argjson isDraft "$isdraft" \
         --argjson commits "$commits" \
-        '$active + [{number: $number, title: $title, repo: $repo, isDraft: $isDraft, commits: $commits}]')
+        '$open + [{number: $number, title: $title, repo: $repo, isDraft: $isDraft, commits: $commits}]')
 done <<< "$open_prs"
 
-jq -n --argjson merged "$merged" --argjson active "$active" '{merged: $merged, active: $active}'
+jq -n --argjson merged "$merged" --argjson open "$open" --arg key "$open_key" \
+    '{merged: $merged} + {($key): $open}'

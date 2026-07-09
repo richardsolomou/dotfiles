@@ -1,6 +1,6 @@
 ---
 name: rs-quarterly-planning
-description: "Prep quarterly planning for the AI Gateway team the PostHog way — review the quarter that's ending, run the HOGS framework, distill themes, and draft next quarter's objectives in the team's `objectives.mdx` format, then open the goals PR on posthog.com tagging the Blitzscale reviewer. Use when the user asks to prep/run quarterly planning, write the quarter retro/review, draft the HOGS, or open/update the objectives PR. Configurable for other teams via `scripts/config.sh`."
+description: "Prep quarterly planning for the AI Gateway team the PostHog way — quarter review, HOGS, themes, and next quarter's objectives PR on posthog.com. Use when the user asks to prep/run quarterly planning, write the quarter retro/review, draft the HOGS, or open/update the objectives PR. Configurable for other teams via `scripts/config.sh`."
 argument-hint: "[review|hogs|pr]"
 ---
 
@@ -94,10 +94,11 @@ If the file is missing or `QP_POSTHOG_COM_DIR` isn't a checkout, note it and ask
 For each team member, fetch their merged PRs across the **current** quarter (`cur_start` to `cur_end`). Issue all fetch calls in parallel (multiple Bash tool calls in one response):
 
 ```bash
-scripts/fetch-team-prs.sh <username> <cur_start> <cur_end>
+source scripts/config.sh
+~/.claude/skills/rs-activity-harvest/scripts/team-merged-prs.sh <username> "$QP_ORG" <cur_start> <cur_end> 500
 ```
 
-Store all PR data per member. A quarter is a lot of PRs — you'll synthesize, not list, them.
+Store all PR data per member. A quarter is a lot of PRs — you'll synthesize, not list, them. The fetch is deliberately title-only (hundreds of bodies would swamp the context at quarter scale); when a flagship or ambiguous item needs more than its title to score an objective, fetch that PR's body selectively with `gh pr view <url> --json body`.
 
 ### Step 5: Build the Past-Quarter Review
 
@@ -205,7 +206,7 @@ git -C "$QP_POSTHOG_COM_DIR" commit -m "${QP_TEAM_NAME} ${next_label} objectives
 git -C "$QP_POSTHOG_COM_DIR" push -u origin HEAD
 ```
 
-Open the PR with `gh`, using the repo's PR template if present (`.github/pull_request_template.md`); otherwise a short Problem / Changes body. Request review from `QP_BLITZSCALE_REVIEWER` — if it's empty, ask the user who the team's Blitzscale member is before opening.
+Open the PR with `gh`, using the repo's PR template if present (`.github/pull_request_template.md`); otherwise a short Problem / Changes body, written in the `rs-tone` `pr-description` register. Request review from `QP_BLITZSCALE_REVIEWER` — if it's empty, ask the user who the team's Blitzscale member is before opening.
 
 ```bash
 source scripts/config.sh
@@ -220,11 +221,3 @@ EOF
 ```
 
 Report the PR URL.
-
-## Formatting Rules
-
-- **Match the team page's existing format exactly** — heading levels, owner-tagging convention, and labels are detected from the current `objectives.mdx` (Step 3), not invented. When in doubt, mirror what's already there.
-- **Review scores are objective-level, not PR-level** — 🟢/🟡/🔴 attach to each objective; individual shipped work is synthesized into plain-language outcomes beneath, not scored.
-- **HOGS are the user's to write** — provide the scaffold and optional neutral prompts; never fill in HOGS on the user's behalf.
-- **Keep links rare** — at most one representative PR link per flagship outcome in the review; never trail a bullet with a list of links.
-- **Never push or open a PR without explicit user confirmation.**

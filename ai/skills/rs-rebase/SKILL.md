@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Merge the parent branch into the current branch, resolve any conflicts, and push.
 
-Use this to bring the current branch up to date with its parent (e.g., after the parent merged master or had new commits pushed).
+Use this to bring the current branch up to date with its parent (e.g., after the parent merged master or had new commits pushed). Despite the name, this **merges** the parent in — it does not rewrite history; rebasing the stack is `rs-restack`.
 
 ## Workflow
 
@@ -35,12 +35,7 @@ If the merge completes cleanly, skip to Step 4.
 
 ### Step 3: Resolve Conflicts
 
-If there are conflicts:
-
-1. Check mergiraf output — it may auto-resolve some files. Always verify its resolutions are correct. Mergiraf can remove imports but leave call sites that reference them.
-2. Check which files still have conflict markers: `git diff --check`
-3. For each conflicted file, read it, understand both sides, and resolve.
-4. Stage resolved files and complete the merge: `git merge --continue`
+If there are conflicts, apply the `rs-resolve-conflicts` skill — it owns the full flow (mergiraf verification, lock files, migrations, stacked-PR duplicates) and finishes with `git merge --continue`.
 
 ### Step 4: Push
 
@@ -50,7 +45,7 @@ git push origin HEAD
 
 ### Step 5: Refresh the PR if the merge changed its scope
 
-If the current branch has an open PR and pulling the parent in changed what this PR actually does (conflict resolutions that altered behaviour, now-redundant commits, a shifted diff), apply the `rs-update-pr` skill to re-check the title and description against the new diff and update them if stale. A clean merge that doesn't change the branch's own diff needs no refresh. Refresh without asking (per CLAUDE.md → Pull Request Descriptions).
+If the branch's own diff changed (conflict resolutions that altered behaviour, now-redundant commits), apply `rs-update-pr` — automatic, no ask (per CLAUDE.md → Pull Request Descriptions). A clean merge that leaves the branch's own diff unchanged needs no refresh.
 
 ### Step 6: Report
 
