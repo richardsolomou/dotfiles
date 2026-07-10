@@ -65,13 +65,17 @@ Then run the harvest skill's wider queries — *everything you touched*, *PRs yo
 
 Apply the harvest skill's *Slack harvest* section as written.
 
-### Step 5: Compose the Entry
+### Step 5: Query PostHog Code Activity
 
-Write the entry per the Style section, merging the GitHub and Slack passes into one picture of the window. A stack of related PRs becomes one bullet describing the thing they add; fold a Slack thread and its PR into a single bullet. If it reads back like a changelog, rewrite it as something you'd say out loud.
+Apply the harvest skill's *PostHog Code harvest* section as written — a memory-jogger for investigation, testing, and triage work invisible to the other passes.
 
-If activity looks thin across both sources, note that to the user — they likely have meetings, calls, or offline work to add.
+### Step 6: Compose the Entry
 
-### Step 6: Write the Archive File
+Write the entry per the Style section, merging the GitHub, Slack, and PostHog Code passes into one picture of the window. A stack of related PRs becomes one bullet describing the thing they add; fold a Slack thread and its PR into a single bullet. If it reads back like a changelog, rewrite it as something you'd say out loud.
+
+If activity looks thin across the sources, note that to the user — they likely have meetings, calls, or offline work to add.
+
+### Step 7: Write the Archive File
 
 Write the entry at `new_file_path` per the harvest skill's *Archive to notes* section, commit prefix `standup:`. Example:
 
@@ -88,7 +92,7 @@ Write the entry at `new_file_path` per the harvest skill's *Archive to notes* se
 
 **Same-day re-run** (`new_file_path` already exists): append the new bullets under the existing ones rather than overwriting the morning's work, and update the `generated-at:` marker to the new `now`.
 
-### Step 7: Report to User
+### Step 8: Report to User
 
 Display:
 

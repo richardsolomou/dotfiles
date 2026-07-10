@@ -90,6 +90,19 @@ Then make sense of what remains:
 
 If the search returns nothing useful, note that and lean on GitHub plus whatever the user adds.
 
+## PostHog Code harvest
+
+Work done through PostHog Code that never reaches GitHub or Slack — investigations, live testing/dogfooding, signal-report triage, analyses. One script covers both halves (cloud task runs and local/worktree conversations), filtered to the window:
+
+```bash
+~/.claude/skills/rs-activity-harvest/scripts/posthog-code-activity.sh "${window_start}" [window_end]
+```
+
+- **Cloud tasks** come from the PostHog API (project 2, `created_by` me), newest-first with client-side window filtering. Needs a personal API key with the Tasks read scope in `$POSTHOG_PERSONAL_API_KEY` or keychain item `posthog-personal-api-key`; when absent the script says so — fall back to the MCP `tasks-list` tool (`created_by: 345145`, `internal: "all"`) and window-filter by `created_at` yourself, reading titles/repos only (descriptions are enormous).
+- **Local sessions** are swept from `~/.posthog-code/sessions/`, keeping only sessions with a prompt timestamped inside the window and showing only those prompts. Cloud-mirror sessions (`/tmp/workspace` cwd) are excluded — the cloud half already covers them.
+
+This is a **memory-jogger, not a primary source**: most tasks wrap work that already surfaces in the GitHub or Slack passes (review runs → review comments, reply drafts → Slack messages, autopilot runs → PRs). An item earns material only when its outcome is invisible to the other passes. Ignore the noise (blank tasks, greetings, meta tasks like "find my old conversation") — though a burst of near-identical test prompts is real signal of live testing. The personal-repo rule applies here too: drop cloud tasks against `richardsolomou/*` (the script does) and local sessions whose cwd is a personal project (judge by path).
+
 ## Archive to notes
 
 Write the entry as plain markdown at `new_file_path`, ending with the marker the next run reads — do not omit it:
