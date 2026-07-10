@@ -63,9 +63,11 @@ gh api search/issues --method GET -f q="reviewed-by:richardsolomou is:pr updated
 **Issue comments and inline review comments** — `involves:` misses substantive design-thread comments on issues that aren't otherwise "updated", and no search qualifier covers inline PR review comments at all. Query both directly for **every repo the other queries surfaced**, not just one:
 
 ```bash
-gh api "repos/PostHog/<repo>/issues/comments?since=${window_start}&per_page=100" --jq '.[] | select(.user.login=="richardsolomou") | {issue: (.issue_url | split("/") | last), created_at, body}'
-gh api "repos/PostHog/<repo>/pulls/comments?since=${window_start}&per_page=100" --jq '.[] | select(.user.login=="richardsolomou") | {pr: (.pull_request_url | split("/") | last), created_at, body}'
+gh api "repos/PostHog/<repo>/issues/comments?since=${window_start}&per_page=100" --paginate --jq '.[] | select(.user.login=="richardsolomou") | {issue: (.issue_url | split("/") | last), created_at, body}'
+gh api "repos/PostHog/<repo>/pulls/comments?since=${window_start}&per_page=100" --paginate --jq '.[] | select(.user.login=="richardsolomou") | {pr: (.pull_request_url | split("/") | last), created_at, body}'
 ```
+
+`--paginate` is load-bearing: these endpoints return **all users'** comments, and on a busy repo (PostHog/posthog) more than a page arrives within even a one-day window, silently dropping yours. Reviews with only a summary or only inline threads live on yet another endpoint — for any PR the reviewed-by search surfaced with no comments here, check `repos/PostHog/<repo>/pulls/<n>/reviews` before concluding the review left no trace.
 
 The `updated:>=`/`merged:>=` qualifiers accept the full ISO timestamp, so they respect a sub-day window start. **Dedup** across all queries by `number` + repo — the same PR appears several times. A heavy review/comment period is real material ("lots of pr reviews", "reviewed the X stack") even with no PRs of your own.
 
