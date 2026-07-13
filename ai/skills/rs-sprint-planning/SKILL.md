@@ -129,6 +129,16 @@ Bucket the open PRs by `createdAt`:
 `isDraft` marks early/WIP work; a non-draft open PR is review-ready. Read the
 bodies here too.
 
+### Step 4b: Harvest Slack
+
+PRs miss a lot of real sprint work — incidents handled, decisions driven, cross-team RFC input, demos, and each member's own stated focus for next sprint. Search Slack for the previous sprint window with `mcp__slack__conversations_search_messages`, three passes:
+
+1. **Your own messages** — `filter_users_from` with your user ID, per the `rs-activity-harvest` Slack rules (day-granular dates; post-filter to the window).
+2. **Each teammate's messages in the team channel** — `filter_users_from: <their user ID>` + `filter_in_channel: <team channel ID>`. This is where their launch updates, incident triage, and "my focus next week is…" posts live; those focus posts are plan gold.
+3. **Your DMs with each teammate** — `filter_in_im_or_mpim` takes the `@username` form; passing the `D…` channel ID fails with "user not found".
+
+Results cap at 100 per page — follow the `Cursor` column until the window is covered (the earliest sprint days are on the later pages). Fold findings into the retro (incidents → 🟢 outcomes, decision threads → 🟡 items, demo/talk appearances → side quests) and the plan (their stated next focus). **Private-DM process conversations and interpersonal feedback never go in the company-wide comment**, however relevant they feel.
+
 ### Step 5: Fetch Project Board Items
 
 If `SPRINT_PROJECT_NUMBER` is empty (no board yet), skip this step — there are no board items to categorize. The plan in Step 9 is then drafted from the previous sprint's in-flight work and the user's input.
@@ -227,7 +237,20 @@ If there is no board (Step 5 skipped), draft the plan **only from in-progress wo
 1. Every `🟡` in-progress item from their retro (Step 7), reworded to imperative/future tense ("Scoped X" → "Finish X").
 2. Their in-flight open/draft PRs from Step 4 (those opened after `prev_end`) — real continuing work.
 
-**Do not invent plan items from the quarter goals.** Carrying a goal forward as a plan bullet with no in-progress work behind it is a guess; the user knows their own plan. After the in-progress items, add an italic placeholder bullet per person (e.g. `- _…(add the rest)_`) so they fill in the rest. Otherwise, present project board items as a draft plan:
+**Do not invent plan items from the quarter goals.** Carrying a goal forward as a plan bullet with no in-progress work behind it is a guess; the user knows their own plan. After the in-progress items, add an italic placeholder bullet per person (e.g. `- _…(add the rest)_`) so they fill in the rest. Otherwise, present project board items as a draft plan.
+
+**The issue tracker is the board.** With no project board, the team repo's open issues carry the real state — sweep them (bodies AND comments) before finalizing the plan, fanning out parallel subagents batched by theme for a large tracker. Gotcha: `gh issue view` can print nothing in this environment; use `gh api repos/<org>/<repo>/issues/<n>` plus `…/comments`. The sweep finds what PR-reading can't:
+
+- **Decisions already recorded in comments** — don't re-plan a question that's been answered (e.g. a feature decided *against*, a mirror decided as drop); the plan item becomes the follow-through, not the decision.
+- **Launch gates with no covering PR** — tracking issues for a cutover often list blockers nobody has picked up; these are the highest-value plan items.
+- **Items already covered by open PRs** — an issue isn't a plan item if a teammate's open stack resolves it.
+- **Close-candidates** — issues whose work merged; mention as housekeeping, not plan items.
+
+**Propose quarter-goal status bumps from evidence** (a ⚪ sub-goal with real in-flight work behind it → 🟡) instead of only asking for changes.
+
+**Suggestions, if the user asks for extra picks:** draw only from open issues the person owns or that sit next to work they already did — prioritize the remaining children of their epics so the epics can close. Phrase each as the work itself ("Reconcile the breaker with the health bands"), never as "close out the epic". Present them as a prunable list; fold the survivors into the end of that person's plan as ordinary bullets.
+
+Then present the draft:
 
 > Here's the plan I've drafted from the project board:
 >
@@ -254,6 +277,8 @@ Wait for the user's response.
 - Any substantial merged work MISSING from every bullet.
 
 Apply the corrections before presenting. This pass routinely catches real omissions and overstatements; don't skip it.
+
+**Fact-check the plan bullets too.** Every plan bullet that references a PR or issue gets re-checked against live state just before presenting — a PR merges, gets renamed, or a decision lands mid-session, and a stale bullet ("land X" when X merged, "strip Y down" when Y is already stripped, a claimed count like "a 13-PR stack" that's actually 12) undermines the whole draft. Verify counts by listing, never by assuming ranges are contiguous (#303–315 was 12 PRs; #313 didn't exist).
 
 Then compose the final sprint update using all gathered and confirmed data.
 
