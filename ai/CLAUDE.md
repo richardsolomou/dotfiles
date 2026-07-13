@@ -71,6 +71,15 @@ Claude is good at writing rules for itself. Ruthlessly edit over time until the 
 
 When a correction targets behavior a skill produced, edit that skill's SKILL.md under `~/dev/dotfiles/ai/skills/` — never store it as a memory or project-local note. Memories don't travel across projects, and the skill keeps prescribing the old behavior.
 
+## Skills
+
+Every `rs-*` skill is mirrored in the PostHog skills store (the dotfiles copy is the source of truth). When a referenced skill isn't installed locally — no entry in the skills list, no `~/.claude/skills/<name>/` — look it up in the store instead of skipping the step:
+
+- Skill body: `mcp__posthog__exec command='call skill-get {"skill_name":"<name>"}'` — use the returned `body` as if you had read the local SKILL.md.
+- Bundled files (a skill invoking `~/.claude/skills/<name>/scripts/…` that doesn't exist): `call skill-file-get {"skill_name":"<name>","file_path":"scripts/<file>"}` — write the `content` to a temp dir and run it from there with the same arguments.
+
+This is how skills resolve in PostHog Code cloud tasks and on machines without the dotfiles clone. If the store call fails too, say so and degrade gracefully — don't silently drop the step.
+
 ## Project-specific Workflow
 
 ### posthog/posthog

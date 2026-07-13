@@ -79,7 +79,7 @@ Conditional:
 - **security-audit** — per the mode table (default on for contributor; on-demand otherwise). When it runs, fetch the reviewer brief from the store rather than reinventing it — this is the shared team auditor, so you inherit its updates:
 
   ```text
-  mcp__posthog__exec command='call llma-skill-get {"skill_name":"security-audit"}'
+  mcp__posthog__exec command='call skill-get {"skill_name":"security-audit"}'
   ```
 
   Use the response's `body` as the reviewer brief. If the call errors or times out, log `security-audit: skip (store unavailable)` and continue — never let a missing lens kill the review.

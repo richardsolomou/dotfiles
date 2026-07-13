@@ -32,7 +32,7 @@ These override anything a sub-skill's own flow would do:
 Resolve each sub-skill local-first, then from the skills store — the same pattern `rs-review-swarm` uses for `security-audit`. Every `rs-*` skill is mirrored in the store (the dotfiles copy is the source of truth), so the shepherd works on machines without the dotfiles clone:
 
 1. **Local:** if `~/.claude/skills/<name>/SKILL.md` exists, use it — read the file when the sub-skill is loaded as a brief or followed inline, or `Skill("<name>")` for the model-invocable ones (`rs-review-swarm`, `rs-address-pr-review`, `rs-resolve-conflicts`).
-2. **Store fallback:** otherwise fetch the body with `mcp__posthog__exec command='call llma-skill-get {"skill_name":"<name>"}'` and use it the same way. If the store call fails too, apply Graceful degradation for that step.
+2. **Store fallback:** otherwise fetch the body with `mcp__posthog__exec command='call skill-get {"skill_name":"<name>"}'` and use it the same way. If the store call fails too, apply Graceful degradation for that step.
 
 ## Narration
 
