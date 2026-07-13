@@ -267,6 +267,7 @@ The format below mirrors the canonical issue template at [`.github/ISSUE_TEMPLAT
 - **The legend is a single inline line at the bottom of the Retro `<details>`** — `🟢 =finished 🟡=in progress 🔴=won't finish ⚪=not started`. No separate legend block under Quarter goals.
 - **No narrative paragraph** — the retro is bullets only, inside `<details>`.
 - **Plan subsections are `### High priority`, `### Low priority / side quests`, and `### Are any other teams impacted by this plan? If so, tag them here`** — include all three, even if a section is just `-`.
+- **Plan items are deliverables, not process.** Never write items like "review X's PRs", "coordinate with Y", or "keep an eye on Z" — reviewing and coordination are ambient work, not plan lines. Every bullet names something that ships or a decision that gets recorded.
 
 Substitute the configured values: `SPRINT_COMMENT_HEADER` for the top heading, `SPRINT_GOALS_URL` for the goals link. Include a `[Project Board](https://github.com/orgs/{SPRINT_ORG}/projects/{SPRINT_PROJECT_NUMBER})` link under `## Plan` **only when `SPRINT_PROJECT_NUMBER` is set**; omit the line entirely when there's no board. The quarter goals come from Step 3 (or the user, for a first sprint), not the example below.
 
@@ -339,25 +340,13 @@ Use this format (Path B retro shown; for Path A, replace the per-person outcomes
 
 Write the final markdown to `~/dev/notes/PostHog/sprint-planning/<sprint_start>.md` (e.g. `2026-06-29.md` — sortable, one file per sprint), then commit and push per `rs-activity-harvest` § _Archive to notes_, commit prefix `sprint-planning:`. If the file already exists (re-run for the same sprint), overwrite it — the latest draft wins; this is the pre-meeting draft, a record of what was prepared, not the final posted comment.
 
-### Step 12: Offer to Post
+### Step 12: Hand Off for Manual Posting
 
-After showing the output, ask:
-
-> Would you like me to post this as a comment on #{current_number}?
-
-If the user confirms, post with:
-
-```bash
-source scripts/config.sh
-gh issue comment <current_number> --repo "$SPRINT_REPO" --body "$(cat <<'EOF'
-<the markdown>
-EOF
-)"
-```
+**Never offer to post the sprint comment, and never run `gh issue comment` for it — even if it seems helpful.** The user pastes it into #{current_number} themselves. End by presenting the final markdown (Step 10's code block) and noting the archive path from Step 11. Only post if the user spontaneously and explicitly asks in their own words.
 
 ### Step 13: Archive Previous Sprint's Done Items
 
-After posting the comment (or if the user declines to post), offer to clean up the project board by archiving Done items from previous sprints.
+After handing off the update, offer to clean up the project board by archiving Done items from previous sprints.
 
 1. Run the helper script to find archivable items:
 
@@ -474,4 +463,4 @@ Merge the sprint plan (Step G3) with the project board (Step G4) into a single v
 - Items with URLs use `[title](url)` links; DraftIssues show plain text; items with multiple assignees appear under each.
 - Unassigned items at the bottom in their own section; side quests from the sprint plan under their own heading per person.
 
-The output template in Step 10 is the authoritative format reference (synthesis and bullet rules live in Step 7). Never post without explicit user confirmation — always ask before running the `gh issue comment` command.
+The output template in Step 10 is the authoritative format reference (synthesis and bullet rules live in Step 7). Never offer to post and never run `gh issue comment` unprompted — the user posts the comment themselves (Step 12).
