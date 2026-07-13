@@ -269,6 +269,8 @@ The format below mirrors the canonical issue template at [`.github/ISSUE_TEMPLAT
 - **Plan subsections are `### High priority`, `### Low priority / side quests`, and `### Are any other teams impacted by this plan? If so, tag them here`** — include all three, even if a section is just `-`.
 - **Plan items are deliverables, not process.** Never write items like "review X's PRs", "coordinate with Y", or "keep an eye on Z" — reviewing and coordination are ambient work, not plan lines. Every bullet names something that ships or a decision that gets recorded.
 - **Plan bullets are short.** Deliverable + issue/PR link, one line, at most one brief clause of context. No rationale chains, PR counts, launch-gate explanations, or em-dash essays — that detail lives in the linked issues.
+- **One deliverable per plan bullet.** Don't pair items just because they're adjacent ("Antithesis trial; add Bedrock to the simulator" is two bullets). Combine only when it's genuinely one workstream — a batch plus its cutover, one alerting effort with two halves.
+- **The Plan is team-scoped.** Out-of-team side quests (other products' PRs, personal itches) never appear in the Plan — the plan is what the team commits to for its own product. They may still appear in the Retro's side quests, which documents where time actually went.
 
 Substitute the configured values: `SPRINT_COMMENT_HEADER` for the top heading, `SPRINT_GOALS_URL` for the goals link. Include a `[Project Board](https://github.com/orgs/{SPRINT_ORG}/projects/{SPRINT_PROJECT_NUMBER})` link under `## Plan` **only when `SPRINT_PROJECT_NUMBER` is set**; omit the line entirely when there's no board. The quarter goals come from Step 3 (or the user, for a first sprint), not the example below.
 
