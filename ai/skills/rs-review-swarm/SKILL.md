@@ -1,13 +1,15 @@
 ---
 name: rs-review-swarm
-description: "Multi-lens PR review by fanning out independent reviewer subagents in parallel, then synthesising into a single deduped review. Auto-detects whose code it is — your own, a teammate's, or an external contributor's — and adapts posture, tone, and output to match. Drafts comments by default (never auto-posts); auto-posts under a bot marker only in loop mode. Use when the user says 'swarm review', 'review this PR thoroughly', 'multi-perspective review', or wants more coverage than a single-pass rs-review-pr."
-argument-hint: "[pr-url|pr-number] [as:self|teammate|contributor] [post] [+security|-security]"
+description: "Multi-lens review of one PR or a PR set by fanning out independent reviewer subagents, validating every comment against that PR's own changed lines, and synthesising a complete deduped review with the correct voice. Drafts comments by default; auto-posts under a bot marker only in loop mode. Use for swarm reviews, stacked or cross-repo reviews, repeated review passes, or when more coverage than rs-review-pr is needed."
+argument-hint: "[pr-url|pr-number ...] [context:<pr-url> ...] [rounds:<n>] [as:self|teammate|contributor] [post] [+security|-security]"
 disable-model-invocation: true
 ---
 
 # Review Swarm
 
-Fan out several independent reviewers over one PR — each a fresh subagent that never sees the others — then synthesise their findings into one deduped review. More coverage than a single-pass `rs-review-pr`; the independence is what surfaces what one read misses.
+Fan out several independent reviewers over each target PR — each a fresh subagent that never sees the others — then synthesise their findings into one deduped review per PR. More coverage than a single-pass `rs-review-pr`; the independence is what surfaces what one read misses.
+
+The unit of review is always **one PR against its own true base**. A stack or cross-repo request is a review set containing several isolated PR reviews, never one combined diff. Context-only PRs inform the target reviews but never receive findings or supply line anchors.
 
 The engine is the same for every review. What changes is **who wrote the code** — your own, a teammate's, or an external contributor's — which sets the posture, the tone, and where the output goes. The skill detects that itself.
 
@@ -41,7 +43,7 @@ State the detected mode in one line before reviewing (`Detected: contributor PR 
 | Counter-bias (from `rs-adversarial-review`) | own-code | teammate | contributor |
 | `security-audit` lens | on-demand¹ | on-demand¹ | **default on** |
 | Convention drift | normal | assume shared conventions | flag **and educate** (link the pattern, explain why) |
-| Voice | none — terminal, blunt | `rs-tone` `pr-review` | neutral, professional, welcoming — **no `rs-tone`** (it's the user's internal voice, wrong for an outside contributor) |
+| Voice | none — terminal, blunt | `rs-tone` `slack-casual` | neutral, professional, welcoming — **no `rs-tone`** (it's the user's internal voice, wrong for an outside contributor) |
 | Destination | terminal walkthrough + offer to apply fixes | drafted inline comments | drafted inline comments |
 | Bar | ship-it | merge | stricter — code you own forever |
 
@@ -51,9 +53,29 @@ The engine below is identical across modes. Only this config block differs.
 
 ## Workflow
 
-### Step 1: Detect PR, check out its head, gather diff, resolve mode
+### Step 1: Resolve the review set
 
-Parse `$ARGUMENTS` for a PR ref, an `as:<mode>` override, `post`, and `±security`. Resolve the PR (or fall back to the local branch vs its base, which forces `self`). Detect the mode per the rules above.
+Parse `$ARGUMENTS` and the user's request for:
+
+- every target PR to review;
+- every context-only PR, explicitly marked by `context:<ref>` or described as context-only;
+- `rounds:<n>` or natural-language repetition such as "three times each", "three times per PR", or "review each PR three times";
+- an `as:<mode>` override, `post`, and `±security`.
+
+Default to one round per target PR; this is the normal choice for small or routine changes. An explicit repetition count overrides the default. Phrases such as "three times each", "three times per PR", and "review each PR three times" all mean three complete, independent rounds for **every target PR**, not three lenses and not three passes spread across the review set. A phrase scoped to one named PR changes only that PR's round count. Record the resolved count for every target in a review manifest before reading code:
+
+```text
+TARGETS:
+- <owner/repo>#<n> rounds=<n>
+CONTEXT:
+- <owner/repo>#<n>
+```
+
+Never silently promote a context PR into a target or omit a target because it is in another repository.
+
+### Step 2: Prepare each target PR in isolation
+
+For each target PR, resolve its repository, number, base ref, head SHA, changed files, discussion, author mode, and a dedicated checkout or worktree. Do not reuse another PR's working tree, even for adjacent PRs in a stack.
 
 **Check out the PR's head before anything reads a file.** The reviewers cite line numbers off the working tree, so the working tree *must* be the PR head — not `master`, not a detached merge-base. A worktree parked on the wrong commit is exactly why line numbers come out garbage: the agents read each file in its base-branch state and report those numbers. `gh pr checkout` handles fork PRs and any base branch; verify HEAD actually landed on the PR head before continuing:
 
@@ -63,13 +85,24 @@ head=$(gh pr view <n> --repo <owner/repo> --json headRefOid -q .headRefOid)
 test "$(git rev-parse HEAD)" = "$head" || { echo "HEAD is not the PR head — abort"; exit 1; }
 ```
 
-(Self / local-branch fallback: you're already on the branch — skip the checkout, but still record `git rev-parse HEAD`.)
+(Self / local-branch fallback: you're already on the branch — skip the checkout, but still record `git rev-parse HEAD`.) For multiple targets, prefer isolated temporary worktrees or archives so checking out one target cannot invalidate another target's files or line numbers.
 
 Then load the `rs-adversarial-review` skill and gather the changeset as one atomic diff (not commit-by-commit) per its Shared mechanics § *Diff against the true base* (add `--name-only` for the changed-file list). Store: PR number, `owner/repo`, base branch, changed-file list, full diff, HEAD SHA, mode.
 
-**Read the existing discussion before launching reviewers** per Shared mechanics § *Fetch the existing discussion*, and pass it to synthesis (Step 4). Note constraints the author has stated, and — in loop/`post` mode — every prior `🤖 rs-review-swarm` comment, so the next pass doesn't re-post what's already on the PR.
+Build a **changed-line manifest** from that exact three-dot diff. For every changed file, record only the new-side line ranges from `@@ ... +<start>,<count> @@` hunks. Added lines with omitted count have count 1; count 0 contributes no anchorable lines. This manifest belongs to that PR and cannot be shared with another PR, including its parent or child in a stack.
 
-### Step 2: Decide which lenses run, fetch the security lens if needed
+```text
+PR <owner/repo>#<n> @ <head SHA>
+<file>: <new-side changed ranges>
+```
+
+The diff, changed files, changed-line manifest, discussion, and HEAD SHA form the immutable review packet for that PR. If HEAD changes during the review, discard its findings and rebuild the packet before continuing.
+
+**Read the existing discussion before launching reviewers** per Shared mechanics § *Fetch the existing discussion*, and pass it to synthesis (Step 5). Note constraints the author has stated, and — in loop/`post` mode — every prior `🤖 rs-review-swarm` comment, so the next pass doesn't re-post what's already on the PR.
+
+Prepare context-only PRs separately. Read their descriptions, diffs, and discussion only for contracts or assumptions needed by a target. Do not include their changed files in a target's review packet and do not anchor target comments to context-only changes.
+
+### Step 3: Decide which lenses run, fetch the security lens if needed
 
 Always run: **correctness**, **tests**, **reuse**, **quality**, **efficiency**.
 
@@ -84,11 +117,15 @@ Conditional:
 
   Use the response's `body` as the reviewer brief. If the call errors or times out, log `security-audit: skip (store unavailable)` and continue — never let a missing lens kill the review.
 
-### Step 3: Set posture, then launch reviewers in parallel
+### Step 4: Run independent rounds and lenses
 
-Apply the `rs-adversarial-review` discipline (loaded in Step 1) with the **mode's** counter-bias (own / teammate / contributor) — skeptical posture, adversarial verification, defensibility bar, skip nitpicks.
+Apply the `rs-adversarial-review` discipline (loaded in Step 2) with the **mode's** counter-bias (own / teammate / contributor) — skeptical posture, adversarial verification, defensibility bar, skip nitpicks.
 
-Launch all selected lenses in a **single message** with multiple `Agent` tool calls (`subagent_type: "general-purpose"`, `model: "opus"`) so they run in true parallel. Pass each agent: the full diff, the changed-file list, the mode's counter-bias, and its lens brief. Tell each it is the sole reviewer, that it must **verify each candidate before raising it** (construct the failing scenario), and that it only reviews — it never edits, commits, or posts. The working tree is checked out at the PR head (Step 1), so files on disk match the diff's new side; every `line:` an agent reports must be the line number in the file **as it stands on disk** (the new side) — never a diff-hunk position or a base-side number.
+For each target PR and each requested round, launch all selected lenses concurrently using the runtime's available subagent/delegation tool. Do not hardcode a vendor-specific agent type or model. Every `(PR, round, lens)` is fresh and independent: it receives only that PR's review packet plus relevant context summaries, and never sees findings from earlier rounds or sibling lenses.
+
+Pass each reviewer: target PR identity, round number, HEAD SHA, true base, full diff, changed-file list, changed-line manifest, existing discussion, mode's counter-bias, and its lens brief. Tell it that it is the sole reviewer, must **verify each candidate before raising it** by constructing the failing scenario, and only reviews — it never edits, commits, or posts. Every `line:` must be a new-side line in that target PR's changed-line manifest — never a diff-hunk ordinal, a line from the base, a nearby unchanged line, a parent/child PR line, or a context-only PR line.
+
+If subagents are unavailable, degrade explicitly to sequential independent passes while preserving separate `(PR, round, lens)` result sets. Never claim that a swarm or requested round completed when it did not. Report missing rounds/lenses in the completion manifest.
 
 Lens briefs — keep each terse; the bar is `rs-adversarial-review`, these say only where to look:
 
@@ -110,7 +147,7 @@ Every reviewer ends its response in this exact format:
 
 ```text
 STRUCTURED_FINDINGS:
-- file: <full repo-relative path> | line: <number or "general"> | bucket: <Blocker|Suggestion> | reviewer: <lens> | body: <the comment text>
+- pr: <owner/repo>#<n> | round: <number> | file: <full repo-relative path> | line: <number or "general"> | bucket: <Blocker|Suggestion> | reviewer: <lens> | body: <the comment text>
 - ...
 
 OVERALL_SUMMARY:
@@ -121,21 +158,38 @@ OVERALL_SUMMARY:
 
 No findings → `STRUCTURED_FINDINGS:` then `(none)`.
 
-### Step 4: Synthesise
+### Step 5: Validate anchors, then synthesise per PR
 
-Collect all findings. **Dedup**: same `file:line` within ~5 lines, or clearly the same concern → merge into one, listing every lens that flagged it. Convergent findings are higher confidence; if any contributor called it a **Blocker**, the merged finding is a Blocker. Then **drop anything already raised in the existing discussion** (Step 1, per the shared don't-second rule), and in `post` mode skip findings matching a prior `🤖 rs-review-swarm` comment at the same `file:line` so loop passes don't re-post.
+Before reading finding bodies, validate every candidate against its target PR packet:
+
+1. `pr` matches a target in the manifest.
+2. `file` is changed by that PR.
+3. `line` is a new-side line inside that PR's changed-line manifest.
+4. The cited line still contains the code the finding discusses at the recorded HEAD SHA.
+
+Reject or re-anchor invalid candidates before synthesis. Re-anchoring means finding a semantically relevant changed line **in the same PR**; never choose an arbitrary nearby changed line merely because GitHub accepts it. If the concern only exists on an unchanged line, in another PR, or generally across the stack, move it to that PR's summary without an inline anchor. Do not output an invalid `file:line` under any circumstances.
+
+Collect findings separately per PR. **Dedup within that PR**: same `file:line` within ~5 lines, or clearly the same concern → merge into one, listing every round and lens that flagged it. Convergence across independent rounds raises confidence; repetition is not a reason to print duplicates. Then **drop anything already raised in that PR's existing discussion**, and in `post` mode skip findings matching a prior `🤖 rs-review-swarm` comment at the same `file:line` so loop passes don't re-post.
 
 You own the final bucket (lens buckets are inputs). Apply the `rs-adversarial-review` defensibility bar one more time across the merged set — drop anything that wouldn't survive pushback. An inline comment must anchor to a line **inside a changed hunk on the new side** — that's all GitHub will accept. A concern about code this PR didn't touch (a pre-existing bug, an untouched caller) folds into the summary framed as out-of-scope; it is never an inline comment on an unchanged line. Anything with no anchorable line also folds into the summary (keep the one or two that matter, drop the rest).
 
 **Final cold read-back (before output).** Read the surviving set as the author who'll receive it, without the context you built up. Each comment: succinct without dropping the line ref / the why / the failing case; the ask in the first sentence, not buried; no AI smell (neutral-professional polish, severity labels, formulaic openers, closing sign-offs). Rewrite any that fail; if two overlap, merge or cut one.
 
-### Step 5: Output — by mode and by draft-vs-post
+Then run an **anchor audit** over the final rendered set, not just the raw findings. For every displayed `file:line`, check it again against the owning PR's changed-line manifest. The review is not ready while any displayed anchor fails.
+
+### Step 6: Apply voice before rendering
+
+For teammate reviews, load `rs-tone` before drafting the final output and apply the `slack-casual` register to every inline comment body. Do not wait for the user to request tone. Preserve technical meaning, PR grouping, severity, anchors, and one fenced block per comment. The headings and recommended actions may remain structured; the text inside each review-comment fence must be Slack casual.
+
+If `rs-tone` is unavailable, say so before the review and apply its known `slack-casual` rules directly; do not silently fall back to generic review prose.
+
+### Step 7: Render the complete review set
 
 **self** — terminal walkthrough in the `rs-self-review` format (`## <n>. <file>:<line> — <gist>`, what's wrong / the concept / proposed fix), then offer to apply fixes per `rs-self-review` Step 5. No `rs-tone`. `rs-ship` when the user is ready. (self mode never posts — it's your own pre-push pass.)
 
 **teammate / contributor** — render each finding as an inline comment, anchored to its `file:line` on the new side. Voice by mode:
 
-- **teammate** — load `rs-tone` with `register: pr-review` and apply it.
+- **teammate** — `rs-tone` `slack-casual`, already applied in Step 6.
 - **contributor** — a neutral, professional, welcoming reviewer voice; **do not** apply `rs-tone` (its registers are the user's own internal voice, wrong for an outside contributor). Still educate: add the "why" and a link for convention findings.
 
 Then branch on draft-vs-post:
@@ -150,7 +204,16 @@ Then branch on draft-vs-post:
   ```
   ````
 
-  After the comments, recommend a GitHub review action (the user acts on it — this is draft, so you don't submit it): **Request changes** if any Blocker survives; **Comment** if only Suggestions; **Approve** only if nothing actionable remains and you'd merge it yourself. One line, with the reason — e.g. "Recommended action: Request changes — the null deref in `frontend/src/parser.ts:88` drops events for empty payloads."
+  Group output by target PR. Each PR section contains only anchors from that PR's diff, followed by its recommended GitHub action: **Request changes** if any Blocker survives; **Comment** if only Suggestions; **Approve** only if nothing actionable remains and you'd merge it yourself.
+
+  End with a completion manifest:
+
+  ```text
+  Completed: <owner/repo>#<n> — <completed>/<requested> rounds, <completed lenses>; anchors validated at <head SHA>
+  Context read: <owner/repo>#<n>
+  ```
+
+  Do not say the review is complete if a requested PR, round, lens, tone pass, or anchor audit is missing.
 
 - **`post` argument present (loop mode) — auto-post.** Post one atomic review via the GitHub Reviews API (`event: "COMMENT"` — never APPROVE/REQUEST_CHANGES; the bot does not gate merging), inline comments plus a short top-level summary. Every posted comment starts with the bot marker so it's unmistakably automated:
 
@@ -159,6 +222,12 @@ Then branch on draft-vs-post:
   ```
 
   Build the payload in a temp JSON file and POST with `gh api repos/<owner>/<repo>/pulls/<n>/reviews --input <file>`. If a single inline comment is rejected (line not in diff), drop it (mention it in the summary only if it's a Blocker). If the whole POST fails, print the findings locally.
+
+### Step 8: Corrections always re-render everything
+
+Treat any user request to change tone, fix PR diff line numbers, update anchors, re-check the head, or revise findings as invalidating the prior rendered review. Perform the requested correction, rerun the final anchor audit and tone pass, then output the **entire corrected review set again** in paste-ready form.
+
+Never answer a correction with only "done", a list of edits, or a summary of what changed. Never require the user to combine an old review with new anchors or rewritten comments. The replacement output must include every PR section, every surviving comment, every recommended action, and the completion manifest. If the corrected output is too large for one response, emit numbered complete parts and continue immediately until all parts are delivered.
 
 ## Loop mode
 
