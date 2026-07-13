@@ -257,7 +257,7 @@ Apply the corrections before presenting. This pass routinely catches real omissi
 
 Then compose the final sprint update using all gathered and confirmed data.
 
-**Write it in Richard's voice.** This comment gets posted under his name, so load `rs-tone` with register **`slack-status`** (never `slack-casual` here) and generate in that register from the start — don't write neutral-assistant prose and rewrite.
+**Write it in Richard's voice.** This comment gets posted under his name, so load `rs-tone` with register **`slack-status`** (never `slack-casual` here) and generate in that register from the start — don't write neutral-assistant prose and rewrite. For this artifact the register means plain language, NOT chat diction: bullets stay sentence case with normal punctuation (it's a company-wide GitHub comment, not Slack), but every term gets the plain-words test — if a reader outside the team would stumble ("provenance-verified", "health-routed election", "drift detection"), say it plainly ("capture verifies the events are really ours", "routes to the healthiest provider", "alert when the ledger and billing disagree"). Domain nouns the team actually uses (attribution, breaker, failover, ledger) stay.
 
 **IMPORTANT**: Output the update as raw markdown inside a code block so the user can copy/paste it directly into GitHub.
 
