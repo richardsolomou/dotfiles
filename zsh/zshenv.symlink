@@ -21,3 +21,11 @@ fi
 if [ -f "$HOME/.cargo/env" ]; then
   . "$HOME/.cargo/env"
 fi
+
+# mise shims — must win over Homebrew's node/python/etc. in every context.
+# Interactive shells replace these with `mise activate` in .zshrc; non-interactive
+# shells (Claude Code's Bash tool, LaunchAgents, cron) rely on the shims here so
+# per-directory tool versions from mise.toml still apply.
+if [ -d "$HOME/.local/share/mise/shims" ]; then
+  export PATH="$HOME/.local/share/mise/shims:$PATH"
+fi

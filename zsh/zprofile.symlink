@@ -7,6 +7,12 @@ if [ -d /opt/homebrew/bin ]; then
   export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 fi
 
+# mise shims — re-prepend after Homebrew so mise-managed tools win in login
+# shells too (interactive ones then swap to `mise activate` in .zshrc).
+if [ -d "$HOME/.local/share/mise/shims" ]; then
+  export PATH="$HOME/.local/share/mise/shims:$PATH"
+fi
+
 # OrbStack CLI integration
 if [ -f "$HOME/.orbstack/shell/init.zsh" ]; then
   source "$HOME/.orbstack/shell/init.zsh" 2>/dev/null || :
