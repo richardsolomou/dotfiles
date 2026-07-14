@@ -131,7 +131,7 @@ Lens briefs — keep each terse; the bar is `rs-adversarial-review`, these say o
 
 > **correctness** — Logic errors, nullability/NPE, races, unhandled errors, data loss/corruption, breaking API changes → **Blocker**; missing error handling, unhandled edge cases, convention violations → **Suggestion**. Read each changed file in full, not just the hunk.
 >
-> **tests** — Do the tests prove the code works? Behaviour-focused, deterministic, fail for the right reason. Production code changed with no test, or a test that would pass through a regression → **Blocker**. Tautological/over-mocked/weak-matcher/branching-in-tests → **Suggestion**.
+> **tests** — Do the tests prove the code works? Behaviour-focused, deterministic, fail for the right reason. Missing, tautological, over-mocked, weak-matcher, or branching tests → **Suggestion**, never **Blocker** by themselves. If investigating a test gap reveals an actual broken behaviour, report that verified defect through the correctness lens as the blocker.
 >
 > **reuse** — New code duplicating an existing helper/hook/component, or reinventing a stdlib/library primitive. Grep for the existing one and point at it. → **Suggestion**.
 >
@@ -173,6 +173,8 @@ Collect findings separately per PR. **Dedup within that PR**: same `file:line` w
 
 You own the final bucket (lens buckets are inputs). Apply the `rs-adversarial-review` defensibility bar one more time across the merged set — drop anything that wouldn't survive pushback. An inline comment must anchor to a line **inside a changed hunk on the new side** — that's all GitHub will accept. A concern about code this PR didn't touch (a pre-existing bug, an untouched caller) folds into the summary framed as out-of-scope; it is never an inline comment on an unchanged line. Anything with no anchorable line also folds into the summary (keep the one or two that matter, drop the rest).
 
+Consolidate surviving test-only suggestions into one concise top-level follow-up describing the behaviour that needs coverage. Do not emit a row of inline test comments, and never promote a test gap to **Blocker** unless a separate, verified correctness defect exists.
+
 **Final cold read-back (before output).** Read the surviving set as the author who'll receive it, without the context you built up. Each comment: succinct without dropping the line ref / the why / the failing case; the ask in the first sentence, not buried; no AI smell (neutral-professional polish, severity labels, formulaic openers, closing sign-offs). Rewrite any that fail; if two overlap, merge or cut one.
 
 Then run an **anchor audit** over the final rendered set, not just the raw findings. For every displayed `file:line`, check it again against the owning PR's changed-line manifest. The review is not ready while any displayed anchor fails.
@@ -204,7 +206,7 @@ Then branch on draft-vs-post:
   ```
   ````
 
-  Group output by target PR. Each PR section contains only anchors from that PR's diff, followed by its recommended GitHub action: **Request changes** if any Blocker survives; **Comment** if only Suggestions; **Approve** only if nothing actionable remains and you'd merge it yourself.
+  Group output by target PR. Each PR section contains only anchors from that PR's diff, followed by its recommended GitHub action: **Request changes** only if a verified Blocker survives; **Comment** if material questions or optional changes remain open, or the review was not thorough enough to approve; **Approve** when no blockers or material questions remain and you'd merge it yourself. Missing tests alone still result in **Approve** with one concise top-level test follow-up rather than a blocking review.
 
   End with a completion manifest:
 

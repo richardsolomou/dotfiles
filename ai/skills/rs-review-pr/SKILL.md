@@ -1,6 +1,6 @@
 ---
 name: rs-review-pr
-description: "Review a pull request: first orient the reviewer with an ELI5 of what the PR does, why, and the concepts in play, then produce inline review comments — confirmed findings only, no open questions or nits — anchored to specific lines, plus an optional short top-level summary, ready to paste into GitHub one at a time."
+description: "Review a pull request: first orient the reviewer with an ELI5 of what the PR does, why, and the concepts in play, then produce inline review comments — verified blockers, concrete suggestions, or researched questions — anchored to specific lines, plus an optional short top-level summary, ready to paste into GitHub one at a time."
 argument-hint: "<pr-url|pr-number>"
 user-invocable: false
 ---
@@ -70,12 +70,13 @@ For each potential concern, ask: *if this shipped as-is, could it cause a bug, a
 
 Then **prioritise**. Pick the three to five things that matter most. A long list dilutes the signal — the author skims, fixes the easy ones, and the real point gets buried.
 
-In your head, sort what survives prioritisation into two categories:
+In your head, sort what survives prioritisation into three categories:
 
-- **Must-fix before merge** — strictly correctness, security, or data-loss. Nothing else qualifies. Design choices, naming, structure, convention drift, missing tests for non-critical paths, observability gaps, performance worries that aren't proven hot paths: these belong in "worth considering," never must-fix. When genuinely uncertain whether a correctness or security concern is real, return to verification rather than escalate on a guess.
-- **Worth considering** — confirmed improvements where you can articulate concretely how the PR is better with the change. Design, naming, structure, convention drift, follow-ups, observability, tests on non-critical paths. Not blocking, but you can defend each one.
+- **Must-fix before merge** — verified defects that make the PR unsafe or unacceptable to merge: broken behaviour, regressions, security vulnerabilities, data loss/corruption, or similarly concrete production risk. Nothing else qualifies. Design choices, naming, structure, convention drift, missing or weak tests, observability gaps, and speculative performance concerns are never blockers by themselves. When genuinely uncertain whether a blocker is real, return to verification rather than escalate on a guess.
+- **Worth considering** — confirmed improvements where you can articulate concretely how the PR is better with the change. Design, naming, structure, convention drift, follow-ups, observability, and tests belong here. Not blocking, but you can defend each one.
+- **Open discussion** — a material question or trade-off you could not resolve after reading the code, history, and existing discussion. State the expectation or concern that prompted the question; never leave a bare "why?" or use uncertainty to imply a blocker.
 
-**Don't raise open questions to the author.** If you don't understand something, that's a gap from Step 3 — go back, read the code, figure it out. Comments that amount to "why this?" without a hypothesis attached signal that you haven't done the homework yet. Only after you've tried and genuinely can't pick between two materially different interpretations does a question warrant raising — and even then, ask it as part of a finding ("I'd expect X here for reason Y; is there a constraint I'm missing?"), not a bare "what does this do?"
+**Research before raising questions.** If you don't understand something, first go back, read the code, history, and existing discussion. Only after that investigation leaves a material ambiguity should you ask the author. Ask it as part of a concrete observation ("I'd expect X here for reason Y; is there a constraint I'm missing?"), not a bare "what does this do?"
 
 ### Step 5: Write the Review
 
@@ -154,11 +155,13 @@ Leave a blank line between comments. If there's an optional top-level summary, s
 
 Do not post anything to GitHub. The user copies each body from the chat and pastes it themselves, one at a time.
 
-Then recommend which GitHub review action to choose, with a one-line reason:
+Then recommend which GitHub review action to choose, with a one-line reason. The action communicates merge readiness, not whether the review found anything to say:
 
-- **Request changes** — choose this if there is **any blocking concern**. Default here when in doubt; it is reversible and signals the author should iterate before merge.
-- **Comment** — choose this when there are only non-blocking findings the author should weigh, but no concerns that must be resolved before merge. Also use this when the PR is not yours to approve (e.g. you don't own the area, or you only spot-checked part of it).
-- **Approve** — choose this **only** when you've done a thorough review and found no blockers, and you would be comfortable merging it yourself. Do not approve a PR where you only skimmed the diff, where tests are missing for new behavior, or where prior reviewers have unresolved blocking concerns. Approval is the strongest signal you give — reserve it for PRs that genuinely warrant it.
+- **Request changes** — choose this only when at least one verified must-fix blocker makes the PR unsafe or unacceptable to merge. Never request changes for missing or weak tests alone, optional improvements, preferences, unanswered questions, or concerns you have not proved. When in doubt, investigate further; uncertainty is not a blocker.
+- **Comment** — choose this when there are no blockers, but material questions, trade-offs, or non-required changes remain open for discussion. Also use this when the PR is not yours to approve, you only spot-checked part of it, or you are otherwise not prepared to signal merge readiness.
+- **Approve** — choose this when you've done a thorough review, found no blockers or material open questions, and would be comfortable merging the PR. Missing or weak tests do not prevent approval: approve and put the test request in a top-level comment so the author sees the follow-up without receiving a blocking signal. Existing unresolved blockers from other reviewers still prevent approval until they are resolved or dismissed.
+
+If tests are the only remaining concern, do not turn every missing case into inline review noise. Add one concise top-level comment describing the behaviour that still needs coverage, and recommend **Approve**.
 
 Format the recommendation like:
 
