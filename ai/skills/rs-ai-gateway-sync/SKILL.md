@@ -59,23 +59,18 @@ Store the five fields per the harvest skill's *Dates script* section. `previous`
 
 If `prev_file_path` is non-empty, read it. Its **This week** section is the strongest signal for what was in flight — items still open are prime candidates for this week's **Last week** (did they ship?) and possibly this week's focus again (still going?). Its "started/continuing" notes carry the same way.
 
-### Step 3: Query GitHub for Activity
+### Step 3: Harvest Activity in Parallel
 
-```bash
-~/.claude/skills/rs-activity-harvest/scripts/author-prs.sh "${window_start}" open include
-```
+Run the GitHub and Slack passes concurrently per the harvest skill's *Run the passes concurrently* section — one subagent each spawned in a single message (parallel tool calls where subagents aren't available), each returning a digest per that section's contract. Sync-specific notes per pass:
 
-- `merged` → **Last week** ("shipped …").
-- `open` with non-empty `commits` → **Last week** in-flight work ("started …" / "continuing …").
-- `open` (all of it, regardless of `commits`) → **This week** focus candidates — the in-flight backlog. A draft or untouched-this-week PR is exactly the kind of thing that becomes next week's focus.
+- **GitHub** — `github-harvest.sh "${window_start}" open include`:
+  - `merged` → **Last week** ("shipped …").
+  - `open` with non-empty `commits` → **Last week** in-flight work ("started …" / "continuing …").
+  - `open` (all of it, regardless of `commits`) → **This week** focus candidates — the in-flight backlog. A draft or untouched-this-week PR is exactly the kind of thing that becomes next week's focus.
+  - The wider sweep (`involved`, `reviewed`, comments) arrives in the same call — dedup per the harvest skill. A heavy review week is real sync material even with no PRs of your own.
+- **Slack** — the harvest skill's *Slack harvest* section as written. For #team-ai-gateway threads especially, the channel bursts are where the substance is.
 
-Then run the harvest skill's wider queries — *everything you touched*, *PRs you reviewed*, *issue comments and inline review comments* — and dedup per its rules. A heavy review week is real sync material even with no PRs of your own.
-
-### Step 4: Query Slack for Activity
-
-Apply the harvest skill's *Slack harvest* section as written. For #team-ai-gateway threads especially, the channel bursts are where the substance is.
-
-### Step 5: Compose the Entry
+### Step 4: Compose the Entry
 
 Write both sections per the Style section.
 
@@ -84,7 +79,7 @@ Write both sections per the Style section.
 
 If activity looks thin, say so — the user likely has offline work and plans to add.
 
-### Step 6: Write the Archive File
+### Step 5: Write the Archive File
 
 Write the entry at `new_file_path` per the harvest skill's *Archive to notes* section, commit prefix `ai-gateway-sync:`. Shape:
 
@@ -104,7 +99,7 @@ Write the entry at `new_file_path` per the harvest skill's *Archive to notes* se
 
 **Same-day re-run** (`new_file_path` exists): update both sections and the `generated-at:` marker rather than blindly overwriting — preserve any focus items the user hand-added earlier.
 
-### Step 7: Report to User
+### Step 6: Report to User
 
 Display:
 

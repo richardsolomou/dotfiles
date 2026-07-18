@@ -43,39 +43,29 @@ Example of the target voice:
 ~/.claude/skills/rs-activity-harvest/scripts/activity-dates.sh PostHog/standup day reuse
 ```
 
-Store the five fields per the harvest skill's *Dates script* section. `reuse` gives the standup its same-day re-run semantics: the window covers only the delta since the morning run.
+Store the five fields per the harvest skill's *Dates script* section. The file and header are dated the business day the standup is **for** — an evening run is for today, a morning run for the previous business day — not necessarily the day you're generating on (see the harvest skill's *Dates script* section). `reuse` gives the standup its re-run semantics: when the entry for that date already exists, the window covers only the delta since the earlier run.
 
 ### Step 2: Read the Previous Standup
 
-If `prev_file_path` is non-empty, read it. Items marked "started" or "continuing" there may still be in flight and worth carrying as "continuing …" if GitHub shows more activity on them. (On a same-day re-run `prev_file_path` is today's own entry — that's fine; it tells you what you already reported earlier today, which is exactly what to avoid duplicating.)
+If `prev_file_path` is non-empty, read it. Items marked "started" or "continuing" there may still be in flight and worth carrying as "continuing …" if GitHub shows more activity on them. (On a re-run for the same entry date `prev_file_path` is that same entry — that's fine; it tells you what you already reported earlier, which is exactly what to avoid duplicating.)
 
-### Step 3: Query GitHub for Activity
+### Step 3: Harvest Activity in Parallel
 
-Any activity counts — reviewing others' PRs, commenting, opening issues, triaging — not just your own PRs. Cast a wide net, then judge what's worth a bullet.
+Run all three passes concurrently per the harvest skill's *Run the passes concurrently* section — GitHub, Slack, and PostHog Code, one subagent each spawned in a single message (parallel tool calls where subagents aren't available), each returning a digest per that section's contract. Standup-specific notes per pass:
 
-```bash
-~/.claude/skills/rs-activity-harvest/scripts/author-prs.sh "${window_start}" active skip
-```
+- **GitHub** — `github-harvest.sh "${window_start}" active skip`. Any activity counts — reviewing others' PRs, commenting, opening issues, triaging — not just your own PRs. `merged` is the "landed" signal; `active` PRs' commit headlines tell you what was done — "started …" (new this window) or "continuing …" (carried from a previous entry).
+- **Slack** — the harvest skill's *Slack harvest* section as written.
+- **PostHog Code** — the harvest skill's *PostHog Code harvest* section as written — a memory-jogger for investigation, testing, and triage work invisible to the other passes.
 
-`merged` is the "landed" signal; `active` PRs' commit headlines tell you what was done — treat them as "started …" (new this window) or "continuing …" (carried from a previous entry).
+Cast a wide net; judging what's worth a bullet happens at compose time.
 
-Then run the harvest skill's wider queries — *everything you touched*, *PRs you reviewed*, *issue comments and inline review comments* — and dedup per its rules. Personal repos are never standup material (see the harvest skill).
+### Step 4: Compose the Entry
 
-### Step 4: Query Slack for Activity
-
-Apply the harvest skill's *Slack harvest* section as written.
-
-### Step 5: Query PostHog Code Activity
-
-Apply the harvest skill's *PostHog Code harvest* section as written — a memory-jogger for investigation, testing, and triage work invisible to the other passes.
-
-### Step 6: Compose the Entry
-
-Write the entry per the Style section, merging the GitHub, Slack, and PostHog Code passes into one picture of the window. A stack of related PRs becomes one bullet describing the thing they add; fold a Slack thread and its PR into a single bullet. If it reads back like a changelog, rewrite it as something you'd say out loud.
+Write the entry per the Style section, merging the three digests into one picture of the window. A stack of related PRs becomes one bullet describing the thing they add; fold a Slack thread and its PR into a single bullet. If it reads back like a changelog, rewrite it as something you'd say out loud.
 
 If activity looks thin across the sources, note that to the user — they likely have meetings, calls, or offline work to add.
 
-### Step 7: Write the Archive File
+### Step 5: Write the Archive File
 
 Write the entry at `new_file_path` per the harvest skill's *Archive to notes* section, commit prefix `standup:`. Example:
 
@@ -90,9 +80,9 @@ Write the entry at `new_file_path` per the harvest skill's *Archive to notes* se
 <!-- generated-at: 2026-06-04T17:30:00Z -->
 ```
 
-**Same-day re-run** (`new_file_path` already exists): append the new bullets under the existing ones rather than overwriting the morning's work, and update the `generated-at:` marker to the new `now`.
+**Re-run for the same entry** (`new_file_path` already exists): append the new bullets under the existing ones rather than overwriting the earlier run's work, and update the `generated-at:` marker to the new `now`.
 
-### Step 8: Report to User
+### Step 6: Report to User
 
 Display:
 
