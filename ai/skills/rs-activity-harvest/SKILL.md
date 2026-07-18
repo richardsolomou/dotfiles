@@ -28,15 +28,54 @@ Returns tab-separated: `<window_start>\t<now>\t<new_file_path>\t<header>\t<prev_
 
 - `window_start` — ISO 8601 UTC instant of the previous entry; feed it to every GitHub and Slack query.
 - `now` — ISO 8601 UTC instant of this run; stamp it into the new entry's `generated-at:` marker.
-- `new_file_path` — where to write this entry (`YYYY-MM-DD.md` under `~/dev/notes/<notes-subdir>/`).
-- `header` — human header ("17 June" for `day`, "Week of 17 June" for `week`).
+- `new_file_path` — where to write this entry (`YYYY-MM-DD.md` under `~/dev/notes/<notes-subdir>/`, dated per below).
+- `header` — human header ("17 June" for `day`, "Week of 17 June" for `week`), matching the file date.
 - `prev_file_path` — the most recent existing entry, or empty.
 
-The `same-day` argument sets re-run semantics: `reuse` treats today's own entry as the previous one (the window covers only the delta since the morning run — rs-standup, which appends); `previous` skips today's file so the window stretches back to the real previous entry (rs-ai-gateway-sync, which regenerates in full). This divergence is deliberate — a standup accumulates through the day, a sync is one weekly artifact.
+For `day` style, the file and header carry the date the entry is **for** — the business day it covers — not the generation day: a run at noon or later is for today (a worked weekend keeps its own date); a morning run is for the previous business day (Tuesday 9am → Monday's entry, Monday 9am → Friday's, weekend work included via the window). `generated-at:` still records the real instant, so windows stay gapless. `week` style is dated the generation day.
+
+The `same-day` argument sets re-run semantics when `new_file_path` already exists: `reuse` treats that same-date entry as the previous one (the window covers only the delta since the earlier run — rs-standup, which appends); `previous` skips it so the window stretches back to the real previous entry (rs-ai-gateway-sync, which regenerates in full). This divergence is deliberate — a standup accumulates, a sync is one weekly artifact.
+
+## Run the passes concurrently
+
+The GitHub, Slack, and PostHog Code passes are independent — never run them serially. After the dates script returns the window:
+
+- **With subagents** (Agent tool available): spawn one agent per pass, all in a single message. Each returns a digest; the caller composes from digests, keeping raw harvest output (comment bodies, message dumps) out of the composing context.
+- **Without subagents** (PostHog Code cloud, other harnesses): each pass is a single call — `github-harvest.sh`, the Slack search, `posthog-code-activity.sh` — so issue them as parallel tool calls in one message.
+
+Each agent's prompt must carry the window (`window_start`, `now`), its pass's rules from this file (by path when it exists locally, inlined otherwise), and the digest contract:
+
+- **Facts, not conclusions.** Commit headlines, PR titles and numbers, quoted comment/message substance, channel names. The caller writes the narrative; a pre-summarized digest launders away the evidence the house style needs.
+- **Join keys on everything.** Repo + number for GitHub items; channel plus any PR/issue numbers mentioned for Slack threads. Folding a thread and its PR into one bullet happens at compose time and is impossible without them.
+- **Grouped by candidate work stream**, evidence under each.
+- **Gaps declared.** Failed queries, empty passes, truncations — stated in the digest, never silently dropped.
 
 ## GitHub harvest
 
-**Your PRs — merged and in-flight:**
+One call fetches the whole pass concurrently — your PRs, the wider searches, and the per-repo comment sweeps:
+
+```bash
+~/.claude/skills/rs-activity-harvest/scripts/github-harvest.sh "${window_start}" <open-key> <untouched: skip|include>
+```
+
+Emits a single JSON object:
+
+- `merged` / `<open-key>` — your PRs, exactly as author-prs.sh below.
+- `involved` — everything you touched (authored, commented, mentioned, assigned) updated since the window start.
+- `reviewed` — PRs you reviewed (`involves:` does not cover reviews).
+- `issue_comments` / `review_comments` — your comments across every surfaced repo, fully paginated (busy repos bury yours past page one).
+- `reviews` — summary-only reviews on reviewed PRs that left no inline comments.
+- `errors` — partial failures. **Never ignore this**: a non-empty list means a blind spot in the harvest; say so.
+
+Reading rules:
+
+- **Dedup by number + repo** — the same PR appears in several lists.
+- **Personal repos are never material.** Queries are scoped `org:PostHog`; drop anything from `richardsolomou/*` (tro.gg, stream-setup) entirely — not even folded into another bullet.
+- Comment/review bodies are truncated to 500 chars — fetch the full text with `gh` when a digest needs more.
+- A heavy review/comment period is real material ("lots of pr reviews", "reviewed the X stack") even with no PRs of your own.
+- The `updated:`/`merged:` qualifiers take the full ISO timestamp, so the window is sub-day precise.
+
+**Your PRs only** — the wrapper's inner pass, usable standalone when the wider sweep isn't needed:
 
 ```bash
 ~/.claude/skills/rs-activity-harvest/scripts/author-prs.sh "${window_start}" <open-key> <untouched: skip|include>
@@ -44,32 +83,7 @@ The `same-day` argument sets re-run semantics: `reuse` treats today's own entry 
 
 Emits `{"merged": [{number, title, repo, merged_at}, …], "<open-key>": [{number, title, repo, isDraft, commits: [headline, …]}, …]}`. `merged` is PRs you authored that merged at/after `window_start`; the open list carries each PR's in-window commit headlines. `untouched: skip` drops open PRs with no commits in the window (rs-standup); `include` keeps them all — the in-flight backlog (rs-ai-gateway-sync's This-week candidates).
 
-Use the script rather than reaching for `gh` directly — it bakes in lessons that are easy to regress: `gh pr view --json commits` dies outside a clone (the script uses `gh api` throughout); `gh search prs --merged` has stale date filtering; the per-PR commits endpoint pages oldest-first, so recent commits need pagination.
-
-**Everything else you touched** (authored, commented, mentioned, assigned — updated since the window start):
-
-```bash
-gh api search/issues --method GET -f q="involves:richardsolomou updated:>=${window_start} org:PostHog" --jq '.items[] | {number, title, state, url: .html_url, repo: .repository_url, is_pr: (.pull_request != null)}'
-```
-
-**PRs you reviewed** (`involves:` does not cover reviews):
-
-```bash
-gh api search/issues --method GET -f q="reviewed-by:richardsolomou is:pr updated:>=${window_start} org:PostHog" --jq '.items[] | {number, title, state, url: .html_url, repo: .repository_url}'
-```
-
-**Personal repos are never material.** Every query stays scoped to `org:PostHog`; drop anything from `richardsolomou/*` (tro.gg, stream-setup) entirely — not even folded into another bullet.
-
-**Issue comments and inline review comments** — `involves:` misses substantive design-thread comments on issues that aren't otherwise "updated", and no search qualifier covers inline PR review comments at all. Query both directly for **every repo the other queries surfaced**, not just one:
-
-```bash
-gh api "repos/PostHog/<repo>/issues/comments?since=${window_start}&per_page=100" --paginate --jq '.[] | select(.user.login=="richardsolomou") | {issue: (.issue_url | split("/") | last), created_at, body}'
-gh api "repos/PostHog/<repo>/pulls/comments?since=${window_start}&per_page=100" --paginate --jq '.[] | select(.user.login=="richardsolomou") | {pr: (.pull_request_url | split("/") | last), created_at, body}'
-```
-
-`--paginate` is load-bearing: these endpoints return **all users'** comments, and on a busy repo (PostHog/posthog) more than a page arrives within even a one-day window, silently dropping yours. Reviews with only a summary or only inline threads live on yet another endpoint — for any PR the reviewed-by search surfaced with no comments here, check `repos/PostHog/<repo>/pulls/<n>/reviews` before concluding the review left no trace.
-
-The `updated:>=`/`merged:>=` qualifiers accept the full ISO timestamp, so they respect a sub-day window start. **Dedup** across all queries by `number` + repo — the same PR appears several times. A heavy review/comment period is real material ("lots of pr reviews", "reviewed the X stack") even with no PRs of your own.
+Use the scripts rather than reaching for `gh` directly — they bake in lessons that are easy to regress: `gh pr view --json commits` dies outside a clone (everything uses `gh api`); `gh search prs --merged` has stale date filtering; the per-PR commits endpoint pages oldest-first, so recent commits need pagination; the comment endpoints return all users' comments, so skipping `--paginate` silently drops yours on busy repos.
 
 ## Slack harvest
 

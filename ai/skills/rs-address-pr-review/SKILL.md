@@ -24,6 +24,8 @@ Resolve the PR and fetch metadata per Shared mechanics § *Resolve the PR*. If t
 
 ### Step 2: Fetch all review feedback
 
+If the PR belongs to a stack and the user asks to address the stack or "each PR", enumerate every PR in that stack first. Fetch feedback for each PR separately and apply each edit on the branch that owns that PR's diff; never patch all feedback into the checked-out top branch.
+
 Pull every form of feedback in one pass per Shared mechanics § *Fetch the existing discussion* (root-level comments, inline review comments, submitted reviews).
 
 For each inline comment, capture: author, file path, line number, body, the diff hunk it's anchored to, and the thread's resolution state.

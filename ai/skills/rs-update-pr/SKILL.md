@@ -7,7 +7,7 @@ description: "Update a pull request's title and description based on the actual 
 
 Update the current branch's PR title and description to reflect the actual changes.
 
-This skill is also the **single source of truth for how to write a PR title and body** — the title rules, the description structure, the length ceilings, and the voice. Other skills that push code (`rs-ship`, `rs-address-pr-review`, `rs-autopilot`, `rs-rebase`, `rs-restack`) apply this skill as a sub-step instead of restating its rules. Per CLAUDE.md, a PR's title and body must always reflect the current diff, so any push to a branch with an open PR ends with a refresh through this skill — automatically, without asking.
+This skill is also the **single source of truth for how to write a PR title and body** — the title rules, the description structure, the length guidance, and the voice. Other skills that push code (`rs-ship`, `rs-address-pr-review`, `rs-autopilot`, `rs-rebase`, `rs-restack`) apply this skill as a sub-step instead of restating its rules. Per CLAUDE.md, a PR's title and body must always reflect the current diff, so any push to a branch with an open PR ends with a refresh through this skill — automatically, without asking.
 
 ## Workflow
 
@@ -47,7 +47,7 @@ This skill is also the **single source of truth for how to write a PR title and 
 
 **Description rules:**
 
-What good looks like. Match this density and length, do not exceed it without a real reason:
+What good looks like for a straightforward PR. Use this density as a baseline, and expand when more context helps reviewers understand or validate the change:
 
 ```markdown
 ## Problem
@@ -66,17 +66,17 @@ Ran `pytest` from the repo root. Async migrations job passes locally.
 Rules:
 
 - Use the PR template if one exists. Fill every section. Write "N/A" for sections that don't apply. Don't add, omit, rename, or reorder sections. If no template, fall back to: Problem, Changes, How did you test this code?
-- **Hard ceiling: 3 lines per section.** Including bullet points. Exceed only when there is a specific non-obvious decision a reader cannot infer from the diff (e.g. why this approach over an obvious alternative), and even then keep it tight.
+- **Aim for roughly 3 lines per section.** Treat this as a concision target, not a limit. Use the space needed to explain important context, decisions, risks, rollout details, or testing clearly, while removing anything that does not help a reviewer.
 - **Don't recap the diff.** The diff is on the PR. Describe only what the diff cannot show: the why, the constraint, the alternative considered, the deferred follow-up.
 - **Describe the state the PR leaves things in and the decisions made — never the journey.** No "old approach", "we pivoted", or draft-history narrative; that lives in the commits.
 - **Tight vertical spacing.** One blank line between sections, none inside a bullet list, no trailing blanks or empty template sections left as gaps.
-- **If you can't say something in under 15 words, you don't have a clear thought.** Cut it or rewrite it.
+- Prefer short, direct sentences. Rewrite long sentences when that improves clarity, but do not omit useful detail to meet an arbitrary word count.
 - Bullets over prose when listing more than one thing. Single sentences when listing one.
 - Problem: the constraint, bug, or motivation. One or two sentences.
 - Changes: the intent and any non-obvious decision. Skip if the title already says it.
 - How did you test: tests added/modified, plus manual testing if any. One line each.
 
-After drafting, re-read and delete anything that is restating the diff, padding, or scene-setting. Shorter is always better.
+After drafting, re-read and delete anything that is restating the diff, padding, or scene-setting. Prefer the shortest description that gives reviewers the context they need.
 
 **Voice and tone (mandatory):**
 

@@ -9,14 +9,17 @@
 # Usage: activity-dates.sh <notes-subdir> <header-style: day|week> <same-day: reuse|previous>
 #
 #   notes-subdir   Directory under ~/dev/notes, e.g. "PostHog/standup".
-#   header-style   day  -> "17 June"
-#                  week -> "Week of 17 June"
-#   same-day       reuse    -> on a same-day re-run, today's own entry is the
-#                              previous one (window = delta since the earlier run;
-#                              callers that append, e.g. rs-standup).
-#                  previous -> skip today's file so the window stretches back to
-#                              the real previous entry (callers that regenerate,
-#                              e.g. rs-ai-gateway-sync).
+#   header-style   day  -> "17 June", dated the business day the entry is for:
+#                          noon or later means today (a worked weekend keeps its
+#                          own date); before noon means the previous business
+#                          day (Tuesday 9am -> Monday, Monday 9am -> Friday).
+#                  week -> "Week of 17 June", dated the generation day.
+#   same-day       reuse    -> on a re-run for the same entry date, that entry is
+#                              the previous one (window = delta since the earlier
+#                              run; callers that append, e.g. rs-standup).
+#                  previous -> skip the same-date file so the window stretches
+#                              back to the real previous entry (callers that
+#                              regenerate, e.g. rs-ai-gateway-sync).
 #
 # Output (tab-separated):
 #   <window_start>\t<now>\t<new_file_path>\t<header>\t<prev_file_path>
@@ -30,14 +33,34 @@ same_day="${3:?same-day mode required: reuse|previous}"
 DIR="$HOME/dev/notes/$subdir"
 mkdir -p "$DIR"
 
-today=$(date +%Y-%m-%d)
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    ago() { date -v-"$1"d +"$2"; }
+else
+    ago() { date -d "$1 days ago" +"$2"; }
+fi
+
 case "$header_style" in
-    day) header=$(date "+%-d %B") ;;
-    week) header="Week of $(date "+%-d %B")" ;;
+    day)
+        # Entry date = the business day the entry covers, not the generation
+        # day. `generated-at:` still records the real instant, so windows stay
+        # gapless either way.
+        back=0
+        if [ "$(date +%H)" -lt 12 ]; then
+            back=1
+            while [ "$(ago "$back" %u)" -gt 5 ]; do back=$((back + 1)); done
+        fi
+        entry_date=$(ago "$back" %Y-%m-%d)
+        header=$(ago "$back" "%-d %B")
+        ;;
+    week)
+        entry_date=$(date +%Y-%m-%d)
+        header="Week of $(date "+%-d %B")"
+        ;;
     *) echo "unknown header-style: $header_style" >&2; exit 1 ;;
 esac
-new_file="${DIR}/${today}.md"
+new_file="${DIR}/${entry_date}.md"
 
 prev_file=$(find "$DIR" -maxdepth 1 -name "????-??-??.md" -type f 2>/dev/null | sort -r | head -1)
 if [[ "$same_day" == "previous" && -n "$prev_file" && "$prev_file" == "$new_file" ]]; then

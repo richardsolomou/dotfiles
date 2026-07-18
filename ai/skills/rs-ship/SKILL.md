@@ -22,6 +22,8 @@ git branch --show-current
 
 If there are no changes (staged or unstaged), stop and tell the user there's nothing to ship.
 
+If the user asks for one self-contained PR per repository, inspect each existing PR's base before shipping. Do not preserve a stacked base: consolidate the required prerequisite diff onto the trunk-based PR and close any superseded PRs in that repository.
+
 ### Step 2: Review the Changes
 
 Read the full diff to understand what changed:
