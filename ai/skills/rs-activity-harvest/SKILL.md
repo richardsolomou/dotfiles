@@ -1,6 +1,6 @@
 ---
 name: rs-activity-harvest
-description: "Shared machinery for the cadence skills (rs-standup, rs-ai-gateway-sync, rs-sprint-planning, rs-quarterly-planning): the activity window, the GitHub and Slack harvest queries, and the archive-to-notes step. Load when one of those skills points here; not useful standalone."
+description: "Shared machinery for the cadence skills (rs-standup, rs-ai-gateway-weekly-sync, rs-sprint-planning, rs-quarterly-planning): the activity window, the GitHub and Slack harvest queries, and the archive-to-notes step. Load when one of those skills points here; not useful standalone."
 user-invocable: false
 ---
 
@@ -34,7 +34,7 @@ Returns tab-separated: `<window_start>\t<now>\t<new_file_path>\t<header>\t<prev_
 
 For `day` style, the file and header carry the date the entry is **for** — the business day it covers — not the generation day: a run at noon or later is for today (a worked weekend keeps its own date); a morning run is for the previous business day (Tuesday 9am → Monday's entry, Monday 9am → Friday's, weekend work included via the window). `generated-at:` still records the real instant, so windows stay gapless. `week` style is dated the generation day.
 
-The `same-day` argument sets re-run semantics when `new_file_path` already exists: `reuse` treats that same-date entry as the previous one (the window covers only the delta since the earlier run — rs-standup, which appends); `previous` skips it so the window stretches back to the real previous entry (rs-ai-gateway-sync, which regenerates in full). This divergence is deliberate — a standup accumulates, a sync is one weekly artifact.
+The `same-day` argument sets re-run semantics when `new_file_path` already exists: `reuse` treats that same-date entry as the previous one (the window covers only the delta since the earlier run — rs-standup, which appends); `previous` skips it so the window stretches back to the real previous entry (rs-ai-gateway-weekly-sync, which regenerates in full). This divergence is deliberate — a standup accumulates, a sync is one weekly artifact.
 
 ## Run the passes concurrently
 
@@ -81,7 +81,7 @@ Reading rules:
 ~/.claude/skills/rs-activity-harvest/scripts/author-prs.sh "${window_start}" <open-key> <untouched: skip|include>
 ```
 
-Emits `{"merged": [{number, title, repo, merged_at}, …], "<open-key>": [{number, title, repo, isDraft, commits: [headline, …]}, …]}`. `merged` is PRs you authored that merged at/after `window_start`; the open list carries each PR's in-window commit headlines. `untouched: skip` drops open PRs with no commits in the window (rs-standup); `include` keeps them all — the in-flight backlog (rs-ai-gateway-sync's This-week candidates).
+Emits `{"merged": [{number, title, repo, merged_at}, …], "<open-key>": [{number, title, repo, isDraft, commits: [headline, …]}, …]}`. `merged` is PRs you authored that merged at/after `window_start`; the open list carries each PR's in-window commit headlines. `untouched: skip` drops open PRs with no commits in the window (rs-standup); `include` keeps them all — the in-flight backlog (rs-ai-gateway-weekly-sync's This-week candidates).
 
 Use the scripts rather than reaching for `gh` directly — they bake in lessons that are easy to regress: `gh pr view --json commits` dies outside a clone (everything uses `gh api`); `gh search prs --merged` has stale date filtering; the per-PR commits endpoint pages oldest-first, so recent commits need pagination; the comment endpoints return all users' comments, so skipping `--paginate` silently drops yours on busy repos.
 

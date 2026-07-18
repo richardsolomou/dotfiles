@@ -6,7 +6,7 @@
 #   since      ISO 8601 instant, e.g. 2026-06-16T18:30:00Z (a bare YYYY-MM-DD
 #              also works — treated as that day's start).
 #   open-key   JSON key for the open-PR list ("active" for rs-standup,
-#              "open" for rs-ai-gateway-sync).
+#              "open" for rs-ai-gateway-weekly-sync).
 #   untouched  skip    -> drop open PRs with no commits in the window
 #              include -> keep them all (the in-flight backlog)
 #

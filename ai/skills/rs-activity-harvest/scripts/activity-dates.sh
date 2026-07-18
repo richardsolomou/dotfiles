@@ -19,7 +19,7 @@
 #                              run; callers that append, e.g. rs-standup).
 #                  previous -> skip the same-date file so the window stretches
 #                              back to the real previous entry (callers that
-#                              regenerate, e.g. rs-ai-gateway-sync).
+#                              regenerate, e.g. rs-ai-gateway-weekly-sync).
 #
 # Output (tab-separated):
 #   <window_start>\t<now>\t<new_file_path>\t<header>\t<prev_file_path>

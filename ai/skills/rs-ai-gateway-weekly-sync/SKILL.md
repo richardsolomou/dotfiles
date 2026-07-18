@@ -1,5 +1,5 @@
 ---
-name: rs-ai-gateway-sync
+name: rs-ai-gateway-weekly-sync
 description: "Prep your weekly AI Gateway sync — a Monday retrospective of what you shipped last week plus what you're focusing on this week, drawn from your GitHub and Slack activity since the previous sync. Use when the user asks to prep, write, or generate their AI Gateway sync / weekly sync / Monday sync."
 ---
 
