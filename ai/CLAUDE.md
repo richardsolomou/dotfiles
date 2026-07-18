@@ -110,6 +110,7 @@ Repos live at `~/dev/posthog/<name>` and `github.com/PostHog/<name>`; not all ar
 
 - Branches: `<type>/<slug>`, or `<type>/<issue#>-<slug>` when the issue number is known, using conventional commit types (`feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`).
 - Keep commits clean: interactive staging (`git add -p`), thoughtful messages, squash when appropriate, no "WIP" commits unless spiking.
+- Every commit→push→PR flow goes through the `rs-ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `rs-update-pr` — no ad-hoc bodies.
 - Commit, push, and PR creation only on explicit request. During exploratory or visual iteration, hold all commits until the user says the result is good — "don't commit until I'm happy" stands for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
 - Stacked PRs in PostHog repos use Graphite (`gt`): track parent-first (`gt track`) and submit the stack (`gt submit --stack`) — tracking alone doesn't register it. After changing a mid-stack branch, restack via `rs-restack`.
 
