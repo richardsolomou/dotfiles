@@ -88,7 +88,7 @@ gh pr view --json number,url 2>/dev/null
 
 **If a PR already exists**, the changes have just been pushed to it, so its title and description are now potentially stale. Apply the `rs-update-pr` skill to refresh both against the full diff, then show the URL. Do not skip this — a PR that already exists is exactly the case where the description drifts. (See CLAUDE.md → Pull Request Descriptions: refreshing is automatic, no approval needed.)
 
-**If no PR exists**, create one. Write the title and body using the `rs-update-pr` skill — it is the single source of truth for the title rules, the description structure, the length ceilings, and the voice. Use the commit message title as the starting point for the PR title.
+**If no PR exists**, create one. Write the title and body using the `rs-update-pr` skill — it is the single source of truth for the title rules, the description structure, the context-sensitive length guidance, and the voice. Use the commit message title as the starting point for the PR title.
 
 ```sh
 gh pr create --title "<title>" --body "$(cat <<'EOF'

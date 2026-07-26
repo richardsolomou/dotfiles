@@ -66,17 +66,17 @@ Ran `pytest` from the repo root. Async migrations job passes locally.
 Rules:
 
 - Use the PR template if one exists. Fill every section. Write "N/A" for sections that don't apply. Don't add, omit, rename, or reorder sections. If no template, fall back to: Problem, Changes, How did you test this code?
-- **Aim for roughly 3 lines per section.** Treat this as a concision target, not a limit. Use the space needed to explain important context, decisions, risks, rollout details, or testing clearly, while removing anything that does not help a reviewer.
+- **Let the change determine the length.** A straightforward PR may need only a sentence per section; a complex PR may need several paragraphs or bullets. Include the context a reviewer needs to understand the problem, evaluate non-obvious decisions, assess risk and rollout, and reproduce the validation. Never cut useful information to hit a line or word target.
 - **Don't recap the diff.** The diff is on the PR. Describe only what the diff cannot show: the why, the constraint, the alternative considered, the deferred follow-up.
 - **Describe the state the PR leaves things in and the decisions made — never the journey.** No "old approach", "we pivoted", or draft-history narrative; that lives in the commits.
 - **Tight vertical spacing.** One blank line between sections, none inside a bullet list, no trailing blanks or empty template sections left as gaps.
 - Prefer short, direct sentences. Rewrite long sentences when that improves clarity, but do not omit useful detail to meet an arbitrary word count.
 - Bullets over prose when listing more than one thing. Single sentences when listing one.
-- Problem: the constraint, bug, or motivation. One or two sentences.
-- Changes: the intent and any non-obvious decision. Skip if the title already says it.
-- How did you test: tests added/modified, plus manual testing if any. One line each.
+- Problem: the constraint, bug, or motivation, including impact and relevant background when they are not obvious.
+- Changes: the intent, non-obvious decisions, important behavior, compatibility or rollout considerations, and explicitly deferred scope. Skip only details that are fully obvious from the title and diff.
+- How did you test: name the tests added or run, manual scenarios exercised, and any validation gaps. Give enough detail for a reviewer to understand what was and was not verified.
 
-After drafting, re-read and delete anything that is restating the diff, padding, or scene-setting. Prefer the shortest description that gives reviewers the context they need.
+After drafting, re-read for reviewer questions. Add missing context that affects correctness, risk, rollout, or validation; then delete only repetition, padding, and scene-setting that does not help answer those questions.
 
 **Voice and tone (mandatory):**
 
