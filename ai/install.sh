@@ -86,6 +86,7 @@ INSTALL_SKILLS=true
 INSTALL_MCP=true
 INSTALL_HOOKS=true
 INSTALL_PERMISSIONS=true
+INSTALL_PREFERENCES=true
 
 show_help() {
     echo "Usage: $0 [OPTIONS]"
@@ -100,12 +101,14 @@ show_help() {
     echo "  --mcp-only          Install only MCP servers"
     echo "  --hooks-only        Install only Claude Code hooks"
     echo "  --permissions-only  Install only tool permissions"
+    echo "  --preferences-only  Install only editor preferences"
     echo "  --no-claude-md      Skip CLAUDE.md installation"
     echo "  --no-agents         Skip agent files installation"
     echo "  --no-skills         Skip skills installation"
     echo "  --no-mcp            Skip MCP servers installation"
     echo "  --no-hooks          Skip Claude Code hooks installation"
     echo "  --no-permissions    Skip tool permissions configuration"
+    echo "  --no-preferences    Skip editor preferences configuration"
     echo "  -h, --help          Show this help message"
     echo ""
     echo "Examples:"
@@ -131,6 +134,7 @@ while [ $# -gt 0 ]; do
             INSTALL_MCP=false
             INSTALL_HOOKS=false
             INSTALL_PERMISSIONS=false
+            INSTALL_PREFERENCES=false
             shift
             ;;
         --agents-only)
@@ -140,6 +144,7 @@ while [ $# -gt 0 ]; do
             INSTALL_MCP=false
             INSTALL_HOOKS=false
             INSTALL_PERMISSIONS=false
+            INSTALL_PREFERENCES=false
             shift
             ;;
         --skills-only)
@@ -149,6 +154,7 @@ while [ $# -gt 0 ]; do
             INSTALL_MCP=false
             INSTALL_HOOKS=false
             INSTALL_PERMISSIONS=false
+            INSTALL_PREFERENCES=false
             shift
             ;;
         --mcp-only)
@@ -158,6 +164,7 @@ while [ $# -gt 0 ]; do
             INSTALL_MCP=true
             INSTALL_HOOKS=false
             INSTALL_PERMISSIONS=false
+            INSTALL_PREFERENCES=false
             shift
             ;;
         --hooks-only)
@@ -167,6 +174,7 @@ while [ $# -gt 0 ]; do
             INSTALL_MCP=false
             INSTALL_HOOKS=true
             INSTALL_PERMISSIONS=false
+            INSTALL_PREFERENCES=false
             shift
             ;;
         --permissions-only)
@@ -176,6 +184,17 @@ while [ $# -gt 0 ]; do
             INSTALL_MCP=false
             INSTALL_HOOKS=false
             INSTALL_PERMISSIONS=true
+            INSTALL_PREFERENCES=false
+            shift
+            ;;
+        --preferences-only)
+            INSTALL_CLAUDE_MD=false
+            INSTALL_AGENTS=false
+            INSTALL_SKILLS=false
+            INSTALL_MCP=false
+            INSTALL_HOOKS=false
+            INSTALL_PERMISSIONS=false
+            INSTALL_PREFERENCES=true
             shift
             ;;
         --no-claude-md)
@@ -200,6 +219,10 @@ while [ $# -gt 0 ]; do
             ;;
         --no-permissions)
             INSTALL_PERMISSIONS=false
+            shift
+            ;;
+        --no-preferences)
+            INSTALL_PREFERENCES=false
             shift
             ;;
         -h|--help)
@@ -349,96 +372,38 @@ if [ "$INSTALL_HOOKS" = "true" ]; then
 
     SETTINGS_FILE="$HOME/.claude/settings.json"
 
-    # Create backup if settings file exists
-    if [ -f "$SETTINGS_FILE" ]; then
-        cp "$SETTINGS_FILE" "${SETTINGS_FILE}.backup.$(date +%Y%m%d_%H%M%S)"
-        success "Backed up existing settings.json"
-    fi
-
-    # Check if hooks are already configured
-    if [ -f "$SETTINGS_FILE" ] && command -v jq > /dev/null 2>&1 && jq -e '.hooks.PostToolUse' "$SETTINGS_FILE" > /dev/null 2>&1; then
-        success "Claude Code hooks already configured"
-    else
-        # Create minimal settings file if it doesn't exist
-        if [ ! -f "$SETTINGS_FILE" ]; then
-            echo '{"model": "sonnet"}' > "$SETTINGS_FILE"
-            success "Created initial settings.json"
-        fi
-
-        # Create hooks configuration with separate matchers for each tool
-        HOOKS_CONFIG=$(cat <<'EOF'
+    HOOKS_CONFIG=$(cat <<'EOF'
 {
   "hooks": {
-    "PreToolUse": [
+    "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "__ZSH__/ai/bin/lang-context",
-            "timeout": 5
+            "command": "if [ -n \"$CLAUDE_FILE_PATHS\" ]; then for file in $CLAUDE_FILE_PATHS; do if [[ \"$file\" == *.md || \"$file\" == *.markdown ]]; then markdownlint \"$file\" || echo \"Markdownlint failed for $file\"; fi; done; fi",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "if [ -n \"$CLAUDE_FILE_PATHS\" ]; then for file in $CLAUDE_FILE_PATHS; do if [[ \"$file\" == *.py ]]; then if command -v ruff > /dev/null 2>&1; then ruff format \"$file\" || echo \"Ruff format failed for $file\"; else echo \"Ruff not installed - skipping Python formatting\"; fi; fi; done; fi",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "if [ -d .github/workflows ]; then if grep -r 'mypy' .github/workflows/ > /dev/null 2>&1; then if command -v mypy > /dev/null 2>&1; then echo 'Running mypy...'; mypy .; else echo 'MyPy configured in CI but not installed locally'; fi; fi; fi",
+            "timeout": 120
           }
         ]
       }
     ],
-    "PostToolUse": [
+    "PreToolUse": [
       {
-        "matcher": "Edit",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -n \"$CLAUDE_FILE_PATHS\" ]; then for file in $CLAUDE_FILE_PATHS; do if [[ \"$file\" == *.md || \"$file\" == *.markdown ]]; then markdownlint \"$file\" || echo \"Markdownlint failed for $file\"; fi; done; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "if [ -n \"$CLAUDE_FILE_PATHS\" ]; then for file in $CLAUDE_FILE_PATHS; do if [[ \"$file\" == *.py ]]; then if command -v ruff > /dev/null 2>&1; then ruff format \"$file\" || echo \"Ruff format failed for $file\"; else echo \"Ruff not installed - skipping Python formatting\"; fi; fi; done; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "if [ -d .github/workflows ]; then if grep -r 'mypy' .github/workflows/ > /dev/null 2>&1; then if command -v mypy > /dev/null 2>&1; then echo 'Running mypy...'; mypy .; else echo 'MyPy configured in CI but not installed locally'; fi; fi; fi",
-            "timeout": 120
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -n \"$CLAUDE_FILE_PATHS\" ]; then for file in $CLAUDE_FILE_PATHS; do if [[ \"$file\" == *.md || \"$file\" == *.markdown ]]; then markdownlint \"$file\" || echo \"Markdownlint failed for $file\"; fi; done; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "if [ -n \"$CLAUDE_FILE_PATHS\" ]; then for file in $CLAUDE_FILE_PATHS; do if [[ \"$file\" == *.py ]]; then if command -v ruff > /dev/null 2>&1; then ruff format \"$file\" || echo \"Ruff format failed for $file\"; else echo \"Ruff not installed - skipping Python formatting\"; fi; fi; done; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "if [ -d .github/workflows ]; then if grep -r 'mypy' .github/workflows/ > /dev/null 2>&1; then if command -v mypy > /dev/null 2>&1; then echo 'Running mypy...'; mypy .; else echo 'MyPy configured in CI but not installed locally'; fi; fi; fi",
-            "timeout": 120
-          }
-        ]
-      },
-      {
-        "matcher": "MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ -n \"$CLAUDE_FILE_PATHS\" ]; then for file in $CLAUDE_FILE_PATHS; do if [[ \"$file\" == *.md || \"$file\" == *.markdown ]]; then markdownlint \"$file\" || echo \"Markdownlint failed for $file\"; fi; done; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "if [ -n \"$CLAUDE_FILE_PATHS\" ]; then for file in $CLAUDE_FILE_PATHS; do if [[ \"$file\" == *.py ]]; then if command -v ruff > /dev/null 2>&1; then ruff format \"$file\" || echo \"Ruff format failed for $file\"; else echo \"Ruff not installed - skipping Python formatting\"; fi; fi; done; fi",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "if [ -d .github/workflows ]; then if grep -r 'mypy' .github/workflows/ > /dev/null 2>&1; then if command -v mypy > /dev/null 2>&1; then echo 'Running mypy...'; mypy .; else echo 'MyPy configured in CI but not installed locally'; fi; fi; fi",
-            "timeout": 120
+            "command": "rtk hook claude"
           }
         ]
       }
@@ -446,16 +411,32 @@ if [ "$INSTALL_HOOKS" = "true" ]; then
   }
 }
 EOF
-        )
+    )
 
-        # Substitute the dotfiles repo root into the hook command path.
-        HOOKS_CONFIG="${HOOKS_CONFIG//__ZSH__/$ZSH}"
+    set_json_settings "$SETTINGS_FILE" "$HOOKS_CONFIG" "hooks"
+    case $? in
+        0) success "Configured Claude Code hooks" ;;
+        2) success "Claude Code hooks already configured" ;;
+    esac
+fi
 
-        # Merge hooks configuration using helper function
-        if merge_json_settings "$SETTINGS_FILE" "$HOOKS_CONFIG" "hooks"; then
-            success "Configured Claude Code hooks"
-        fi
-    fi
+# Configure editor preferences
+if [ "$INSTALL_PREFERENCES" = "true" ]; then
+    info "Configuring editor preferences…"
+
+    PREFERENCES_CONFIG=$(cat <<'EOF'
+{
+  "tui": "fullscreen",
+  "skipDangerousModePermissionPrompt": true
+}
+EOF
+    )
+
+    set_json_settings "$HOME/.claude/settings.json" "$PREFERENCES_CONFIG" "preferences"
+    case $? in
+        0) success "Configured editor preferences" ;;
+        2) success "Editor preferences already configured" ;;
+    esac
 fi
 
 # Configure tool permissions
