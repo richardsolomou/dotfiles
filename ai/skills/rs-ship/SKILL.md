@@ -18,9 +18,12 @@ git diff --stat
 git diff --staged --stat
 git log --oneline -5
 git branch --show-current
+gh pr view --json state,url 2>/dev/null || true
 ```
 
 If there are no changes (staged or unstaged), stop and tell the user there's nothing to ship.
+
+If the current branch has a merged or closed PR, do not push new commits to it. Fetch the remote base branch, create a fresh branch from `origin/<base>`, and replay only the unmerged changes before continuing. Verify the new branch has no existing PR.
 
 If the user asks for one self-contained PR per repository, inspect each existing PR's base before shipping. Do not preserve a stacked base: consolidate the required prerequisite diff onto the trunk-based PR and close any superseded PRs in that repository.
 
