@@ -24,6 +24,10 @@ uninstall_claude_config() {
         elif [ -f ~/.claude/RTK.md ]; then
             warning "~/.claude/RTK.md is a regular file, not a symlink - skipping"
         fi
+        if [ -L "$HOME/dev/posthog/CLAUDE.md" ]; then
+            rm -f "$HOME/dev/posthog/CLAUDE.md"
+            success "Removed CLAUDE.posthog.md symlink"
+        fi
     fi
 
     # Remove agent symlinks
@@ -228,6 +232,18 @@ if [ "$INSTALL_CLAUDE_MD" = "true" ]; then
     rm -f ~/.claude/RTK.md
     ln -sf $ZSH/ai/RTK.md ~/.claude/RTK.md
     success "Symlinked CLAUDE.md"
+
+    # PostHog-scoped memory: loads only for sessions under ~/dev/posthog, so the
+    # PostHog workflow rules stay out of context in unrelated projects.
+    if [ -d "$HOME/dev/posthog" ]; then
+        if [ -e "$HOME/dev/posthog/CLAUDE.md" ] && [ ! -L "$HOME/dev/posthog/CLAUDE.md" ]; then
+            warning "$HOME/dev/posthog/CLAUDE.md exists and is not a symlink - skipping"
+        else
+            rm -f "$HOME/dev/posthog/CLAUDE.md"
+            ln -sf $ZSH/ai/CLAUDE.posthog.md "$HOME/dev/posthog/CLAUDE.md"
+            success "Symlinked CLAUDE.posthog.md"
+        fi
+    fi
 fi
 
 # Symlink agents
