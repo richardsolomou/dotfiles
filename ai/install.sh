@@ -42,7 +42,7 @@ uninstall_claude_config() {
         fi
     fi
 
-    # Remove skill symlinks and contexts
+    # Remove skill symlinks
     if [ "$INSTALL_SKILLS" = "true" ]; then
         if [ -d ~/.claude/skills ]; then
             for skill in ~/.claude/skills/*/; do
@@ -65,11 +65,6 @@ uninstall_claude_config() {
                 fi
             done
             success "Removed Codex skill symlinks"
-        fi
-
-        if [ -L ~/.claude/contexts ]; then
-            rm -f ~/.claude/contexts
-            success "Removed contexts symlink"
         fi
     fi
 
@@ -308,11 +303,6 @@ if [ "$INSTALL_SKILLS" = "true" ]; then
         ln -sf "$skill_dir" "$target"
     done
     success "Symlinked Codex skills"
-
-    # Symlink contexts (for language-specific writing guidelines)
-    rm -f ~/.claude/contexts
-    ln -sf $ZSH/ai/contexts ~/.claude/contexts
-    success "Symlinked contexts"
 fi
 
 # Define MCP servers as a list of entries
