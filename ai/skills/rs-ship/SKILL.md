@@ -69,6 +69,16 @@ If the current branch IS the main branch, stop and ask the user to create a feat
 
 ### Step 6: Push
 
+If the branch belongs to a GitHub Stack (`gh stack view --json` succeeds and includes it), submit the whole stack through GitHub's official extension:
+
+```sh
+gh stack submit --auto --open
+```
+
+This pushes every layer, creates or updates the PRs, and syncs the GitHub Stack object. Skip the standalone `git push` and `gh pr create` commands below, then apply `rs-update-pr` to any created or changed PR descriptions.
+
+For an unstacked branch, push normally:
+
 Push the current branch, setting upstream if needed:
 
 ```sh

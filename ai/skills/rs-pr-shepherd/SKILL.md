@@ -90,7 +90,7 @@ For each failing check, in order of likely payoff:
 - `mergeable == CONFLICTING` → resolve `rs-rebase` and follow it. If conflict resolution hits a genuine judgement call (both sides changed behaviour and the right merge isn't derivable), abort the merge cleanly, defer with the file list, and skip to Step 3.
 - CI failing *because* the branch is stale (a required "branch up to date" check, or failures that don't reproduce on the merged tree) → same.
 - Otherwise leave the branch alone.
-- If the branch has dependent branches stacked on it (Graphite), follow `rs-restack` after any push so the stack stays coherent.
+- If the branch belongs to a GitHub Stack, follow `rs-restack` after any push so every layer and the remote Stack object stay coherent.
 
 ### Step 3: Review comments — every comment becomes a prompt
 

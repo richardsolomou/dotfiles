@@ -72,7 +72,7 @@ PostHog-specific workflow (skills store, per-repo rules, production architecture
 - Keep commits clean: interactive staging (`git add -p`), thoughtful messages, squash when appropriate, no "WIP" commits unless spiking.
 - Every commit→push→PR flow goes through the `rs-ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `rs-update-pr` — no ad-hoc bodies.
 - Commit, push, and PR creation only on explicit request. During exploratory or visual iteration, hold all commits until the user says the result is good — "don't commit until I'm happy" stands for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
-- Stacked PRs in PostHog repos use Graphite (`gt`): track parent-first (`gt track`) and submit the stack (`gt submit --stack`) — tracking alone doesn't register it. After changing a mid-stack branch, restack via `rs-restack`.
+- Stacked PRs use GitHub Stacked PRs through the official `gh stack` extension, not Graphite or base-linked PRs alone. Use `gh stack init`/`add`, `gh stack submit --open`, and `gh stack sync` so GitHub creates the Stack object and UI. After changing a mid-stack branch, propagate it via `rs-restack`.
 
 ### Commit messages
 
