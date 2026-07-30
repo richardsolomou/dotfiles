@@ -24,17 +24,17 @@ const LENSES = [
   {
     key: 'correctness',
     focus:
-      'Correctness and edge cases: nil/empty/boundary inputs, inverted conditions, error handling, concurrency and failure, partial writes, off-by-ones.',
+      'Correctness across system boundaries: nil/empty/boundary inputs; retries, timeouts, cancellation, concurrency and partial writes; tenant and trust boundaries; state transitions; consistent billing, error, health, and limit classification across sibling paths.',
   },
   {
     key: 'tests',
     focus:
-      'Test quality and coverage: untested behaviour, tautological or over-mocked tests, missing edge-case tests, assertions on implementation rather than observable behaviour.',
+      'Test quality and coverage: prove tests fail for the intended reason; find self-derived fixtures, permissive matchers, unrelated rejection paths, over-mocking, missing negative branches, compound logic without clause-isolating cases, and assertions on implementation rather than observable behaviour.',
   },
   {
     key: 'design',
     focus:
-      'Design and convention: scope creep, coupling and hidden dependencies, naming and clarity, drift from existing patterns in this repo.',
+      'Production design: compare every producer, consumer, and sibling implementation; find unbounded hot-path work, scans/N+1s, work under locks, stale PR/docs/comments, hidden config or rollout assumptions, noisy or missing observability, dead code, scope creep, and drift from established repo patterns.',
   },
 ]
 

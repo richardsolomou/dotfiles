@@ -104,7 +104,7 @@ Prepare context-only PRs separately. Read their descriptions, diffs, and discuss
 
 ### Step 3: Decide which lenses run, fetch the security lens if needed
 
-Always run: **correctness**, **tests**, **reuse**, **quality**, **efficiency**.
+Always run: **correctness**, **tests**, **system-boundaries**, **reuse**, **quality**, **efficiency**.
 
 Conditional:
 
@@ -132,6 +132,8 @@ Lens briefs — keep each terse; the bar is `rs-adversarial-review`, these say o
 > **correctness** — Logic errors, nullability/NPE, races, unhandled errors, data loss/corruption, breaking API changes → **Blocker**; missing error handling, unhandled edge cases, convention violations → **Suggestion**. Read each changed file in full, not just the hunk.
 >
 > **tests** — Do the tests prove the code works? Behaviour-focused, deterministic, fail for the right reason. Missing, tautological, over-mocked, weak-matcher, or branching tests → **Suggestion**, never **Blocker** by themselves. If investigating a test gap reveals an actual broken behaviour, report that verified defect through the correctness lens as the blocker.
+>
+> **system-boundaries** — Trace success, failure, retry, timeout, cancellation, partial-write, and concurrent paths. Compare every producer, consumer, and sibling variant for consistent billing, error, health, limit, auth, and observability semantics. Check tenant/trust boundaries, production-sized inputs, rollout/config assumptions, and whether docs or comments overstate the guarantee. Verified corruption, leakage, security, or production correctness defects → **Blocker**; hardening and clarity → **Suggestion**.
 >
 > **reuse** — New code duplicating an existing helper/hook/component, or reinventing a stdlib/library primitive. Grep for the existing one and point at it. → **Suggestion**.
 >

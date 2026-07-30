@@ -49,10 +49,23 @@ Tests passing and review approval aren't "done" for anything production-facing (
 
 - Write tests first when practical; always test new functionality, covering edge cases and errors. Run them before marking a task complete; fix failures before proceeding.
 - Test behavior, not implementation: one assertion per test when possible, deterministic, scenario-describing names, existing test utilities, no redundant tests.
+- Prove tests fail for the intended reason: perturb or remove the behavior under test when an assertion could pass through a stub, self-derived fixture, permissive matcher, mock, or unrelated validation error.
 - Every commit compiles, passes all tests, and is formatted/linted — run `bin/fmt` if it exists, otherwise the language's formatter, before committing. Never bypass hooks with `--no-verify`.
 - No TODOs without issue numbers; no tool warnings ignored without strong justification.
 - Use the project's existing build/test/format tooling; don't introduce new tools without strong justification.
 - Update relevant documentation when changing functionality.
+
+### Review Readiness
+
+Before marking non-trivial work ready for review, perform a system-boundary pass over the whole changed flow, not just each diff hunk:
+
+- Trace success, failure, retry, timeout, cancellation, partial-write, shutdown, and concurrent execution. Preserve idempotency and make state transitions atomic or self-healing where partial failure can strand state.
+- Treat limits as part of correctness. Bound input size, memory, query cardinality, retries, and work under locks; check migrations, refreshes, and request paths at production scale.
+- Keep classification consistent across sibling paths: status and error mapping, billing/settlement, breaker health, logs, metrics, limits, and authentication. Search for every producer and consumer of changed fields and apply class-wide fixes everywhere they occur.
+- Test observable outcomes and negative branches, including each independent clause in compound logic. A green test that would also pass for the wrong reason is not evidence.
+- Verify trust boundaries explicitly: tenant ownership, signed or authoritative fields, secret-bearing headers, redirects/replays, database constraints, and writes that bypass model validation.
+- Exercise production-facing configuration, migrations, alerts, runbooks, and rollout assumptions in the real shape they will run. Confirm fallback and backwards compatibility rather than inferring them from unit tests.
+- Re-read the final PR description, docs, comments, metric names, and runbooks against the final diff. Remove stale claims, dead code, speculative mechanisms, and comments that overstate guarantees.
 
 ## Self-Improvement
 
