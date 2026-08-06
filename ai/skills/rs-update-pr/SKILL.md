@@ -87,10 +87,16 @@ Overrides on top of the register:
 - No em-dashes. Use commas, periods, or parentheses. The `pr-description` register allows em-dashes; this skill does not.
 - No AI smell: no formulaic openers ("This PR…", "In this change…"), no marketing words ("seamlessly", "robust", "comprehensive"), no closing sign-offs, no padding.
 
-Finally, update the PR:
+Finally, update the PR without putting generated content in a shell command. Write the title and body to temporary files with the available file-writing tool, then build the API payload from those files:
 
 ```sh
-gh pr edit <number> --title "<title>" --body "<body>"
+jq -n --rawfile title /tmp/rs-update-pr-title.txt --rawfile body /tmp/rs-update-pr-body.md '{title: ($title | rtrimstr("\n")), body: ($body | rtrimstr("\n"))}' > /tmp/rs-update-pr.json
+gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pulls/<number>" --method PATCH --input /tmp/rs-update-pr.json
+gh pr view <number> --json title,body | jq '{title,body}' > /tmp/rs-update-pr-actual.json
+diff -u /tmp/rs-update-pr.json /tmp/rs-update-pr-actual.json
 ```
 
-Use a heredoc for the body to preserve formatting.
+- Do not create the temporary files with `echo`, `printf`, command interpolation, or an unquoted heredoc.
+- Never substitute generated title or Markdown directly into a shell command, even inside quotes. Backticks, `$()`, quotes, and backslashes in generated content must remain data, not shell syntax.
+- Do not report success unless the exact read-back comparison passes.
+- Remove all four temporary files after verification.
