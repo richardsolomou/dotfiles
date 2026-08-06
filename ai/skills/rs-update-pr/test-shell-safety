@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+skill=$(dirname "$0")/SKILL.md
+
+grep -F -- '--input /tmp/rs-update-pr.json' "$skill" >/dev/null
+grep -F -- 'Never substitute generated title or Markdown directly into a shell command' "$skill" >/dev/null
+if grep -E -- '--body |--title ' "$skill" >/dev/null; then
+  echo 'rs-update-pr still recommends inline PR content interpolation'
+  exit 1
+fi
