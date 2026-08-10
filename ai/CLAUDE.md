@@ -73,6 +73,7 @@ When corrected after a mistake, update this file with a rule that prevents it; r
 
 ## Repositories
 
+- Create a fresh worktree for each PR or resumed task before editing, even when the current directory is already a worktree. Never reuse a worktree that the user or another task may be using. Give concurrent E2E runs unique ports, container names, and data roots; do not run repository defaults when they use shared resources.
 - Fetch first and branch off `origin/<main>` (not a possibly-stale local main), named per the Git section. If the code looks like an older direction of the project, stop and confirm before building on it.
 - When done, prompt to commit.
 - Run `bin/fmt` if available; revert changes it makes to files we didn't touch.
