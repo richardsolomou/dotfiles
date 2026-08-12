@@ -55,6 +55,10 @@ Tests passing and review approval aren't "done" for anything production-facing (
 - Use the project's existing build/test/format tooling; don't introduce new tools without strong justification.
 - Update relevant documentation when changing functionality.
 
+### Technical Writing
+
+Use the `rs-asd-ste100` skill when ambiguous technical prose can cause a mistake. Apply it to instructions, prompts, error messages, tool descriptions, reports, and agent-to-agent messages. Do not apply it to creative or marketing copy. Use `rs-tone` for content that Richard will post under his name.
+
 ### Review Readiness
 
 Before marking non-trivial work ready for review, perform a system-boundary pass over the whole changed flow, not just each diff hunk:

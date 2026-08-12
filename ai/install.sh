@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export ZSH="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
+export ZSH="$(cd "$(dirname "$0")/.." && pwd -P)"
 
 # Source helper functions
 . $ZSH/ai/helpers/output.sh
