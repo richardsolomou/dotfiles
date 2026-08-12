@@ -88,8 +88,8 @@ PostHog-specific workflow (skills store, per-repo rules, production architecture
 - Branches: `<type>/<slug>`, or `<type>/<issue#>-<slug>` when the issue number is known, using conventional commit types (`feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`).
 - Keep commits clean: interactive staging (`git add -p`), thoughtful messages, squash when appropriate, no "WIP" commits unless spiking.
 - Every commit→push→PR flow goes through the `rs-ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `rs-update-pr` — no ad-hoc bodies.
-- Commit, push, and PR creation only on explicit request. During exploratory or visual iteration, hold all commits until the user says the result is good — "don't commit until I'm happy" stands for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
-- In a cloud task, never leave an authorized commit only in the local checkout. Push it and create or update its PR so preview environments can run. This does not grant permission to commit or push when the user did not request it.
+- Commit, push, and PR creation only on explicit request, except when a cloud task already has an open PR. During exploratory or visual iteration, hold all commits until the user says the result is good — "don't commit until I'm happy" stands for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
+- In a cloud task with an open PR, commit and push requested changes to that PR. Never leave those changes only in the local checkout because preview environments run from the remote branch.
 - Stacked PRs use GitHub Stacked PRs through the official `gh stack` extension, not Graphite or base-linked PRs alone. Use `gh stack init`/`add`, `gh stack submit --open`, and `gh stack sync` so GitHub creates the Stack object and UI. After changing a mid-stack branch, propagate it via `rs-restack`.
 
 ### Commit messages
