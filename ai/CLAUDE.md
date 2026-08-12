@@ -57,7 +57,7 @@ Tests passing and review approval aren't "done" for anything production-facing (
 
 ### Technical Writing
 
-Use the `rs-asd-ste100` skill when ambiguous technical prose can cause a mistake. Apply it to instructions, prompts, error messages, tool descriptions, reports, and agent-to-agent messages. Do not apply it to creative or marketing copy. Use `rs-tone` for content that Richard will post under his name.
+Use the `asd-ste100` skill when ambiguous technical prose can cause a mistake. Apply it to instructions, prompts, error messages, tool descriptions, reports, and agent-to-agent messages. Do not apply it to creative or marketing copy. Use `rs-tone` for content that Richard will post under his name.
 
 ### Review Readiness
 
