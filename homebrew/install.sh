@@ -2,33 +2,23 @@
 #
 # Homebrew
 #
-# Install Homebrew and all packages defined in the Brewfile.
+# Install Homebrew, the packages defined in the Brewfile, and the gh extensions
+# the git aliases depend on.
 
-# Check for Homebrew
-if test ! "$(which brew)"
+if ! command -v brew > /dev/null 2>&1
 then
   echo "  Installing Homebrew for you."
-
-  # Install the correct homebrew for each OS type
-  if test "$(uname)" = "Darwin"
-  then
-    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-  elif test "$(expr substr "$(uname -s)" 1 5)" = "Linux"
-  then
-    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install)"
-  fi
-
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 brew bundle --file="$SCRIPT_DIR/Brewfile"
 
-gh extension install seachicken/gh-poi
-
-# Install Rust via rustup if brew didn't provide it
-if test ! "$(which rustup)"
-then
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-fi
+# gh poi backs `git bclean`; gh stack backs the stacked-PR workflow.
+for extension in seachicken/gh-poi github/gh-stack
+do
+  gh extension install "$extension" 2>/dev/null || true
+done
 
 exit 0

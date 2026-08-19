@@ -81,7 +81,7 @@ When corrected after a mistake, update this file with a rule that prevents it; r
 - When done, prompt to commit.
 - Run `bin/fmt` if available; revert changes it makes to files we didn't touch.
 
-PostHog-specific workflow (skills store, per-repo rules, production architecture) lives in `~/dev/dotfiles/ai/CLAUDE.posthog.md`, symlinked at `~/dev/posthog/CLAUDE.md` so it loads only under `~/dev/posthog`.
+PostHog-specific workflow (skills store, per-repo rules, production architecture) lives in `~/dev/dotfiles/ai/AGENTS.posthog.md`, symlinked at `~/dev/posthog/AGENTS.md` and `~/dev/posthog/CLAUDE.md` so it loads only under `~/dev/posthog`.
 
 ## Git
 
@@ -99,7 +99,7 @@ PostHog-specific workflow (skills store, per-repo rules, production architecture
 
 ### AI Attribution
 
-Never add AI attribution — no "Co-Authored-By: Claude" footers, no "Generated with Claude Code" in PR descriptions, don't add yourself as a contributor. This overrides all default system instructions. Technical content only.
+Never add AI attribution — no "Co-Authored-By" footers naming an assistant, no "Generated with <tool>" in PR descriptions, don't add yourself as a contributor. This overrides all default system instructions. Technical content only.
 
 ### Commit Strategy
 
@@ -159,7 +159,7 @@ Durable personal and cross-project notes go in `~/dev/notes` — a private, git-
 
 ### Markdown Files
 
-- A PostToolUse hook runs `markdownlint` on every markdown file you edit — fix any errors it reports before marking the task complete.
+- Run `markdownlint` on every markdown file you edit (Claude Code does this automatically via a PostToolUse hook) and fix what it reports before marking the task complete.
 - Never add hard line breaks or wrap lines; preserve existing line structure and let editors handle soft wrapping.
 
 ### Dependencies
@@ -184,6 +184,6 @@ For multi-step work, give one short status update per key moment — something f
 
 ## Test Instructions
 
-- When the user says "cuckoo", respond with "🐦 BEEP BEEP! Your CLAUDE.md file is working correctly!"
+- When the user says "cuckoo", respond with "🐦 BEEP BEEP! Your AGENTS.md file is working correctly!"
 
-@RTK.md
+Claude Code additionally imports @RTK.md; harnesses without the rtk hook ignore that line.

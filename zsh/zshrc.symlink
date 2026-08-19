@@ -1,3 +1,9 @@
+# Resolve dotfiles repo root from this file's symlink target.
+export ZSH="${${(%):-%x}:A:h:h}"
+
+# Tying $path to $PATH with -U drops duplicates as entries are prepended.
+typeset -U path
+
 # --- SSH ---
 
 # 1Password SSH agent
@@ -12,11 +18,11 @@ fi
 
 # --- Build environment ---
 export OPENSSL_ROOT_DIR="/opt/homebrew/opt/openssl@3"
-export OPENSSL_LIB_DIR="/opt/homebrew/opt/openssl@3/lib"
-export OPENSSL_INCLUDE_DIR="/opt/homebrew/opt/openssl@3/include"
-export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@3/lib/pkgconfig"
-export CPPFLAGS="-I/opt/homebrew/opt/openssl/include"
-export LDFLAGS="-L/opt/homebrew/opt/openssl/lib"
+export OPENSSL_LIB_DIR="$OPENSSL_ROOT_DIR/lib"
+export OPENSSL_INCLUDE_DIR="$OPENSSL_ROOT_DIR/include"
+export PKG_CONFIG_PATH="$OPENSSL_ROOT_DIR/lib/pkgconfig"
+export CPPFLAGS="-I$OPENSSL_ROOT_DIR/include"
+export LDFLAGS="-L$OPENSSL_ROOT_DIR/lib"
 
 # --- Language/tool managers ---
 
@@ -25,40 +31,25 @@ if command -v mise >/dev/null 2>&1; then
   eval "$(mise activate zsh)"
 fi
 
-# pnpm
-export PNPM_HOME="$HOME/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-
 # direnv
 if command -v direnv >/dev/null 2>&1; then
   eval "$(direnv hook zsh)"
 fi
 
-# Resolve dotfiles repo root from this file's symlink target.
-export ZSH="${${(%):-%x}:A:h:h}"
+export PNPM_HOME="$HOME/Library/pnpm"
 
-# --- PATH additions ---
-
-# Go
-if [ -d "$HOME/go/bin" ]; then
-  export PATH="$HOME/go/bin:$PATH"
-fi
-
-# Dotfiles bin
-export PATH="$ZSH/bin:$PATH"
-
-# Local bin (claude code, pipx, etc.)
-if [ -d "$HOME/.local/bin" ]; then
-  export PATH="$HOME/.local/bin:$PATH"
-fi
-
-# PostHog infra scripts
-if [ -d "$HOME/dev/posthog/posthog/infra-scripts/mcp" ]; then
-  export PATH="$HOME/dev/posthog/posthog/infra-scripts/mcp:$PATH"
-fi
+# --- PATH additions (listed low to high priority) ---
+# ~/.local/bin outranks Homebrew: the agent CLIs installed there (claude, codex)
+# are newer than any Homebrew copy of the same name.
+for dir in \
+  "$HOME/dev/posthog/posthog/tools/infra-scripts/mcp" \
+  "$HOME/go/bin" \
+  "$PNPM_HOME" \
+  "$HOME/.local/bin" \
+  "$ZSH/bin"
+do
+  [ -d "$dir" ] && path=("$dir" $path)
+done
 
 # --- Shell utilities ---
 
@@ -69,14 +60,6 @@ listening() {
     sudo lsof -iTCP -sTCP:LISTEN -n -P | grep -i --color "$1"
   else
     echo "Usage: listening [pattern]"
-  fi
-}
-
-killpid() {
-  if [ $# -eq 1 ]; then
-    kill -9 "$1"
-  else
-    kill
   fi
 }
 
@@ -92,20 +75,18 @@ setopt HIST_REDUCE_BLANKS
 autoload -Uz compinit && compinit
 source "$ZSH/zsh/aliases.zsh"
 source "$ZSH/zsh/claude-completion.zsh"
-source "$ZSH/zsh/gt-completion.zsh"
+command -v codex >/dev/null 2>&1 && source <(codex completion zsh)
 
 # --- Shell plugins ---
-source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+  [ -r "/opt/homebrew/share/$plugin/$plugin.zsh" ] && source "/opt/homebrew/share/$plugin/$plugin.zsh"
+done
 
 # fzf (ctrl-r history, ctrl-t files, alt-c cd)
-source <(fzf --zsh)
+command -v fzf >/dev/null 2>&1 && source <(fzf --zsh)
 
 # zoxide (smart cd: use 'z' instead of 'cd')
-eval "$(zoxide init zsh)"
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 
 # --- Starship prompt ---
-eval "$(starship init zsh)"
-
-# PostHog infra scripts (grafana-region, grafana-token, mcp wrapper)
-export PATH="$HOME/dev/posthog/posthog/tools/infra-scripts/mcp:$PATH"
+command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"

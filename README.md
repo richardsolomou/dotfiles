@@ -30,3 +30,9 @@ this script in `bin/`.
 
 `~/.zshrc` is managed by this repo via `zsh/zshrc.symlink`. Running
 `script/bootstrap` creates the symlink automatically.
+
+### Agents
+
+`ai/` holds the instructions, skills, and MCP servers shared by every agent
+harness — Claude Code, Codex, and pi all read the same files. `ai/install.sh`
+links them into each harness; see `ai/README.md`.
