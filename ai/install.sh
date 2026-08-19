@@ -1,366 +1,228 @@
 #!/bin/sh
+#
+# Install the shared agent configuration into every harness in use: Claude Code,
+# Codex, and pi. ai/AGENTS.md and ai/skills are the single source of truth; each
+# harness gets symlinks to them under whatever name it expects.
 
 export ZSH="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
 
-# Source helper functions
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-# Uninstall function
-uninstall_claude_config() {
-    info "Uninstalling Claude configuration…"
+ALL_COMPONENTS="context skills agents mcp hooks permissions preferences"
 
-    # Remove CLAUDE.md symlink and its imports
-    if [ "$INSTALL_CLAUDE_MD" = "true" ]; then
-        if [ -L ~/.claude/CLAUDE.md ]; then
-            rm -f ~/.claude/CLAUDE.md
-            success "Removed CLAUDE.md symlink"
-        elif [ -f ~/.claude/CLAUDE.md ]; then
-            warning "~/.claude/CLAUDE.md is a regular file, not a symlink - skipping"
-        fi
-        if [ -L ~/.claude/RTK.md ]; then
-            rm -f ~/.claude/RTK.md
-            success "Removed RTK.md symlink"
-        elif [ -f ~/.claude/RTK.md ]; then
-            warning "~/.claude/RTK.md is a regular file, not a symlink - skipping"
-        fi
-        if [ -L "$HOME/dev/posthog/CLAUDE.md" ]; then
-            rm -f "$HOME/dev/posthog/CLAUDE.md"
-            success "Removed CLAUDE.posthog.md symlink"
-        fi
-    fi
+# Directories every harness scans for skills. pi also reads ~/.agents/skills,
+# the cross-harness convention.
+SKILL_DIRS="$HOME/.claude/skills $HOME/.codex/skills $HOME/.agents/skills"
 
-    # Remove agent symlinks
-    if [ "$INSTALL_AGENTS" = "true" ]; then
-        if [ -d ~/.claude/agents ]; then
-            for agent in ~/.claude/agents/*.*; do
-                if [ -L "$agent" ]; then
-                    rm -f "$agent"
-                fi
-            done
-            success "Removed agent symlinks"
-        fi
-    fi
-
-    # Remove skill symlinks
-    if [ "$INSTALL_SKILLS" = "true" ]; then
-        if [ -d ~/.claude/skills ]; then
-            for skill in ~/.claude/skills/*/; do
-                [ -d "$skill" ] || continue
-                skill_name=$(basename "$skill")
-                if [ -L ~/.claude/skills/"$skill_name" ]; then
-                    rm -f ~/.claude/skills/"$skill_name"
-                fi
-            done
-            success "Removed skill symlinks"
-        fi
-
-        if [ -d ~/.agents/skills ]; then
-            for skill_dir in "$ZSH"/ai/skills/*/; do
-                [ -d "$skill_dir" ] || continue
-                skill_name=$(basename "$skill_dir")
-                target="$HOME/.agents/skills/$skill_name"
-                if [ -L "$target" ]; then
-                    rm -f "$target"
-                fi
-            done
-            success "Removed Codex skill symlinks"
-        fi
-    fi
-
-    echo ""
-    success "Claude configuration uninstalled successfully!"
-    info "Note: MCP servers, hooks, and permissions are not removed by uninstall"
-}
-
-# Parse command line options
-UNINSTALL=false
-INSTALL_CLAUDE_MD=true
-INSTALL_AGENTS=true
-INSTALL_SKILLS=true
-INSTALL_MCP=true
-INSTALL_HOOKS=true
-INSTALL_PERMISSIONS=true
-INSTALL_PREFERENCES=true
+# Format: name|description|command|env (env optional, KEY=VALUE)
+MCP_SERVERS="
+posthog-db|PostHog database connection|$HOME/.local/bin/postgres-mcp --access-mode=restricted|DATABASE_URI=postgresql://posthog:posthog@localhost:5432/posthog
+memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory|
+grafana|Grafana MCP server|$HOME/dev/posthog/posthog/tools/infra-scripts/mcp/mcp-grafana-wrapper.sh|
+"
 
 show_help() {
-    echo "Usage: $0 [OPTIONS]"
+    echo "Usage: $0 [--uninstall] [component…]"
     echo ""
-    echo "Install Claude configuration components selectively or all at once (default)."
+    echo "Installs the shared agent configuration. With no component named, installs everything."
+    echo ""
+    echo "Components:"
+    echo "  context      Instruction files: ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.pi/agent/AGENTS.md"
+    echo "  skills       ai/skills/* into each harness' skill directory"
+    echo "  agents       ai/agents/* as Claude Code subagents"
+    echo "  mcp          MCP servers (Claude Code and Codex)"
+    echo "  hooks        Claude Code hooks"
+    echo "  permissions  Claude Code tool permissions"
+    echo "  preferences  Claude Code editor preferences"
     echo ""
     echo "Options:"
-    echo "  --uninstall         Remove symlinks for file-based components"
-    echo "  --claude-md-only    Install only CLAUDE.md file"
-    echo "  --agents-only       Install only agent files"
-    echo "  --skills-only       Install only skills"
-    echo "  --mcp-only          Install only MCP servers"
-    echo "  --hooks-only        Install only Claude Code hooks"
-    echo "  --permissions-only  Install only tool permissions"
-    echo "  --preferences-only  Install only editor preferences"
-    echo "  --no-claude-md      Skip CLAUDE.md installation"
-    echo "  --no-agents         Skip agent files installation"
-    echo "  --no-skills         Skip skills installation"
-    echo "  --no-mcp            Skip MCP servers installation"
-    echo "  --no-hooks          Skip Claude Code hooks installation"
-    echo "  --no-permissions    Skip tool permissions configuration"
-    echo "  --no-preferences    Skip editor preferences configuration"
-    echo "  -h, --help          Show this help message"
+    echo "  --uninstall  Remove the symlinks made by context, skills, and agents"
+    echo "  -h, --help   Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                      # Install everything (default)"
-    echo "  $0 --claude-md-only     # Install only CLAUDE.md"
-    echo "  $0 --agents-only        # Install only agent files"
-    echo "  $0 --no-mcp             # Install everything except MCP servers"
-    echo "  $0 --uninstall          # Remove all symlinks"
-    echo "  $0 --uninstall --agents-only  # Remove only agent symlinks"
+    echo "  $0                       # Install everything"
+    echo "  $0 context skills        # Refresh instruction files and skills only"
+    echo "  $0 --uninstall skills    # Remove skill symlinks"
 }
 
-# Parse arguments
+UNINSTALL=false
+COMPONENTS=""
+
 while [ $# -gt 0 ]; do
     case $1 in
         --uninstall)
             UNINSTALL=true
-            shift
-            ;;
-        --claude-md-only)
-            INSTALL_CLAUDE_MD=true
-            INSTALL_AGENTS=false
-            INSTALL_SKILLS=false
-            INSTALL_MCP=false
-            INSTALL_HOOKS=false
-            INSTALL_PERMISSIONS=false
-            INSTALL_PREFERENCES=false
-            shift
-            ;;
-        --agents-only)
-            INSTALL_CLAUDE_MD=false
-            INSTALL_AGENTS=true
-            INSTALL_SKILLS=false
-            INSTALL_MCP=false
-            INSTALL_HOOKS=false
-            INSTALL_PERMISSIONS=false
-            INSTALL_PREFERENCES=false
-            shift
-            ;;
-        --skills-only)
-            INSTALL_CLAUDE_MD=false
-            INSTALL_AGENTS=false
-            INSTALL_SKILLS=true
-            INSTALL_MCP=false
-            INSTALL_HOOKS=false
-            INSTALL_PERMISSIONS=false
-            INSTALL_PREFERENCES=false
-            shift
-            ;;
-        --mcp-only)
-            INSTALL_CLAUDE_MD=false
-            INSTALL_AGENTS=false
-            INSTALL_SKILLS=false
-            INSTALL_MCP=true
-            INSTALL_HOOKS=false
-            INSTALL_PERMISSIONS=false
-            INSTALL_PREFERENCES=false
-            shift
-            ;;
-        --hooks-only)
-            INSTALL_CLAUDE_MD=false
-            INSTALL_AGENTS=false
-            INSTALL_SKILLS=false
-            INSTALL_MCP=false
-            INSTALL_HOOKS=true
-            INSTALL_PERMISSIONS=false
-            INSTALL_PREFERENCES=false
-            shift
-            ;;
-        --permissions-only)
-            INSTALL_CLAUDE_MD=false
-            INSTALL_AGENTS=false
-            INSTALL_SKILLS=false
-            INSTALL_MCP=false
-            INSTALL_HOOKS=false
-            INSTALL_PERMISSIONS=true
-            INSTALL_PREFERENCES=false
-            shift
-            ;;
-        --preferences-only)
-            INSTALL_CLAUDE_MD=false
-            INSTALL_AGENTS=false
-            INSTALL_SKILLS=false
-            INSTALL_MCP=false
-            INSTALL_HOOKS=false
-            INSTALL_PERMISSIONS=false
-            INSTALL_PREFERENCES=true
-            shift
-            ;;
-        --no-claude-md)
-            INSTALL_CLAUDE_MD=false
-            shift
-            ;;
-        --no-agents)
-            INSTALL_AGENTS=false
-            shift
-            ;;
-        --no-skills)
-            INSTALL_SKILLS=false
-            shift
-            ;;
-        --no-mcp)
-            INSTALL_MCP=false
-            shift
-            ;;
-        --no-hooks)
-            INSTALL_HOOKS=false
-            shift
-            ;;
-        --no-permissions)
-            INSTALL_PERMISSIONS=false
-            shift
-            ;;
-        --no-preferences)
-            INSTALL_PREFERENCES=false
-            shift
             ;;
         -h|--help)
             show_help
             exit 0
             ;;
         *)
-            echo "Unknown option: $1"
-            show_help
-            exit 1
+            case " $ALL_COMPONENTS " in
+                *" $1 "*)
+                    COMPONENTS="$COMPONENTS $1"
+                    ;;
+                *)
+                    error "Unknown argument: $1"
+                    show_help
+                    exit 1
+                    ;;
+            esac
             ;;
     esac
+    shift
 done
 
-# If uninstall flag is set, uninstall and exit
-if [ "$UNINSTALL" = "true" ]; then
-    uninstall_claude_config
-    exit 0
-fi
+[ -n "$COMPONENTS" ] || COMPONENTS="$ALL_COMPONENTS"
 
-info "Installing Claude configuration…"
+wants() {
+    case " $COMPONENTS " in
+        *" $1 "*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-# Ensure ~/.claude directory exists
-mkdir -p ~/.claude
-
-# Symlink CLAUDE.md and its imports
-if [ "$INSTALL_CLAUDE_MD" = "true" ]; then
-    rm -f ~/.claude/CLAUDE.md
-    ln -sf $ZSH/ai/CLAUDE.md ~/.claude/CLAUDE.md
-    rm -f ~/.claude/RTK.md
-    ln -sf $ZSH/ai/RTK.md ~/.claude/RTK.md
-    success "Symlinked CLAUDE.md"
-
-    # PostHog-scoped memory: loads only for sessions under ~/dev/posthog, so the
-    # PostHog workflow rules stay out of context in unrelated projects.
-    if [ -d "$HOME/dev/posthog" ]; then
-        if [ -e "$HOME/dev/posthog/CLAUDE.md" ] && [ ! -L "$HOME/dev/posthog/CLAUDE.md" ]; then
-            warning "$HOME/dev/posthog/CLAUDE.md exists and is not a symlink - skipping"
-        else
-            rm -f "$HOME/dev/posthog/CLAUDE.md"
-            ln -sf $ZSH/ai/CLAUDE.posthog.md "$HOME/dev/posthog/CLAUDE.md"
-            success "Symlinked CLAUDE.posthog.md"
-        fi
+# Everything is linked rather than copied so repo edits apply without a reinstall.
+link() {
+    if [ -e "$2" ] && [ ! -L "$2" ]; then
+        warning "$2 exists and is not a symlink - skipping"
+        return 1
     fi
-fi
+    mkdir -p "$(dirname "$2")"
+    ln -sfn "$1" "$2"
+}
 
-# Symlink agents
-if [ "$INSTALL_AGENTS" = "true" ]; then
-    mkdir -p ~/.claude/agents
-    for agent in $ZSH/ai/agents/*.*; do
-        agent_name=$(basename "$agent")
-        rm -f ~/.claude/agents/"$agent_name"
-        ln -sf "$agent" ~/.claude/agents/"$agent_name"
+unlink_managed() {
+    if [ -L "$1" ]; then
+        rm -f "$1"
+    elif [ -e "$1" ]; then
+        warning "$1 is not a symlink - skipping"
+    fi
+}
+
+# Renaming or deleting a skill leaves a dangling link behind; drop those, but
+# only the ones this script created.
+prune_dangling_skill_links() {
+    [ -d "$1" ] || return 0
+    for entry in "$1"/*; do
+        [ -L "$entry" ] && [ ! -e "$entry" ] || continue
+        case "$(readlink "$entry")" in
+            */ai/skills/*) rm -f "$entry" ;;
+        esac
     done
-    success "Symlinked agents"
-fi
+}
 
-# Symlink skills (directories, not files)
-if [ "$INSTALL_SKILLS" = "true" ]; then
-    mkdir -p ~/.claude/skills
-    for skill_dir in $ZSH/ai/skills/*/; do
-        [ -d "$skill_dir" ] || continue
-        skill_name=$(basename "$skill_dir")
-        rm -rf ~/.claude/skills/"$skill_name"
-        ln -sf "$skill_dir" ~/.claude/skills/"$skill_name"
-    done
-    success "Symlinked skills"
+# Claude Code reads CLAUDE.md, Codex and pi read AGENTS.md. AGENTS.posthog.md is
+# linked into ~/dev/posthog so its rules load only for sessions under there.
+context_links() {
+    echo "$ZSH/ai/AGENTS.md|$HOME/.claude/CLAUDE.md"
+    echo "$ZSH/ai/RTK.md|$HOME/.claude/RTK.md"
+    echo "$ZSH/ai/AGENTS.md|$HOME/.codex/AGENTS.md"
+    echo "$ZSH/ai/AGENTS.md|$HOME/.pi/agent/AGENTS.md"
+    if [ -d "$HOME/dev/posthog" ]; then
+        echo "$ZSH/ai/AGENTS.posthog.md|$HOME/dev/posthog/AGENTS.md"
+        echo "$ZSH/ai/AGENTS.posthog.md|$HOME/dev/posthog/CLAUDE.md"
+    fi
+}
 
-    # Symlink Codex skills (user scope). Codex follows symlinked skill folders
-    # from ~/.agents/skills, so ai/skills remains the source of truth.
-    mkdir -p ~/.agents/skills
-    for skill_dir in "$ZSH"/ai/skills/*/; do
-        [ -d "$skill_dir" ] || continue
-        skill_name=$(basename "$skill_dir")
-        target="$HOME/.agents/skills/$skill_name"
-
-        if [ -e "$target" ] && [ ! -L "$target" ]; then
-            warning "$target exists and is not a symlink - skipping"
-            continue
-        fi
-
-        rm -f "$target"
-        ln -sf "$skill_dir" "$target"
-    done
-    success "Symlinked Codex skills"
-fi
-
-# Define MCP servers as a list of entries
-# Format: "name|description|command"
-MCP_SERVERS="
-posthog-db|PostHog database connection|/Users/richard/.local/bin/postgres-mcp --access-mode=restricted
-memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory
-grafana|Grafana MCP server|$HOME/dev/posthog/posthog/tools/infra-scripts/mcp/mcp-grafana-wrapper.sh
-"
-
-# Special environment variables for specific servers
-set_server_env() {
-    local server_name="$1"
-    case "$server_name" in
-        posthog-db)
-            echo "-e DATABASE_URI=postgresql://posthog:posthog@localhost:5432/posthog"
+# Returns 2 when the server is already configured. $server_command is
+# deliberately unquoted: it carries the server's argv.
+add_mcp_server() {
+    harness="$1" name="$2" server_command="$3" server_env="$4"
+    case "$harness" in
+        claude)
+            claude mcp list 2>/dev/null | grep -q "^${name}:" && return 2
+            claude mcp add --scope user "$name" ${server_env:+-e "$server_env"} -- $server_command
             ;;
-        *)
-            echo ""
+        codex)
+            mkdir -p "${CODEX_HOME:-$HOME/.codex}"
+            codex mcp list --json 2>/dev/null | jq -e --arg n "$name" 'any(.[]; .name == $n)' > /dev/null && return 2
+            codex mcp add "$name" ${server_env:+--env "$server_env"} -- $server_command
             ;;
     esac
 }
 
-# Install MCP servers
-if [ "$INSTALL_MCP" = "true" ]; then
+if [ "$UNINSTALL" = "true" ]; then
+    info "Uninstalling agent configuration…"
+
+    if wants context; then
+        context_links | while IFS='|' read -r src dst; do unlink_managed "$dst"; done
+        success "Removed instruction file symlinks"
+    fi
+
+    if wants skills; then
+        for dir in $SKILL_DIRS; do
+            for skill_dir in "$ZSH"/ai/skills/*/; do
+                [ -d "$skill_dir" ] || continue
+                unlink_managed "$dir/$(basename "$skill_dir")"
+            done
+            prune_dangling_skill_links "$dir"
+        done
+        success "Removed skill symlinks"
+    fi
+
+    if wants agents; then
+        for agent in "$ZSH"/ai/agents/*.md; do
+            [ -f "$agent" ] || continue
+            unlink_managed "$HOME/.claude/agents/$(basename "$agent")"
+        done
+        success "Removed agent symlinks"
+    fi
+
+    echo ""
+    success "Agent configuration uninstalled"
+    info "Note: MCP servers, hooks, and permissions are not removed by uninstall"
+    exit 0
+fi
+
+info "Installing agent configuration…"
+
+if wants context; then
+    context_links | while IFS='|' read -r src dst; do link "$src" "$dst"; done
+    success "Linked instruction files for Claude Code, Codex, and pi"
+fi
+
+if wants skills; then
+    for dir in $SKILL_DIRS; do
+        for skill_dir in "$ZSH"/ai/skills/*/; do
+            [ -d "$skill_dir" ] || continue
+            link "$skill_dir" "$dir/$(basename "$skill_dir")"
+        done
+        prune_dangling_skill_links "$dir"
+    done
+    success "Linked skills into Claude Code, Codex, and pi"
+fi
+
+if wants agents; then
+    for agent in "$ZSH"/ai/agents/*.md; do
+        [ -f "$agent" ] || continue
+        link "$agent" "$HOME/.claude/agents/$(basename "$agent")"
+    done
+    success "Linked Claude Code subagents"
+fi
+
+if wants mcp; then
     info "Installing MCP servers…"
 
-    # Process each server definition
-    echo "$MCP_SERVERS" | grep -v "^$" | while IFS='|' read -r name description command; do
-        # Skip empty lines
-        [ -z "$name" ] && continue
+    echo "$MCP_SERVERS" | grep -v "^$" | while IFS='|' read -r name description server_command server_env; do
+        for harness in claude codex; do
+            command -v "$harness" > /dev/null 2>&1 || continue
 
-        # Check if server already exists
-        if ! claude mcp list 2>/dev/null | grep -q "^${name}:"; then
-            info "Installing ${description}…"
-
-            # Get any special environment variables
-            env_args=$(set_server_env "$name")
-
-            # Build and execute the command
-            if [ -n "$env_args" ]; then
-                eval "claude mcp add --scope user ${name} ${env_args} -- ${command}"
-            else
-                claude mcp add --scope user ${name} -- ${command}
-            fi
-
-            success "${description} installed"
-        else
-            success "${description} already installed"
-        fi
+            add_mcp_server "$harness" "$name" "$server_command" "$server_env"
+            case $? in
+                0) success "${description} installed for ${harness}" ;;
+                2) success "${description} already installed for ${harness}" ;;
+                *) warning "Failed to install ${description} for ${harness}" ;;
+            esac
+        done
     done
 fi
 
-# Configure Claude Code hooks
-if [ "$INSTALL_HOOKS" = "true" ]; then
+# Hooks, permissions, and preferences are Claude Code settings; Codex and pi
+# configure their equivalents in their own config files.
+if wants hooks; then
     info "Configuring Claude Code hooks…"
-
-    SETTINGS_FILE="$HOME/.claude/settings.json"
 
     HOOKS_CONFIG=$(cat <<'EOF'
 {
@@ -403,15 +265,14 @@ if [ "$INSTALL_HOOKS" = "true" ]; then
 EOF
     )
 
-    set_json_settings "$SETTINGS_FILE" "$HOOKS_CONFIG" "hooks"
+    set_json_settings "$HOME/.claude/settings.json" "$HOOKS_CONFIG" "hooks"
     case $? in
         0) success "Configured Claude Code hooks" ;;
         2) success "Claude Code hooks already configured" ;;
     esac
 fi
 
-# Configure editor preferences
-if [ "$INSTALL_PREFERENCES" = "true" ]; then
+if wants preferences; then
     info "Configuring editor preferences…"
 
     PREFERENCES_CONFIG=$(cat <<'EOF'
@@ -429,10 +290,9 @@ EOF
     esac
 fi
 
-# Configure tool permissions
-if [ "$INSTALL_PERMISSIONS" = "true" ]; then
+if wants permissions; then
     $ZSH/ai/configure-tool-permissions.sh
 fi
 
 echo ""
-success "Claude configuration installed successfully!"
+success "Agent configuration installed"

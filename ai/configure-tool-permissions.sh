@@ -149,7 +149,6 @@ PERMISSIONS_CONFIG=$(cat <<'EOF'
       "Bash(pip3:*)",
       "Bash(pip:*)",
       "Bash(pnpm:*)",
-      "Bash(pyenv:*)",
       "Bash(pytest:*)",
       "Bash(python -c:*)",
       "Bash(python -m mypy:*)",
@@ -161,7 +160,6 @@ PERMISSIONS_CONFIG=$(cat <<'EOF'
       "Bash(ruff format:*)",
       "Bash(ruff:*)",
       "Bash(sed:*)",
-      "Bash(snob:*)",
       "Bash(sort:*)",
       "Bash(source:*)",
       "Bash(ssh:*)",
@@ -170,7 +168,6 @@ PERMISSIONS_CONFIG=$(cat <<'EOF'
       "Bash(test -d :*)",
       "Bash(test -e :*)",
       "Bash(test -f :*)",
-      "Bash(tmux:*)",
       "Bash(wc:*)",
       "Bash(which:*)",
       "Bash(xargs:*)",
@@ -184,20 +181,6 @@ PERMISSIONS_CONFIG=$(cat <<'EOF'
       "Read(~/.claude/**)",
       "WebFetch(domain:*)",
       "WebSearch",
-      "mcp__github__get_file_contents",
-      "mcp__github__get_issue",
-      "mcp__github__get_pull_request",
-      "mcp__github__get_pull_request_comments",
-      "mcp__github__get_pull_request_files",
-      "mcp__github__get_pull_request_reviews",
-      "mcp__github__get_pull_request_status",
-      "mcp__github__list_commits",
-      "mcp__github__list_issues",
-      "mcp__github__list_pull_requests",
-      "mcp__github__search_code",
-      "mcp__github__search_issues",
-      "mcp__github__search_repositories",
-      "mcp__github__search_users",
       "mcp__google-calendar__get-current-time",
       "mcp__google-calendar__get-event",
       "mcp__google-calendar__get-freebusy",
@@ -222,8 +205,6 @@ PERMISSIONS_CONFIG=$(cat <<'EOF'
       "mcp__posthog-db__get_top_queries",
       "mcp__posthog-db__list_objects",
       "mcp__posthog-db__list_schemas",
-      "mcp__puppeteer__puppeteer_navigate",
-      "mcp__puppeteer__puppeteer_screenshot",
       "mcp__slack__channels_list",
       "mcp__slack__conversations_history",
       "mcp__slack__conversations_replies",
@@ -239,10 +220,9 @@ case $? in
     0)
         success "Safe tool operations auto-approved"
         info "Write/dangerous operations will still require approval:"
-        info "  - GitHub: create/update/merge operations"
-        info "  - Memory: create/delete operations"
         info "  - Git: push operations (add/commit/read operations are auto-approved)"
         info "  - GitHub CLI: create/merge operations (read operations are auto-approved)"
+        info "  - Memory MCP: create/delete operations"
         ;;
     2)
         success "Tool permissions already configured"

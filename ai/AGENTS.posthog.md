@@ -1,6 +1,6 @@
 # PostHog Workflow
 
-Loaded for any session under `~/dev/posthog`. Universal guidance lives in `~/dev/dotfiles/ai/CLAUDE.md`.
+Loaded for any session under `~/dev/posthog`. Universal guidance lives in `~/dev/dotfiles/ai/AGENTS.md`.
 
 ## Skills
 
