@@ -2,16 +2,34 @@
 # Walk every git repo up to one subfolder under ~/dev (e.g. ~/dev/posthog/posthog.com);
 # if it has no pending changes, switch to main/master and pull. Depth is capped to
 # avoid vendored/build .git dirs nested inside repos (e.g. .terraform modules, gatsby caches).
+# Repos are independent, so updates run in parallel batches with a live status line per repo.
 
-for git_dir in $(find ~/dev -maxdepth 3 -type d -name .git); do
-    repo="$(dirname "$git_dir")"
-    cd "$repo" || continue
+PARALLEL=8
+
+mapfile -t repos < <(find ~/dev -maxdepth 3 -type d -name .git | sed 's:/\.git$::' | sort)
+n=${#repos[@]}
+if [ "$n" -eq 0 ]; then
+    echo "No repos found under ~/dev"
+    exit 0
+fi
+
+statusdir=$(mktemp -d)
+trap 'rm -rf "$statusdir"' EXIT
+for i in "${!repos[@]}"; do
+    echo "pending" > "$statusdir/$i"
+done
+
+sync_repo() {
+    local idx="$1" repo="$2"
+    echo "syncing" > "$statusdir/$idx"
+    cd "$repo" || { echo "error (cd failed)" > "$statusdir/$idx"; return; }
 
     if [ -n "$(git status --porcelain)" ]; then
-        echo "Skipping $repo (uncommitted changes)"
-        continue
+        echo "skipped (uncommitted changes)" > "$statusdir/$idx"
+        return
     fi
 
+    local branch
     branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
     if [ -z "$branch" ]; then
         if git show-ref --verify --quiet refs/heads/main; then
@@ -21,6 +39,47 @@ for git_dir in $(find ~/dev -maxdepth 3 -type d -name .git); do
         fi
     fi
 
-    echo "Updating $repo ($branch)"
-    git checkout "$branch" && git pull
+    if git checkout -q "$branch" 2>/dev/null && git pull -q 2>/dev/null; then
+        echo "updated ($branch)" > "$statusdir/$idx"
+    else
+        echo "failed ($branch)" > "$statusdir/$idx"
+    fi
+}
+
+line_for() {
+    printf '%s: %s' "${repos[$1]#"$HOME"/dev/}" "$(cat "$statusdir/$1")"
+}
+
+render() {
+    tput cuu "$n" 2>/dev/null
+    for i in "${!repos[@]}"; do
+        printf '\033[2K'
+        line_for "$i"
+        printf '\n'
+    done
+}
+
+for i in "${!repos[@]}"; do
+    line_for "$i"
+    printf '\n'
+done
+
+batch_start=0
+while [ "$batch_start" -lt "$n" ]; do
+    batch_end=$((batch_start + PARALLEL))
+    if [ "$batch_end" -gt "$n" ]; then
+        batch_end=$n
+    fi
+
+    for ((i = batch_start; i < batch_end; i++)); do
+        sync_repo "$i" "${repos[$i]}" &
+    done
+
+    while [ "$(jobs -r | wc -l)" -gt 0 ]; do
+        render
+        sleep 0.2
+    done
+    render
+
+    batch_start=$batch_end
 done
