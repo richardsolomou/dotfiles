@@ -27,9 +27,9 @@ sync_repo() {
     local idx="$1" repo="$2" name
     name="${repo#"$HOME"/dev/}"
 
-    cd "$repo" || { printf '%s❌ %s: cd failed%s\n' "$RED" "$name" "$RESET" > "$resultsdir/$idx"; return; }
+    cd "$repo" 2>/dev/null || { printf '%s❌ %s: cd failed%s\n' "$RED" "$name" "$RESET" > "$resultsdir/$idx"; return; }
 
-    if [ -n "$(git status --porcelain)" ]; then
+    if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
         printf '%s⏭️  %s: skipped (uncommitted changes)%s\n' "$YELLOW" "$name" "$RESET" > "$resultsdir/$idx"
         return
     fi
@@ -37,7 +37,7 @@ sync_repo() {
     local branch
     branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
     if [ -z "$branch" ]; then
-        if git show-ref --verify --quiet refs/heads/main; then
+        if git show-ref --verify --quiet refs/heads/main 2>/dev/null; then
             branch=main
         else
             branch=master
@@ -75,7 +75,7 @@ while [ "$batch_start" -lt "$n" ]; do
 
     for ((i = batch_start; i < batch_end; i++)); do
         if [ -t 1 ]; then
-            printf '\r\033[2K%s' "$(cat "$resultsdir/$i")"
+            printf '\r\033[2K%s\n' "$(cat "$resultsdir/$i")"
         else
             cat "$resultsdir/$i"
         fi
