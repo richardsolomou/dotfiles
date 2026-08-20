@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Walk every git repo up to one subfolder under ~/dev (e.g. ~/dev/posthog/posthog.com);
+# if it has no pending changes, switch to main/master and pull. Depth is capped to
+# avoid vendored/build .git dirs nested inside repos (e.g. .terraform modules, gatsby caches).
+
+for git_dir in $(find ~/dev -maxdepth 3 -type d -name .git); do
+    repo="$(dirname "$git_dir")"
+    cd "$repo" || continue
+
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "Skipping $repo (uncommitted changes)"
+        continue
+    fi
+
+    branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+    if [ -z "$branch" ]; then
+        if git show-ref --verify --quiet refs/heads/main; then
+            branch=main
+        else
+            branch=master
+        fi
+    fi
+
+    echo "Updating $repo ($branch)"
+    git checkout "$branch" && git pull
+done
