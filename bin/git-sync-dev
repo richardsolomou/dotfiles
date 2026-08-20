@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Walk every git repo under ~/dev; if it has no pending changes, switch to
-# main/master and pull.
+# Walk every git repo up to one subfolder under ~/dev (e.g. ~/dev/posthog/posthog.com);
+# if it has no pending changes, switch to main/master and pull. Depth is capped to
+# avoid vendored/build .git dirs nested inside repos (e.g. .terraform modules, gatsby caches).
 
-for git_dir in $(find ~/dev -type d -name .git); do
+for git_dir in $(find ~/dev -maxdepth 3 -type d -name .git); do
     repo="$(dirname "$git_dir")"
     cd "$repo" || continue
 
