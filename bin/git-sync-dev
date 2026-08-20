@@ -2,9 +2,16 @@
 # Walk every git repo up to one subfolder under ~/dev (e.g. ~/dev/posthog/posthog.com);
 # if it has no pending changes, switch to main/master and pull. Depth is capped to
 # avoid vendored/build .git dirs nested inside repos (e.g. .terraform modules, gatsby caches).
-# Repos are independent, so updates run in parallel batches with a live status line per repo.
+# Repos are independent, so updates run in parallel batches. Each repo prints one
+# result line as it finishes, plus a running counter pinned to the last line.
 
 PARALLEL=8
+
+if [ -t 1 ]; then
+    GREEN=$'\033[32m'; YELLOW=$'\033[33m'; RED=$'\033[31m'; DIM=$'\033[2m'; RESET=$'\033[0m'
+else
+    GREEN=; YELLOW=; RED=; DIM=; RESET=
+fi
 
 mapfile -t repos < <(find ~/dev -maxdepth 3 -type d -name .git | sed 's:/\.git$::' | sort)
 n=${#repos[@]}
@@ -13,19 +20,17 @@ if [ "$n" -eq 0 ]; then
     exit 0
 fi
 
-statusdir=$(mktemp -d)
-trap 'rm -rf "$statusdir"' EXIT
-for i in "${!repos[@]}"; do
-    echo "pending" > "$statusdir/$i"
-done
+resultsdir=$(mktemp -d)
+trap 'rm -rf "$resultsdir"' EXIT
 
 sync_repo() {
-    local idx="$1" repo="$2"
-    echo "syncing" > "$statusdir/$idx"
-    cd "$repo" || { echo "error (cd failed)" > "$statusdir/$idx"; return; }
+    local idx="$1" repo="$2" name
+    name="${repo#"$HOME"/dev/}"
+
+    cd "$repo" || { printf '%s❌ %s: cd failed%s\n' "$RED" "$name" "$RESET" > "$resultsdir/$idx"; return; }
 
     if [ -n "$(git status --porcelain)" ]; then
-        echo "skipped (uncommitted changes)" > "$statusdir/$idx"
+        printf '%s⏭️  %s: skipped (uncommitted changes)%s\n' "$YELLOW" "$name" "$RESET" > "$resultsdir/$idx"
         return
     fi
 
@@ -40,30 +45,22 @@ sync_repo() {
     fi
 
     if git checkout -q "$branch" 2>/dev/null && git pull -q 2>/dev/null; then
-        echo "updated ($branch)" > "$statusdir/$idx"
+        printf '%s✅ %s: updated (%s)%s\n' "$GREEN" "$name" "$branch" "$RESET" > "$resultsdir/$idx"
     else
-        echo "failed ($branch)" > "$statusdir/$idx"
+        printf '%s❌ %s: failed (%s)%s\n' "$RED" "$name" "$branch" "$RESET" > "$resultsdir/$idx"
     fi
 }
 
-line_for() {
-    printf '%s: %s' "${repos[$1]#"$HOME"/dev/}" "$(cat "$statusdir/$1")"
+done_count=0
+progress() {
+    if [ -t 1 ]; then
+        printf '\r\033[2K%s⏳ %d/%d repos synced%s' "$DIM" "$done_count" "$n" "$RESET"
+    else
+        printf '%d/%d repos synced\n' "$done_count" "$n"
+    fi
 }
 
-render() {
-    tput cuu "$n" 2>/dev/null
-    for i in "${!repos[@]}"; do
-        printf '\033[2K'
-        line_for "$i"
-        printf '\n'
-    done
-}
-
-for i in "${!repos[@]}"; do
-    line_for "$i"
-    printf '\n'
-done
-
+progress
 batch_start=0
 while [ "$batch_start" -lt "$n" ]; do
     batch_end=$((batch_start + PARALLEL))
@@ -74,12 +71,18 @@ while [ "$batch_start" -lt "$n" ]; do
     for ((i = batch_start; i < batch_end; i++)); do
         sync_repo "$i" "${repos[$i]}" &
     done
+    wait
 
-    while [ "$(jobs -r | wc -l)" -gt 0 ]; do
-        render
-        sleep 0.2
+    for ((i = batch_start; i < batch_end; i++)); do
+        if [ -t 1 ]; then
+            printf '\r\033[2K%s' "$(cat "$resultsdir/$i")"
+        else
+            cat "$resultsdir/$i"
+        fi
+        done_count=$((done_count + 1))
+        progress
     done
-    render
 
     batch_start=$batch_end
 done
+printf '\n'
