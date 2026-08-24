@@ -90,3 +90,6 @@ command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 
 # --- Starship prompt ---
 command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
+
+# opencode
+export PATH=/Users/richard/.opencode/bin:$PATH
