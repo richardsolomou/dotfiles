@@ -2,7 +2,6 @@
 name: rs-pr-shepherd
 description: "Shepherd an open PR through the post-open toil: fix failing CI, keep the branch current with its base, turn every new review comment into a fix or a drafted reply, re-run a swarm self-review on substantive pushes, and keep the PR body honest. One invocation is one iteration — run under /loop for hands-off cadence. Use when the user says 'shepherd this PR', 'babysit this PR', or wants CI and review comments handled automatically."
 argument-hint: "[pr-url|pr-number]"
-disable-model-invocation: true
 ---
 
 # PR Shepherd

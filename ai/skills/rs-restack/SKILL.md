@@ -1,7 +1,6 @@
 ---
 name: rs-restack
 description: "Rebase and sync a GitHub Stacked PR stack after a parent branch changes."
-disable-model-invocation: true
 ---
 
 # Restack

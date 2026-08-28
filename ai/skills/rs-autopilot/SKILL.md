@@ -2,7 +2,6 @@
 name: rs-autopilot
 description: "Build a feature end to end: implement it autonomously, converge it through repeated fresh-context adversarial self-reviews, then gate a ship. Use when the user hands over a feature to build start to finish with minimal supervision."
 argument-hint: "<feature description>"
-disable-model-invocation: true
 ---
 
 # Autopilot

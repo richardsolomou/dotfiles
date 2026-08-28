@@ -2,7 +2,6 @@
 name: rs-review-swarm
 description: "Multi-lens review of one PR or a PR set by fanning out independent reviewer subagents, validating every comment against that PR's own changed lines, and synthesising a complete deduped review with the correct voice. Drafts comments by default; auto-posts under a bot marker only in loop mode. Use for swarm reviews, stacked or cross-repo reviews, repeated review passes, or when more coverage than rs-review-pr is needed."
 argument-hint: "[pr-url|pr-number ...] [context:<pr-url> ...] [rounds:<n>] [as:self|teammate|contributor] [post] [+security|-security]"
-disable-model-invocation: true
 ---
 
 # Review Swarm
