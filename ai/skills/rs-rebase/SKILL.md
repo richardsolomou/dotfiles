@@ -1,7 +1,6 @@
 ---
 name: rs-rebase
 description: "Merge the parent branch into the current branch, resolve conflicts, and push."
-disable-model-invocation: true
 ---
 
 # Rebase

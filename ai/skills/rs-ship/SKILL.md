@@ -1,7 +1,6 @@
 ---
 name: rs-ship
 description: "Commit staged/unstaged changes with a semantic commit message, push, and create a PR."
-disable-model-invocation: true
 ---
 
 # Ship
