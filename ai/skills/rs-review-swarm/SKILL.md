@@ -101,20 +101,20 @@ The diff, changed files, changed-line manifest, discussion, and HEAD SHA form th
 
 Prepare context-only PRs separately. Read their descriptions, diffs, and discussion only for contracts or assumptions needed by a target. Do not include their changed files in a target's review packet and do not anchor target comments to context-only changes.
 
-### Step 3: Decide which lenses run, fetch the security lens if needed
+### Step 3: Decide which lenses run, load the security lens if needed
 
 Always run: **correctness**, **tests**, **system-boundaries**, **reuse**, **quality**, **efficiency**.
 
 Conditional:
 
 - **react** — if any changed file is `.tsx`/`.jsx`, under `components/`, or imports `react`.
-- **security-audit** — per the mode table (default on for contributor; on-demand otherwise). When it runs, fetch the reviewer brief from the store rather than reinventing it — this is the shared team auditor, so you inherit its updates:
+- **security-audit** — per the mode table (default on for contributor; on-demand otherwise). Load the installed `security-audit` skill and use it as the reviewer brief. If it is unavailable, fetch it from the PostHog skills store:
 
   ```text
   mcp__posthog__exec command='call skill-get {"skill_name":"security-audit"}'
   ```
 
-  Use the response's `body` as the reviewer brief. If the call errors or times out, log `security-audit: skip (store unavailable)` and continue — never let a missing lens kill the review.
+  Use the response's `body` as the reviewer brief. If neither source is available, log `security-audit: skip (brief unavailable)` and continue. Never let a missing lens stop the review.
 
 ### Step 4: Run independent rounds and lenses
 
