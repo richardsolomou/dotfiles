@@ -57,7 +57,7 @@ Tests passing and review approval aren't "done" for anything production-facing (
 
 ### Technical Writing
 
-Use the `asd-ste100` skill when ambiguous technical prose can cause a mistake. Apply it to instructions, prompts, error messages, tool descriptions, reports, and agent-to-agent messages. Do not apply it to creative or marketing copy. Use `rs-tone` for content that Richard will post under his name.
+Use `asd-ste100` only when the user explicitly requests controlled-language rewriting. Use `rs-tone` for content that Richard will post under his name.
 
 ### Review Readiness
 
@@ -81,7 +81,7 @@ When corrected after a mistake, update this file with a rule that prevents it; r
 - When done, prompt to commit.
 - Run `bin/fmt` if available; revert changes it makes to files we didn't touch.
 
-PostHog-specific workflow (skills store, per-repo rules, production architecture) lives in `~/dev/dotfiles/ai/AGENTS.posthog.md`, symlinked at `~/dev/posthog/AGENTS.md` and `~/dev/posthog/CLAUDE.md` so it loads only under `~/dev/posthog`.
+PostHog-specific workflow, per-repo rules, and production architecture live in `~/dev/dotfiles/ai/AGENTS.posthog.md`, symlinked at `~/dev/posthog/AGENTS.md` and `~/dev/posthog/CLAUDE.md` so it loads only under `~/dev/posthog`.
 
 ## Git
 
@@ -180,7 +180,6 @@ For multi-step work, give one short status update per key moment — something f
 - Default to no comment; comment only what isn't obvious to a skilled reader, and earn each one — when in doubt, leave it out. While editing, remove existing comments that fail this bar.
 - Be terse: the why, the invariant, or the gotcha in one dense sentence; proper grammar, no dramatic or all-caps comments.
 - Describe the code as it is, not the change that produced it — no "now uses X", no references to old behavior, the bug just fixed, or the PR/issue that motivated the change (that belongs in the commit and PR); linking a still-live spec or upstream issue is fine.
-- Full rules, telltale signs, and worked examples live in the `rs-trim-comments` skill — load it when writing comments in earnest or sweeping a diff for comment noise.
 
 ## Test Instructions
 

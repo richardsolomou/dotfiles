@@ -2,15 +2,6 @@
 
 Loaded for any session under `~/dev/posthog`. Universal guidance lives in `~/dev/dotfiles/ai/AGENTS.md`.
 
-## Skills
-
-Every `rs-*` skill is mirrored in the PostHog skills store (the dotfiles copy is the source of truth); that's how skills resolve in PostHog Code cloud tasks and on machines without the dotfiles clone. When a referenced skill isn't installed locally, fetch it from the store instead of skipping the step:
-
-- Skill body: `mcp__posthog__exec command='call skill-get {"skill_name":"<name>"}'` — use the returned `body` as the SKILL.md.
-- Bundled files: `call skill-file-get {"skill_name":"<name>","file_path":"scripts/<file>"}` — write the `content` to a temp dir and run it with the same arguments.
-
-If the store call fails too, say so and degrade gracefully — don't silently drop the step.
-
 ## Project-specific Workflow
 
 ### posthog/posthog

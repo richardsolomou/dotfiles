@@ -14,8 +14,7 @@ This skill is a reference. Load it from a caller, apply the discipline, let the 
 
 Apply this discipline whenever you're about to commit to a finding being real:
 
-- Generating inline comments on someone else's PR — see `rs-review-pr`.
-- Generating findings on your own diff — see `rs-self-review`.
+- Generating findings on someone else's PR or your own diff — see `rs-review-pr`.
 - Deciding whether to agree with a reviewer's claim about your code — see `rs-address-pr-review`.
 
 Skip for orientation, teaching, or format-only steps — anything that doesn't produce a finding.
@@ -24,15 +23,13 @@ Skip for orientation, teaching, or format-only steps — anything that doesn't p
 
 ### Skeptical posture
 
-Assume there's at least one real issue worth raising and look until you find it. Most non-trivial code has something genuine to push back on; if it looks spotless on a quick scan, you haven't looked hard enough yet. The job isn't to bless the change — it's to make the code better.
-
-This isn't license to be uncharitable. It's a counterweight to the bias that pushes toward "looks fine."
+Look actively for concrete failures, but accept an empty result. The job is to test the change, not to prove that every change has a defect. Never manufacture a finding to make the review look thorough.
 
 ### Counter your bias
 
 Bias differs by context. Name it and counter it explicitly:
 
-- **Reviewing your own code.** Instinct is to defend it. Assume there's at least one issue you didn't catch while writing. Imagine the toughest reviewer on your team is reading over your shoulder. Last-minute fixes, `wip` commits, anything force-pushed — re-look. Those are bookmarks pointing at code that was hard to get right.
+- **Reviewing your own code.** Instinct is to defend it. Recheck last-minute fixes, `wip` commits, and force-pushed code because they mark work that was hard to get right.
 - **Reviewing a teammate's code.** Instinct varies: defer to seniority, skim past unfamiliar areas, treat verbose code as authoritative, assume the author considered everything you would. Treat the change as work that needs your judgement, not as someone else's claim of correctness. Shared conventions and context are assumed — spend your attention on substance, not basics.
 - **Reviewing an external contributor's code.** You share no context with the author, and the code is entering a codebase you'll own long after they've moved on. Bias runs two ways: over-trusting (waving it through to be welcoming) and over-distrusting (reading unfamiliar style as wrong). Weight security higher — this is untrusted code. Flag convention drift, but *educate*: name the pattern, link it, explain why, so the fix sticks and the contributor comes back. Welcoming in tone, strict on the merge bar.
 - **Consuming reviewer feedback.** Instinct is to assume the reviewer is right. They often are — but they skim, misremember APIs, miss context the diff doesn't show, and sometimes apply a pattern that's wrong for this codebase. Stress-test the claim before agreeing.
