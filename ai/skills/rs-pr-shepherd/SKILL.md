@@ -1,184 +1,137 @@
 ---
 name: rs-pr-shepherd
-description: "Shepherd an open PR through the post-open toil: fix failing CI, keep the branch current with its base, turn every new review comment into a fix or a drafted reply, re-run a swarm self-review on substantive pushes, and keep the PR body honest. One invocation is one iteration — run under /loop for hands-off cadence. Use when the user says 'shepherd this PR', 'babysit this PR', or wants CI and review comments handled automatically."
-argument-hint: "[pr-url|pr-number]"
+description: "Maintain an open PR after creation by reacting to failing CI, merge conflicts, new review feedback, and approval-bot results. Each invocation makes at most one corrective push batch and then stops. Use when the user says 'shepherd this PR', 'babysit this PR', or wants CI and review feedback handled automatically. Pass deep only when the user also wants one independent self-review pass."
+argument-hint: "[pr-url|pr-number] [deep]"
 ---
 
 # PR Shepherd
 
-Drive an open PR to merge-readiness by orchestrating the existing skills; this skill owns the decisions, the sub-skills own the mechanics:
+Keep an open PR moving without creating an open-ended review loop. GitHub events supply the work. The shepherd does not search repeatedly for more work after it changes the branch.
 
-- **CI** — inspect failing checks, fix real failures, re-run flaky ones (handled inline; there is no sub-skill for this).
-- **`rs-rebase` / `rs-resolve-conflicts` / `rs-restack`** — branch currency when the base has moved and it matters.
-- **`rs-address-pr-review`** — every review comment becomes a prompt: apply clear fixes, draft replies, defer judgement calls.
-- **`rs-review-swarm`** (self mode) — re-review your own substantive pushes so quality converges across iterations.
-- **`rs-update-pr`** — refresh the title/body when the pushed commits changed what the PR claims to do.
-- **stamphog** (PostHog/posthog only) — keep the PR Approval Agent's label on the current SHA and report its verdict.
+One invocation handles the current actionable events, makes at most one corrective push batch, and stops. An outer `/loop` can invoke it again to observe later CI or reviewer activity. The skill never sleeps, polls after a mutation, or invokes itself.
 
-**One invocation = one iteration.** The skill never sleeps or self-loops — it does one pass and hands back. For hands-off cadence run it under `/loop` (e.g. `/loop 10m /rs-pr-shepherd <pr>`); the outer loop provides the rounds, and fixes pushed in one iteration are re-reviewed in the next.
+## Boundaries
 
-## Hard rules
+- Make at most one corrective push batch per invocation. Batch CI fixes, review fixes, and conflict resolution before that push.
+- Do not self-review by default. When the user passes `deep`, run `rs-review-pr` once in self mode with one second opinion.
+- In `deep` mode, review only the HEAD that existed at invocation start. Never review the commit that fixes that review's findings.
+- Never post a PR comment, reply, or review. Draft necessary replies for the user. Do not resolve review threads.
+- For a draft PR, handle only failed CI and merge conflicts. Do not process review feedback, run `deep`, refresh the body, submit Stamphog, or mark the PR ready.
+- Re-run an infrastructure failure at most once for a given workflow run and HEAD.
+- Stop when progress requires product judgement, credentials, approval, or missing external context. Do not revisit the item until its GitHub event changes.
+- Do not update the PR body for a fix that the current body already describes. Use `rs-update-pr` only when the PR's scope or claims changed.
 
-These override anything a sub-skill's own flow would do:
+## Event cursor
 
-- **Never post a PR comment, reply, or review.** Full stop, not even with approval — code fixes are pushed as commits (that's fine), but anything conversational is drafted and accumulated in `drafted_replies` for the user to copy and post themselves. This is a standing CLAUDE.md rule — the shepherd runs unattended, so there is no "ask first" escape hatch: draft, carry, surface, never post.
-- **New commit per round, never amend.** Reviewers must see what changed between rounds.
-- **Never mark a draft PR ready.** Shepherd it (CI, currency, swarm) but skip the review-comment and body-refresh steps and note the draft state in the summary — readiness is the user's call.
-- **PR body refreshes are automatic** — `rs-update-pr` is not a review comment; run it without asking when warranted.
+GitHub is the source of truth. Carry only a compact event cursor between invocations:
 
-## Resolving sub-skills
+- `head_sha` — the final known remote HEAD.
+- `checks` — sorted required-check names and states.
+- `thread_heads` — each unresolved thread ID mapped to its latest comment ID.
+- `handled_events` — event IDs already handled, mapped to their outcomes.
+- `rerun_runs` — workflow run IDs already re-run at a given HEAD.
+- `deep_reviewed_sha` — the SHA reviewed in `deep` mode, or `null`.
+- `shepherd_pushed_sha` — the last SHA pushed by the shepherd, or `null`.
+- `stamphog_sha` — the SHA submitted to Stamphog, or `null`.
 
-Resolve each sub-skill local-first, then from the skills store — the same pattern `rs-review-swarm` uses for `security-audit`. Every `rs-*` skill is mirrored in the store (the dotfiles copy is the source of truth), so the shepherd works on machines without the dotfiles clone:
+Use `head_sha`, `checks`, `thread_heads`, mergeability, and draft state as the actionable fingerprint. Do not use the PR's `updatedAt`: label changes, body edits, and unrelated comments change it without creating shepherd work.
 
-1. **Local:** if `~/.claude/skills/<name>/SKILL.md` exists, use it — read the file when the sub-skill is loaded as a brief or followed inline, or `Skill("<name>")` for the model-invocable ones (`rs-review-swarm`, `rs-address-pr-review`, `rs-resolve-conflicts`).
-2. **Store fallback:** otherwise fetch the body with `mcp__posthog__exec command='call skill-get {"skill_name":"<name>"}'` and use it the same way. If the store call fails too, apply Graceful degradation for that step.
+Give each external event a stable ID: `thread:<thread-id>:<latest-comment-id>`, `check:<run-id>:<attempt>`, or `conflict:<head-sha>`. An event is new when its ID is absent from `handled_events`. Replace obsolete event IDs when a thread advances, a check starts another attempt, a conflict changes SHA, or a thread resolves. This keeps the cursor bounded.
 
-## Narration
+Ignore review threads whose latest comment is by the current GitHub user. Add their event IDs to `handled_events` without classification. A later reviewer reply has a new comment ID and becomes actionable.
 
-Emit a one-line, present-tense narration before every step so the user can follow without reading tool output. Format: `[shepherd] <step> — <what and why>`. A silent 30-second gap is the failure mode.
+## Workflow
 
-```text
-[shepherd] step 2 — 2 checks failing, reading logs for lint
-[shepherd] step 3 — 3 new review comments, dispatching rs-address-pr-review
-[shepherd] iter done — handing back; /loop drives the next pass
-```
+### 1. Take one snapshot
 
-## State between invocations
+Resolve the supplied PR, or use the current branch's PR. Fetch the following in at most three GitHub reads, combining fields where practical:
 
-GitHub is the source of truth; the loop is restartable from nothing. State is carried only via the printed state line (re-supplied through `$ARGUMENTS` or visible in the conversation when iterations run back-to-back):
+- PR number, URL, state, draft state, base, HEAD, mergeability, title, body, review decision, and latest reviews.
+- Required check names, states, links, and workflow run IDs.
+- Current GitHub login and unresolved review threads with thread ID, latest comment ID, author, body, path, line, and outdated state.
 
-- `swarm_marker_sha` — HEAD the last time the swarm ran. `null` initially.
-- `deferred_threads` — review-thread IDs already surfaced as needing the user's judgement; skipped on later iterations to avoid nagging.
-- `drafted_replies` — count of reply drafts awaiting approval (the drafts themselves live in the conversation; re-print the pending ones each iteration until the user acts).
-- `flaky_rerun_sha` — HEAD at which a failed-check re-run was already tried, so a genuinely broken check isn't re-run forever.
-- `stamphog_applied_for_sha` — HEAD at which the `stamphog` label was last applied (PostHog/posthog only). `null` initially.
-- `last_updated_at` — the PR's `updatedAt` observed at the end of the previous iteration.
+Stop if the PR is merged or closed. Stop if no PR exists. Do not check out the branch yet.
 
-## Workflow — one iteration
+Compare the snapshot with the carried cursor. Actionable work is one or more of:
 
-### Step 1: Resolve the PR and fast-path check
+- A merge conflict with a new event ID.
+- A failed required check with a new event ID.
+- A review thread with a new event ID.
+- A requested `deep` review that has not run for the invocation-start HEAD and whose HEAD differs from `shepherd_pushed_sha`.
+- A Stamphog submission that is due under step 4.
 
-If `$ARGUMENTS` has a PR number or URL, use it; otherwise the current branch's PR. Resolve everything in one call:
+If none applies, print one status line and the updated cursor, then stop. Pending checks are a wait condition, not work to poll within the invocation.
 
-```bash
-gh pr view <ref> --json number,url,baseRefName,headRefOid,state,isDraft,mergeable,updatedAt \
-  --jq '{number, url, base: .baseRefName, head_sha: .headRefOid, state, isDraft, mergeable, updatedAt}'
-```
+### 2. Classify all current work
 
-Parse owner/repo from `url`. If state is `MERGED` or `CLOSED`, terminate with a final summary. If no PR exists for the current branch, say so and stop — opening a PR is `rs-ship`'s job, on the user's initiative, not the shepherd's.
+Read only the evidence needed for actionable items.
 
-**Fast path:** on a re-invocation, if `head_sha` and `updatedAt` both match the carried state and CI is not failing, nothing happened — print the state line and exit without dispatching anything. (`updatedAt` moves on any commit, comment, review, or label event; CI-only transitions may not move it, which is why the CI check is part of the gate.)
+For each new failed-check event, read its failed log once. Classify it as a reproducible code failure, an infrastructure failure, or a human dependency. Reproduce code failures locally when cheap. Re-run an infrastructure failure only if `rerun_runs` does not contain its run ID at the current HEAD. A rerun creates another check attempt and therefore another event ID. Defer human dependencies.
 
-Ensure the working tree is on the PR head before anything edits files: `gh pr checkout <n>` unless already there, and abort the iteration if `git status --porcelain` shows unrelated local changes — never push someone's half-finished work.
+For each new review thread, read the surrounding function, callers, and relevant type definitions. Then choose one outcome:
 
-### Step 2: CI and branch currency
+- `fix` — the requested change is unambiguous and correct.
+- `different-fix` — the concern is correct, but another implementation better preserves the code's invariants.
+- `draft-reply` — no code change is appropriate.
+- `defer` — two materially different choices remain after reading the available context.
 
-```bash
-gh pr checks <n> --json name,state,link,workflow
-```
+Apply the adversarial verification rules from `rs-adversarial-review` before accepting a reviewer's claim. Do not load the interactive teaching workflow from `rs-address-pr-review`. The shepherd needs classification, not a walkthrough. Draft reply text for `different-fix`, `draft-reply`, and any deferred item that needs a reviewer response, but never post it.
 
-For each failing check, in order of likely payoff:
+Record `draft-reply` and `defer` events in `handled_events` immediately. After a rerun starts, record its event and add its run ID and HEAD to `rerun_runs`. Record events that require code or history changes only after the corrective push succeeds. A failed push must leave those events actionable for the next invocation.
 
-1. **Read the failure** — `gh run view <run-id> --log-failed` (find the run id via the check's `link`). Classify: real failure (test, lint, types, build) vs infrastructure flake (timeout, runner death, 5xx from a registry).
-2. **Real failure** — reproduce locally when cheap (the repo's own test/lint command for the failing target), fix it, and commit (`fix: <what>`, new commit). Batch all CI fixes into one commit per iteration; push once at the end of this step.
-3. **Flake** — `gh run rerun <run-id> --failed`, once per HEAD: if `flaky_rerun_sha` already equals the current HEAD, don't re-run again — report the check as persistently failing and defer to the user.
-4. **Needs a human** (a secret is missing, a required approval, an infra change) — defer: one line in the summary, no thrash.
+If `deep` was requested, run `rs-review-pr <pr> as:self second-opinion` against the invocation-start HEAD. Apply only verified blockers. Report suggestions without changing code for them. Set `deep_reviewed_sha` to the reviewed SHA even when blockers produce a new commit.
 
-**Branch currency** — act only when it matters; don't churn merge commits every iteration:
+### 3. Make one correction batch
 
-- `mergeable == CONFLICTING` → resolve `rs-rebase` and follow it. If conflict resolution hits a genuine judgement call (both sides changed behaviour and the right merge isn't derivable), abort the merge cleanly, defer with the file list, and skip to Step 3.
-- CI failing *because* the branch is stale (a required "branch up to date" check, or failures that don't reproduce on the merged tree) → same.
-- Otherwise leave the branch alone.
-- If the branch belongs to a GitHub Stack, follow `rs-restack` after any push so every layer and the remote Stack object stay coherent.
+If the batch changes files or history, check out the PR head and stop if the working tree contains unrelated changes. Never stash or discard the user's work.
 
-### Step 3: Review comments — every comment becomes a prompt
+For a plain PR, fetch and merge its base branch without pushing. For a GitHub Stack, use `rs-restack` once. Resolve conflicts with `rs-resolve-conflicts`. If conflict resolution needs judgement, abort it cleanly, record the conflict event as deferred, and stop changing history.
 
-Skip if `isDraft`. Fetch the review threads and keep only actionable ones — unresolved, not authored by you after the reviewer's last word, and not in `deferred_threads`:
+Apply all unambiguous CI, review, and deep-review fixes. Run the narrow tests, formatter, and linter that cover the changed areas. Create one new fix commit when file edits exist. Never amend. Push the target branch once after the full batch passes local verification. Set `shepherd_pushed_sha` to the pushed SHA.
 
-```bash
-gh api graphql -f query='query($owner:String!,$repo:String!,$n:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$n){reviewThreads(first:100){nodes{id isResolved isOutdated path line comments(first:20){nodes{author{login} body createdAt}}}}}}}' -f owner=<owner> -f repo=<repo> -F n=<pr>
-```
+If the PR belongs to a GitHub Stack and `rs-restack` has not run in this invocation, run it once after the target push. A required restack belongs to the same corrective push batch and can update dependent branches. Do not perform another target-branch correction in this invocation.
 
-If any remain, dispatch **`rs-address-pr-review`** as a `model: "sonnet"` Agent subagent by load-then-spawn: resolve its body, pass it plus this override brief and the thread list:
+If the push fails, stop and report the error. Do not retry the push, update the PR body, or claim that a review fix is live.
 
-> Sub-step, not standalone. Skip the interactive walkthrough and the teaching layer — classify and act. For each thread: if the fix is unambiguous (the reviewer named the change, or there is exactly one reasonable reading), apply it to the working tree; if it needs the author's judgement (design pushback, scope questions, trade-offs), mark it deferred with a one-line reason; if it deserves a reply rather than a code change, draft the reply text but NEVER post it. Never call AskUserQuestion. Return: files changed, per-thread outcome (fixed / deferred+reason / reply-drafted+text), nothing else.
+Do not wait for new CI after a push. The next invocation observes it. If the pushed changes alter the PR's scope or claims, use `rs-update-pr` once against the complete PR diff. Otherwise leave the body alone.
 
-Commit the applied fixes as one commit (`fix: address review comments`), push. Add deferred threads to `deferred_threads`; add drafted replies to `drafted_replies` and print them in the summary, each in a fenced code block ready to paste.
+### 4. Handle Stamphog only when idle
 
-### Step 4: Swarm self-review on substantive pushes
+This step applies only to `PostHog/posthog`, and never to drafts.
 
-Run when `swarm_marker_sha` is `null`, or the diff `swarm_marker_sha..HEAD` touches at least one non-doc file (something other than `*.md`, `*.txt`, or pure whitespace). Otherwise log `swarm: skip (no substantive changes since <sha>)`.
+Submit the current HEAD to Stamphog only when this invocation made no push, required CI is green, no new review thread remains unprocessed, no human decision is pending, and `stamphog_sha` differs from HEAD. Confirm that the remote HEAD still matches the snapshot, apply the label, set `stamphog_sha`, and stop. Do not poll for the verdict. A later invocation reads the resulting review or threads.
 
-Invoke `Skill("rs-review-swarm", args: "<pr> as:self")` **in the main loop** — it spawns its own reviewer agents, and nesting agent spawns inside a dispatched subagent is the thing to avoid. Then, instead of its interactive offer-to-apply:
+Treat the approval verdict as status. Actionable feedback comes through review threads and returns to step 2.
 
-- **Blockers** — apply the fixes yourself, commit (`fix: address self-review findings`), push. HEAD moves; the next iteration's swarm gate sees the fixes.
-- **Suggestions** — list them in the summary; don't act unless trivial and unambiguous.
+### 5. Report and stop
 
-Set `swarm_marker_sha` to the HEAD the swarm reviewed (its Step 1 records it). One swarm pass per iteration — convergence comes from the outer `/loop`, not an inner round-loop.
+Emit commentary only for meaningful transitions: the actionable snapshot, the correction batch, and the final result. Do not narrate every command.
 
-### Step 5: PR body freshness
-
-If this iteration pushed commits, compare the PR's title/body against `git diff <base>...HEAD` per the standing CLAUDE.md rule; when the net state no longer matches what the PR claims, resolve `rs-update-pr` and follow it against the entire PR diff. Skip if `isDraft` or nothing was pushed.
-
-### Step 6: Stamphog (PostHog/posthog only)
-
-`stamphog` is PostHog/posthog's PR Approval Agent; re-applying its label on each new SHA is what triggers a fresh review, so the shepherd just keeps the label current and reports the verdict. Skip this step entirely when the repo isn't `PostHog/posthog`, and when `isDraft` — stamphog silently skips drafts, and the shepherd never marks a PR ready.
-
-Apply when `stamphog_applied_for_sha` differs from the current HEAD. Guard against an out-of-band push first:
-
-```bash
-gh pr view <n> --json headRefOid -q .headRefOid
-```
-
-If HEAD moved since your last push, skip and let the next iteration re-baseline. Otherwise:
-
-```bash
-gh pr edit <n> --add-label stamphog
-```
-
-Set `stamphog_applied_for_sha` to the labeled SHA. Then read the verdict (informational — it never gates the loop, and the actionable review *threads* were already handled in Step 3):
-
-```bash
-gh pr view <n> --json reviewDecision,latestReviews \
-  --jq '{reviewDecision, reviews: [.latestReviews[] | {author: .author.login, state, body: .body[:400]}]}'
-```
-
-Report approved / changes requested / dismissed with a one-line reason from the review body when present.
-
-### Step 7: Summary and hand-back
-
-Print one status line, then the pending human-input items, then the state line:
+Print one compact status line:
 
 ```text
-[shepherd] iter done — sha=<short> ci=<pass=N fail=N pending=N> currency=<clean|merged-base|conflict-deferred> comments=<fixed=N deferred=N replies-drafted=N> swarm=<ran: B blockers fixed, S suggestions|skip> body=<refreshed|current> stamphog=<applied|current|skipped|n/a> verdict=<approved|changes|pending|n/a>
+[shepherd] done — sha=<short> ci=<green|pending|failed|deferred> conflict=<none|resolved|deferred> threads=<fixed=N drafted=N deferred=N> deep=<not-requested|reviewed|current> push=<sha|none> stamphog=<submitted|current|waiting|n/a>
 ```
 
-- Drafted replies awaiting approval: each as `file:line` + the draft in a fenced block (re-print unactioned ones from previous iterations too).
-- Deferred threads and deferred CI/conflict items: `file:line` or check name + one-line reason.
+Print only reply drafts and deferred items created or changed in this invocation. Put each reply draft in a fenced code block. Do not repeat unchanged drafts on every loop pass.
+
+Then print the cursor in one machine-readable line:
 
 ```text
-[shepherd] state — swarm_marker_sha=<sha|null> deferred_threads=[...] drafted_replies=<n> flaky_rerun_sha=<sha|null> stamphog_applied_for_sha=<sha|null> last_updated_at=<iso8601>
+[shepherd] cursor — {"head_sha":"...","checks":{...},"thread_heads":{...},"handled_events":{...},"rerun_runs":{...},"deep_reviewed_sha":null,"shepherd_pushed_sha":null,"stamphog_sha":null}
 ```
 
-Set `last_updated_at` from a final `gh pr view --json updatedAt` after all pushes, so the next fast-path compares against a post-action baseline. Hand back — `/loop` or the user drives the next iteration.
+## Stop conditions
 
-## Terminal conditions
+- `ready` — required CI is green, the branch is mergeable, and no new review feedback remains.
+- `waiting` — CI, Stamphog, or a reviewer must produce a new event.
+- `needs-user` — a deferred decision or external dependency requires the user. Repeated invocations with the same event cursor must exit immediately.
+- `finished` — the PR is merged or closed. Tell the outer loop to stop.
 
-Stop cleanly (tell the outer loop to stop too) when:
-
-- the PR is `MERGED` or `CLOSED`;
-- everything actionable is done and only deferred items remain — CI green or deferred, no new comments, swarm converged (last run found nothing), body current. The fast path short-circuits this on re-invocation, but say it explicitly once so the user knows the shepherd is idle by success, not by being stuck;
-- the user interrupts.
-
-CI failures, conflicts needing judgement, and deferred threads are **not** terminal — they're reported and the loop keeps watching for the user's input or new events.
-
-## Model economy
-
-Launch the loop session on a cheaper model (`/model sonnet` before `/loop … /rs-pr-shepherd`): the orchestration and CI mechanics don't need deep reasoning. The parts that do are pinned regardless of session model — `rs-review-swarm` pins its reviewers to `opus`, and the `rs-address-pr-review` runner is dispatched at `sonnet` explicitly.
+Suggestions from the optional deep review do not prevent `ready`. A pushed correction always ends the invocation, even when more CI or review work may arrive later.
 
 ## Graceful degradation
 
-- A sub-skill resolves neither locally nor from the store → warn, skip that step, continue the iteration (a missing swarm never blocks a CI fix).
-- `Agent` can't be spawned → run the `rs-address-pr-review` body inline in the main loop; you lose the model pin, not the function.
-- `gh` rate-limited or a call fails → retry once, then defer that step to the next iteration rather than failing the whole pass.
-- Working tree dirty with unrelated changes → abort the iteration with a clear message; never stash or push around the user's work.
+- If a required helper skill is unavailable, perform safe, obvious work inline. Skip optional deep review if its skill is unavailable.
+- If a GitHub read fails, retry it once. If it fails again, stop this invocation.
+- If the working tree is dirty with unrelated changes, stop before checkout or mutation.

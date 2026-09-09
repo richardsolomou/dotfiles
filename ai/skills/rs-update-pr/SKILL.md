@@ -7,7 +7,7 @@ description: "Update a pull request's title and description based on the actual 
 
 Update the current branch's PR title and description to reflect the actual changes.
 
-This skill is also the **single source of truth for how to write a PR title and body** — the title rules, the description structure, the length guidance, and the voice. Other skills that push code (`rs-ship`, `rs-address-pr-review`, `rs-autopilot`, `rs-rebase`, `rs-restack`) apply this skill as a sub-step instead of restating its rules. Per CLAUDE.md, a PR's title and body must always reflect the current diff, so any push to a branch with an open PR ends with a refresh through this skill — automatically, without asking.
+This skill is also the **single source of truth for how to write a PR title and body** — the title rules, the description structure, the length guidance, and the voice. Other skills that push code (`rs-ship`, `rs-address-pr-review`, `rs-pr-shepherd`, `rs-restack`) apply this skill as a sub-step instead of restating its rules. Per CLAUDE.md, a PR's title and body must always reflect the current diff, so any push to a branch with an open PR ends with a refresh through this skill — automatically, without asking.
 
 ## Workflow
 
