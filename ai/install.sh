@@ -332,16 +332,28 @@ if wants pi; then
     "openai-codex/*",
     "posthog-gateway-anthropic/*",
     "posthog-gateway-openai/**"
+  ],
+  "packages": [
+    "npm:pi-mcp-adapter",
+    "npm:pi-subagents",
+    "npm:pi-agent-browser-native",
+    "npm:pi-web-access"
   ]
 }
 EOF
     )
 
+    # pi installs anything in `packages` that is missing on its next start, so
+    # listing them is enough. They cover what pi has no built-in answer for:
+    # MCP (which also picks up the servers registered above for Claude and
+    # Codex, browser control among them), subagents, and web search.
+
     merge_json_settings "$HOME/.pi/agent/settings.json" "$PI_CYCLING_CONFIG" "pi model cycling"
     case $? in
-        0) success "Configured pi Ctrl+P model cycling list" ;;
-        2) success "pi model cycling already configured" ;;
+        0) success "Configured pi model cycling and packages" ;;
+        2) success "pi model cycling and packages already configured" ;;
     esac
+
 fi
 
 echo ""
