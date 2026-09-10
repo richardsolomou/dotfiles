@@ -96,6 +96,26 @@ function resolveGatewayModel(
   return undefined;
 }
 
+// A routing switch has to be visible wherever pi is being driven from. notify()
+// only reaches TUI and RPC sessions, so print/JSON runs under an orchestrator
+// would otherwise swap models in complete silence: stderr puts it in the host's
+// logs, and the session entry keeps a machine-readable record either way.
+function report(
+  pi: ExtensionAPI,
+  ctx: { hasUI?: boolean; ui?: { notify: (message: string, level: string) => void } },
+  level: "info" | "warning" | "error",
+  message: string,
+  data: Record<string, unknown>,
+) {
+  if (ctx.hasUI && ctx.ui) ctx.ui.notify(message, level);
+  else console.error(`[gateway-fallback] ${message}`);
+  try {
+    pi.appendEntry("gateway-fallback", { level, message, at: Date.now(), ...data });
+  } catch {
+    // Session may not be writable yet; the log line above still stands.
+  }
+}
+
 function extractText(content: unknown): string | undefined {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
@@ -123,12 +143,13 @@ export default function (pi: ExtensionAPI) {
         const target = resolveGatewayModel(ctx.modelRegistry, pair, model.id);
         if (target && (await pi.setModel(target.model))) {
           const minsLeft = Math.ceil((s.backoffMs - (now - s.lastFailureAt)) / 60000);
-          if (ctx.hasUI) {
-            ctx.ui.notify(
-              `${model.provider} is cooling down (~${minsLeft}m left) — using ${target.id} on PostHog AI Gateway`,
-              "info",
-            );
-          }
+          report(
+            pi,
+            ctx,
+            "info",
+            `${model.provider} is cooling down (~${minsLeft}m left) — using ${target.id} on PostHog AI Gateway`,
+            { event: "preempted", provider: model.provider, model: target.id, minsLeft },
+          );
         }
       }
       return;
@@ -140,9 +161,11 @@ export default function (pi: ExtensionAPI) {
     if (s.lastFailureAt && s.modelId && now - s.lastFailureAt >= s.backoffMs) {
       const target = ctx.modelRegistry.find(subscriptionProvider, s.modelId);
       if (target && (await pi.setModel(target))) {
-        if (ctx.hasUI) {
-          ctx.ui.notify(`Cooldown elapsed — retrying ${subscriptionProvider} subscription`, "info");
-        }
+        report(pi, ctx, "info", `Cooldown elapsed — retrying ${subscriptionProvider} subscription`, {
+          event: "retrying-subscription",
+          provider: subscriptionProvider,
+          model: s.modelId,
+        });
       }
     }
   });
@@ -157,7 +180,10 @@ export default function (pi: ExtensionAPI) {
       if (state[provider]?.lastFailureAt) {
         state[provider] = { lastFailureAt: null, backoffMs: INITIAL_BACKOFF_MS, modelId: null };
         saveState(state);
-        if (ctx.hasUI) ctx.ui.notify(`${provider} subscription recovered — staying on it`, "info");
+        report(pi, ctx, "info", `${provider} subscription recovered — staying on it`, {
+          event: "recovered",
+          provider,
+        });
       }
       return;
     }
@@ -173,23 +199,27 @@ export default function (pi: ExtensionAPI) {
 
     const target = resolveGatewayModel(ctx.modelRegistry, pair, event.message.model ?? null);
     if (!target) {
-      if (ctx.hasUI) {
-        ctx.ui.notify(`${provider} errored and no PostHog gateway model is configured to fall back to`, "error");
-      }
+      report(pi, ctx, "error", `${provider} errored and no PostHog gateway model is available to fall back to`, {
+        event: "no-target",
+        provider,
+      });
       return;
     }
     if (!(await pi.setModel(target.model))) {
-      if (ctx.hasUI) {
-        ctx.ui.notify(`${provider} errored; PostHog gateway fallback has no API key configured`, "error");
-      }
+      report(pi, ctx, "error", `${provider} errored; PostHog gateway fallback has no credential configured`, {
+        event: "no-credential",
+        provider,
+        model: target.id,
+      });
       return;
     }
-    if (ctx.hasUI) {
-      ctx.ui.notify(
-        `${provider} errored (${event.message.errorMessage ?? "unknown error"}) — falling back to ${target.id} on PostHog AI Gateway`,
-        "warning",
-      );
-    }
+    report(
+      pi,
+      ctx,
+      "warning",
+      `${provider} errored (${event.message.errorMessage ?? "unknown error"}) — falling back to ${target.id} on PostHog AI Gateway`,
+      { event: "fell-back", provider, model: target.id, error: event.message.errorMessage },
+    );
 
     const branch = ctx.sessionManager.getBranch();
     for (let i = branch.length - 1; i >= 0; i--) {
