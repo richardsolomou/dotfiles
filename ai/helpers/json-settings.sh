@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # JSON Settings Merger Helper
 # Provides functions for safely merging JSON configurations into settings files
@@ -33,10 +33,13 @@ merge_json_settings() {
         return 1
     fi
     
-    # Ensure settings file exists
+    # Ensure settings file exists. Seed it empty: this helper is used for pi's
+    # settings as well as Claude Code's, and a default model key means nothing
+    # to the other harnesses.
     if [ ! -f "$settings_file" ]; then
-        echo '{"model": "sonnet"}' > "$settings_file"
-        info "Created initial settings.json"
+        mkdir -p "$(dirname "$settings_file")"
+        echo '{}' > "$settings_file"
+        info "Created $(basename "$settings_file")"
     fi
     
     # Merge configuration into existing settings
@@ -114,8 +117,9 @@ set_json_settings() {
     fi
 
     if [ ! -f "$settings_file" ]; then
+        mkdir -p "$(dirname "$settings_file")"
         echo '{}' > "$settings_file"
-        info "Created initial settings.json"
+        info "Created $(basename "$settings_file")"
     fi
 
     if ! jq --argjson new "$json_config" '. + $new' "$settings_file" > "${settings_file}.tmp" 2>/dev/null; then
