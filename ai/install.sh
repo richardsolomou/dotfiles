@@ -318,6 +318,13 @@ if wants pi; then
     done
     success "Linked pi extensions (gateway providers, automatic fallback)"
 
+    # merge_json_settings seeds a missing file with Claude Code's default model
+    # key, which means nothing to pi. Create it empty so that never lands here.
+    if [ ! -f "$HOME/.pi/agent/settings.json" ]; then
+        mkdir -p "$HOME/.pi/agent"
+        echo '{}' > "$HOME/.pi/agent/settings.json"
+    fi
+
     PI_CYCLING_CONFIG=$(cat <<'EOF'
 {
   "enabledModels": [
