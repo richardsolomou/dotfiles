@@ -35,9 +35,12 @@ const STATE_PATH = join(homedir(), ".pi", "agent", "gateway-fallback-state.json"
 const INITIAL_BACKOFF_MS = 5 * 60 * 1000;
 const MAX_BACKOFF_MS = 60 * 60 * 1000;
 
-const FALLBACK_PAIRS: Record<string, { gatewayProvider: string; gatewayModelId: string }> = {
-  anthropic: { gatewayProvider: "posthog-gateway-anthropic", gatewayModelId: "claude-sonnet-4-6" },
-  "openai-codex": { gatewayProvider: "posthog-gateway-openai", gatewayModelId: "gpt-5.4-mini" },
+// The gateway carries the same model ids as the subscriptions, so a fallback
+// keeps the model you were using. `defaultModelId` only covers ids the gateway
+// does not serve under any spelling (e.g. gpt-5.3-codex-spark).
+const FALLBACK_PAIRS: Record<string, { gatewayProvider: string; defaultModelId: string }> = {
+  anthropic: { gatewayProvider: "posthog-gateway-anthropic", defaultModelId: "claude-sonnet-4-6" },
+  "openai-codex": { gatewayProvider: "posthog-gateway-openai", defaultModelId: "gpt-5.6-terra" },
 };
 
 const GATEWAY_TO_SUBSCRIPTION: Record<string, string> = Object.fromEntries(
@@ -73,6 +76,26 @@ function getState(state: State, provider: string): ProviderState {
   return state[provider] ?? { lastFailureAt: null, backoffMs: INITIAL_BACKOFF_MS, modelId: null };
 }
 
+// Prefer the same model on the gateway, then the same model without its date
+// pin (the gateway serves undated ids), then the provider's default.
+function resolveGatewayModel(
+  registry: { find: (provider: string, id: string) => unknown },
+  pair: { gatewayProvider: string; defaultModelId: string },
+  failedModelId: string | null,
+) {
+  const candidates = [
+    failedModelId,
+    failedModelId?.replace(/-\d{8}$/, ""),
+    pair.defaultModelId,
+  ];
+  for (const id of candidates) {
+    if (!id) continue;
+    const model = registry.find(pair.gatewayProvider, id);
+    if (model) return { model, id };
+  }
+  return undefined;
+}
+
 function extractText(content: unknown): string | undefined {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
@@ -97,12 +120,12 @@ export default function (pi: ExtensionAPI) {
     if (pair) {
       const s = getState(state, model.provider);
       if (s.lastFailureAt && now - s.lastFailureAt < s.backoffMs) {
-        const target = ctx.modelRegistry.find(pair.gatewayProvider, pair.gatewayModelId);
-        if (target && (await pi.setModel(target))) {
+        const target = resolveGatewayModel(ctx.modelRegistry, pair, model.id);
+        if (target && (await pi.setModel(target.model))) {
           const minsLeft = Math.ceil((s.backoffMs - (now - s.lastFailureAt)) / 60000);
           if (ctx.hasUI) {
             ctx.ui.notify(
-              `${model.provider} is cooling down (~${minsLeft}m left) — using PostHog AI Gateway`,
+              `${model.provider} is cooling down (~${minsLeft}m left) — using ${target.id} on PostHog AI Gateway`,
               "info",
             );
           }
@@ -148,14 +171,14 @@ export default function (pi: ExtensionAPI) {
     };
     saveState(state);
 
-    const target = ctx.modelRegistry.find(pair.gatewayProvider, pair.gatewayModelId);
+    const target = resolveGatewayModel(ctx.modelRegistry, pair, event.message.model ?? null);
     if (!target) {
       if (ctx.hasUI) {
         ctx.ui.notify(`${provider} errored and no PostHog gateway model is configured to fall back to`, "error");
       }
       return;
     }
-    if (!(await pi.setModel(target))) {
+    if (!(await pi.setModel(target.model))) {
       if (ctx.hasUI) {
         ctx.ui.notify(`${provider} errored; PostHog gateway fallback has no API key configured`, "error");
       }
@@ -163,7 +186,7 @@ export default function (pi: ExtensionAPI) {
     }
     if (ctx.hasUI) {
       ctx.ui.notify(
-        `${provider} errored (${event.message.errorMessage ?? "unknown error"}) — falling back to PostHog AI Gateway`,
+        `${provider} errored (${event.message.errorMessage ?? "unknown error"}) — falling back to ${target.id} on PostHog AI Gateway`,
         "warning",
       );
     }

@@ -1,0 +1,111 @@
+#!/bin/sh
+#
+# Regenerate ai/pi/models.json from the PostHog AI Gateway's live /v1/models
+# catalog, so the declared models, context windows, and prices match what the
+# gateway actually serves rather than a hand-maintained guess.
+#
+# The catalog publishes ids, context windows, prices, and API shapes, but not
+# whether a model reasons, accepts images, or its output ceiling. Where a model
+# id also exists in pi's own provider catalog we reuse those; otherwise we
+# default to the conservative answer, because claiming a capability a model
+# lacks turns into failed requests rather than a cosmetic error.
+#
+# Run after the gateway adds or retires models, then commit the result.
+
+set -eu
+
+GATEWAY="${POSTHOG_GATEWAY_URL:-https://ai-gateway.us.posthog.com}"
+AUTH_FILE="$HOME/.pi/agent/auth.json"
+STORE_FILE="$HOME/.pi/agent/models-store.json"
+OUT="$(cd "$(dirname "$0")" && pwd -P)/models.json"
+
+command -v jq > /dev/null 2>&1 || { echo "jq is required"; exit 1; }
+
+KEY="${POSTHOG_GATEWAY_KEY:-}"
+if [ -z "$KEY" ] && [ -f "$AUTH_FILE" ]; then
+    KEY=$(jq -r '.["posthog-gateway-openai"].key // .["posthog-gateway-anthropic"].key // empty' "$AUTH_FILE")
+fi
+if [ -z "$KEY" ]; then
+    echo "No gateway credential found in $AUTH_FILE (or POSTHOG_GATEWAY_KEY)"
+    exit 1
+fi
+
+CATALOG=$(curl -fsS -m 30 -H "Authorization: Bearer $KEY" "$GATEWAY/v1/models")
+echo "$CATALOG" | jq -e '.data | length > 0' > /dev/null || { echo "Empty catalog from $GATEWAY"; exit 1; }
+
+# pi publishes reasoning/input/maxTokens per model; reuse where the ids line up.
+if [ -f "$STORE_FILE" ]; then
+    TRAITS=$(jq '
+        [ .. | objects | select(has("id") and has("contextWindow"))
+          | {key: .id, value: {
+                reasoning: .reasoning,
+                input: .input,
+                maxTokens: .maxTokens,
+                compat: .compat,
+                thinkingLevelMap: .thinkingLevelMap,
+            }} ]
+        | from_entries' "$STORE_FILE")
+else
+    TRAITS='{}'
+fi
+
+# Chat models only: image and realtime endpoints are not usable as pi models.
+echo "$CATALOG" | jq \
+    --argjson traits "$TRAITS" \
+    --arg gateway "$GATEWAY" '
+    def rate($v): if $v == null then 0 else (($v | tonumber) * 1000000 * 100000 | round / 100000) end;
+
+    # Reasoning families the gateway was observed to accept effort params for:
+    # the GPT-5/6 and o-series lines, plus the open-weight checkpoints. Older
+    # OpenAI lines (gpt-4.1 and down) reject them, so they stay off.
+    def reasons($m): ($m.owned_by == "posthog")
+        or ($m.id | test("^o[0-9]"))
+        or ($m.id | test("^gpt-[56]"));
+
+    def model($m): ($traits[$m.id] // {}) as $t | {
+        id: $m.id,
+        name: ($m.name + " (Gateway)"),
+        reasoning: ($t.reasoning // reasons($m)),
+        input: ($t.input // ["text"]),
+        contextWindow: $m.context_window,
+        cost: {
+            input: rate($m.pricing.prompt),
+            output: rate($m.pricing.completion),
+            cacheRead: rate($m.pricing.cache_read),
+            cacheWrite: rate($m.pricing.cache_write),
+        },
+    }
+    + (if $t.maxTokens then {maxTokens: $t.maxTokens} else {} end)
+    # Quirks pi already knows for these ids — notably forceAdaptiveThinking,
+    # which newer Claude models require and reject requests without.
+    + (if $t.compat then {compat: $t.compat} else {} end)
+    + (if $t.thinkingLevelMap then {thinkingLevelMap: $t.thinkingLevelMap} else {} end);
+
+    [.data[] | select(.id | test("image|realtime") | not)] as $models
+    | {
+        providers: {
+            "posthog-gateway-anthropic": {
+                name: "PostHog AI Gateway (Anthropic)",
+                baseUrl: $gateway,
+                api: "anthropic-messages",
+                models: [$models[] | select(.api_shapes | index("anthropic-messages")) | model(.)],
+            },
+            "posthog-gateway-openai": {
+                name: "PostHog AI Gateway (OpenAI-compatible)",
+                baseUrl: ($gateway + "/v1"),
+                api: "openai-responses",
+                models: [
+                    $models[]
+                    | select(.api_shapes | index("anthropic-messages") | not)
+                    | model(.)
+                      + (if .owned_by == "posthog" then {api: "openai-completions"} else {} end)
+                ],
+            },
+        },
+    }' > "$OUT.tmp"
+
+jq empty "$OUT.tmp"
+mv "$OUT.tmp" "$OUT"
+
+echo "Wrote $OUT"
+jq -r '.providers | to_entries[] | "  \(.key): \(.value.models | length) models"' "$OUT"
