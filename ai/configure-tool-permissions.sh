@@ -1,6 +1,7 @@
 #!/bin/sh
 
-export ZSH="$(cd "$(dirname "$0")/.." && pwd -P)"
+ZSH="$(cd "$(dirname "$0")/.." && pwd -P)"
+export ZSH
 
 # Source helper functions
 . $ZSH/ai/helpers/output.sh
