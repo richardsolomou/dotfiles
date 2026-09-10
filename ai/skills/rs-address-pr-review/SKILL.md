@@ -156,7 +156,7 @@ Per-verdict rules:
 
 | Verdict | Open questions? | File edit | In-thread reply | Resolve thread |
 | --- | --- | --- | --- | --- |
-| Agree | No | Yes | Short "done" reply naming what changed | **Yes** |
+| Agree | No | Yes | Answer the reviewer's question, explain why the resulting behavior is correct, and name what changed | **Yes** |
 | Agree | Yes | Yes | Reply names the change + asks the open question | **No** — leave open for reviewer |
 | Agree with different fix | No | Yes | Reply explains the different approach (use the **Suggested reply** drafted above) | **No** — let reviewer accept on next pass |
 | Agree with different fix | Yes | Yes | Suggested reply + open question | **No** |
@@ -209,7 +209,7 @@ Apply *all* the file edits, then commit and push, then refresh the PR body, and 
       -f body="<reply body>"
     ```
 
-    For "Agree, no open questions" the reply body can be as terse as `Done — <one-liner naming what changed>`. For everything else, use the **Suggested reply** drafted in the walkthrough. The Suggested reply was already written with `rs-tone` register `pr-review` applied; the terse "done" replies should follow the same rules (no severity labels, no sign-offs, lowercase informal voice is fine).
+    For "Agree, no open questions", answer any question the reviewer asked and briefly explain the invariant or failure mode that makes the change correct before naming what changed. Never reply with only `done` or a change summary: that makes the reviewer reconstruct the reasoning they asked for. For everything else, use the **Suggested reply** drafted in the walkthrough. The Suggested reply was already written with `rs-tone` register `pr-review` applied; completion replies should follow the same rules (no severity labels, no sign-offs, lowercase informal voice is fine).
 
 5. **Resolve the thread** (only when the per-verdict rules above say to):
 
