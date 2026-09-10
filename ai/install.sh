@@ -318,6 +318,18 @@ if wants pi; then
     done
     success "Linked pi extensions (gateway providers, automatic fallback)"
 
+    # `imports` lets pi read the MCP servers already registered for Claude and
+    # Codex rather than duplicating them here; the two declared servers are the
+    # ones that need no machine-specific paths or credentials, so a box with
+    # neither of those CLIs still gets memory and browser control. Machines that
+    # had a local mcp.json keep it alongside as mcp.json.local.
+    if [ -e "$HOME/.pi/agent/mcp.json" ] && [ ! -L "$HOME/.pi/agent/mcp.json" ]; then
+        mv "$HOME/.pi/agent/mcp.json" "$HOME/.pi/agent/mcp.json.local"
+        warning "Kept your previous mcp.json as mcp.json.local"
+    fi
+    link "$ZSH/ai/pi/mcp.json" "$HOME/.pi/agent/mcp.json"
+    success "Linked pi MCP config"
+
     # merge_json_settings seeds a missing file with Claude Code's default model
     # key, which means nothing to pi. Create it empty so that never lands here.
     if [ ! -f "$HOME/.pi/agent/settings.json" ]; then
@@ -334,7 +346,7 @@ if wants pi; then
     "posthog-gateway-openai/**"
   ],
   "packages": [
-    "npm:pi-mcp-adapter",
+    "npm:pi-mcp-adapter@2.32.1",
     "npm:pi-subagents",
     "npm:pi-agent-browser-native",
     "npm:pi-web-access"
@@ -347,6 +359,11 @@ EOF
     # listing them is enough. They cover what pi has no built-in answer for:
     # MCP (which also picks up the servers registered above for Claude and
     # Codex, browser control among them), subagents, and web search.
+    #
+    # pi-mcp-adapter is held at 2.32.1: 2.33.0 pins the MCP SDK to commit
+    # tarballs on pkg.pr.new, which npm 12 refuses to fetch (EALLOWREMOTE), and
+    # pi treats a failed package install as fatal, so the agent will not start
+    # at all. Unpin once upstream depends on released versions again.
 
     merge_json_settings "$HOME/.pi/agent/settings.json" "$PI_CYCLING_CONFIG" "pi model cycling"
     case $? in
