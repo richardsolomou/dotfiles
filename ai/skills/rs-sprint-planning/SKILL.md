@@ -241,7 +241,7 @@ If there is no board (Step 5 skipped), draft the plan **only from in-progress wo
 
 **The issue tracker is the board.** With no project board, the team repo's open issues carry the real state — sweep them (bodies AND comments) before finalizing the plan, fanning out parallel subagents batched by theme for a large tracker. Gotcha: `gh issue view` can print nothing in this environment; use `gh api repos/<org>/<repo>/issues/<n>` plus `…/comments`. The sweep finds what PR-reading can't:
 
-- **Decisions already recorded in comments** — don't re-plan a question that's been answered (e.g. a feature decided *against*, a mirror decided as drop); the plan item becomes the follow-through, not the decision.
+- **Decisions already recorded in comments** — don't re-plan a question that's been answered (e.g. a feature decided _against_, a mirror decided as drop); the plan item becomes the follow-through, not the decision.
 - **Launch gates with no covering PR** — tracking issues for a cutover often list blockers nobody has picked up; these are the highest-value plan items.
 - **Items already covered by open PRs** — an issue isn't a plan item if a teammate's open stack resolves it.
 - **Close-candidates** — issues whose work merged; mention as housekeeping, not plan items.
