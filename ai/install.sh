@@ -9,7 +9,7 @@ export ZSH="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-ALL_COMPONENTS="context skills agents mcp hooks permissions preferences"
+ALL_COMPONENTS="context skills agents mcp hooks permissions preferences pi"
 
 # Directories every harness scans for skills. pi also reads ~/.agents/skills,
 # the cross-harness convention.
@@ -35,6 +35,7 @@ show_help() {
     echo "  hooks        Claude Code hooks"
     echo "  permissions  Claude Code tool permissions"
     echo "  preferences  Claude Code editor preferences"
+    echo "  pi           pi model routing: ai/pi/models.json + Ctrl+P cycling list"
     echo ""
     echo "Options:"
     echo "  --uninstall  Remove the symlinks made by context, skills, and agents"
@@ -170,9 +171,18 @@ if [ "$UNINSTALL" = "true" ]; then
         success "Removed agent symlinks"
     fi
 
+    if wants pi; then
+        unlink_managed "$HOME/.pi/agent/models.json"
+        for ext in "$ZSH"/ai/pi/extensions/*.ts; do
+            [ -f "$ext" ] || continue
+            unlink_managed "$HOME/.pi/agent/extensions/$(basename "$ext")"
+        done
+        success "Removed pi model routing and extension symlinks"
+    fi
+
     echo ""
     success "Agent configuration uninstalled"
-    info "Note: MCP servers, hooks, and permissions are not removed by uninstall"
+    info "Note: MCP servers, hooks, permissions, and the pi model cycling list are not removed by uninstall"
     exit 0
 fi
 
@@ -292,6 +302,44 @@ fi
 
 if wants permissions; then
     $ZSH/ai/configure-tool-permissions.sh
+fi
+
+# ai/pi/models.json declares the PostHog AI Gateway as custom providers so
+# subscription usage (Claude Pro/Max, ChatGPT Codex) can fall back to gateway
+# usage-based billing via Ctrl+P model cycling when a subscription cap is hit.
+# The gateway key itself is stored directly in ~/.pi/agent/auth.json (per
+# provider id), not here — that way it resolves the same way regardless of
+# how pi is launched (interactive shell, or a subprocess from an orchestrator
+# that never sources shell rc files, e.g. Superset).
+if wants pi; then
+    info "Configuring pi model routing…"
+
+    link "$ZSH/ai/pi/models.json" "$HOME/.pi/agent/models.json"
+    success "Linked pi custom providers (PostHog AI Gateway)"
+
+    for ext in "$ZSH"/ai/pi/extensions/*.ts; do
+        [ -f "$ext" ] || continue
+        link "$ext" "$HOME/.pi/agent/extensions/$(basename "$ext")"
+    done
+    success "Linked pi extensions (automatic gateway fallback)"
+
+    PI_CYCLING_CONFIG=$(cat <<'EOF'
+{
+  "enabledModels": [
+    "anthropic/*",
+    "openai-codex/*",
+    "posthog-gateway-anthropic/*",
+    "posthog-gateway-openai/**"
+  ]
+}
+EOF
+    )
+
+    merge_json_settings "$HOME/.pi/agent/settings.json" "$PI_CYCLING_CONFIG" "pi model cycling"
+    case $? in
+        0) success "Configured pi Ctrl+P model cycling list" ;;
+        2) success "pi model cycling already configured" ;;
+    esac
 fi
 
 echo ""
