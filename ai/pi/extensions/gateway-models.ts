@@ -18,9 +18,15 @@
 // quirks. Because the gateway serves the same ids as the Claude and Codex
 // subscriptions, pi's own catalogs answer those. That join is what supplies
 // forceAdaptiveThinking, which newer Claude models reject requests without.
+//
+// Those traits come from the catalogs pi ships in the package, overlaid with
+// the locally refreshed copy where one exists. The shipped catalogs are what
+// make this work on a machine with no Claude or Codex login at all: reading
+// only the local cache there would leave every gateway model looking
+// non-reasoning and text-only with a default output ceiling.
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -76,22 +82,68 @@ function perMillion(value: string | undefined): number {
   return Number.isFinite(rate) ? Math.round(rate * 100_000) / 100_000 : 0;
 }
 
-// Traits come from the subscription catalogs; the gateway serves the same ids.
-function subscriptionTraits(): Record<string, Traits> {
+function pick(model: { id?: string } & Traits): Traits {
+  return {
+    reasoning: model.reasoning,
+    input: model.input,
+    maxTokens: model.maxTokens,
+    compat: model.compat,
+    thinkingLevelMap: model.thinkingLevelMap ?? undefined,
+  };
+}
+
+// Catalogs pi ships in its package, keyed by api then model id. Codex is read
+// before openai so the plain OpenAI entry wins on any shared id: the gateway
+// proxies the real OpenAI API, not the ChatGPT backend the Codex entries
+// describe.
+const BUILTIN_CATALOGS = ["openai-codex.json", "openai.json", "anthropic.json"];
+
+// pi-ai cannot be resolved from here: an extension lives outside pi's module
+// tree, and pi-ai's exports map has no require-able main anyway. Walk up from
+// the running CLI instead, resolving the bin symlink first so we start inside
+// the installed package rather than in a bin directory.
+function builtinCatalogDir(): string | undefined {
+  let dir: string;
+  try {
+    dir = dirname(realpathSync(process.argv[1]));
+  } catch {
+    return undefined;
+  }
+  for (let depth = 0; depth < 8; depth++) {
+    const candidate = join(dir, "node_modules", "@earendil-works", "pi-ai", "dist", "providers", "data");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return undefined;
+}
+
+function builtinTraits(): Record<string, Traits> {
   const traits: Record<string, Traits> = {};
+  const dataDir = builtinCatalogDir();
+  if (!dataDir) return traits;
+  for (const file of BUILTIN_CATALOGS) {
+    const catalog = readJson<Record<string, Record<string, { id?: string } & Traits>>>(join(dataDir, file));
+    for (const byId of Object.values(catalog ?? {})) {
+      for (const model of Object.values(byId ?? {})) {
+        if (model?.id) traits[model.id] = pick(model);
+      }
+    }
+  }
+  return traits;
+}
+
+// The gateway serves the same ids as the subscriptions, so pi's own catalogs
+// describe its models. The locally refreshed copy overlays the shipped one.
+function subscriptionTraits(): Record<string, Traits> {
+  const traits = builtinTraits();
   const store = readJson<Record<string, { models?: unknown[] }>>(STORE_PATH) ?? {};
   for (const [providerId, entry] of Object.entries(store)) {
     if (providerId === ANTHROPIC_PROVIDER || providerId === OPENAI_PROVIDER) continue;
     for (const model of entry?.models ?? []) {
       const m = model as { id?: string } & Traits;
-      if (!m?.id || traits[m.id]) continue;
-      traits[m.id] = {
-        reasoning: m.reasoning,
-        input: m.input,
-        maxTokens: m.maxTokens,
-        compat: m.compat,
-        thinkingLevelMap: m.thinkingLevelMap ?? undefined,
-      };
+      if (m?.id) traits[m.id] = pick(m);
     }
   }
   return traits;
