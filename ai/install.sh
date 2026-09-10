@@ -1,10 +1,11 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 # Install the shared agent configuration into every harness in use: Claude Code,
 # Codex, and pi. ai/AGENTS.md and ai/skills are the single source of truth; each
 # harness gets symlinks to them under whatever name it expects.
 
-export ZSH="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
+ZSH="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
+export ZSH
 
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
@@ -176,7 +177,14 @@ if [ "$UNINSTALL" = "true" ]; then
             [ -f "$ext" ] || continue
             unlink_managed "$HOME/.pi/agent/extensions/$(basename "$ext")"
         done
-        success "Removed pi extension symlinks"
+        unlink_managed "$HOME/.pi/agent/mcp.json"
+        # Hand back whatever the install step moved aside, so uninstalling
+        # restores the previous MCP config instead of leaving none.
+        if [ -f "$HOME/.pi/agent/mcp.json.local" ] && [ ! -e "$HOME/.pi/agent/mcp.json" ]; then
+            mv "$HOME/.pi/agent/mcp.json.local" "$HOME/.pi/agent/mcp.json"
+            info "Restored your previous mcp.json"
+        fi
+        success "Removed pi extension and MCP symlinks"
     fi
 
     echo ""
@@ -330,13 +338,6 @@ if wants pi; then
     link "$ZSH/ai/pi/mcp.json" "$HOME/.pi/agent/mcp.json"
     success "Linked pi MCP config"
 
-    # merge_json_settings seeds a missing file with Claude Code's default model
-    # key, which means nothing to pi. Create it empty so that never lands here.
-    if [ ! -f "$HOME/.pi/agent/settings.json" ]; then
-        mkdir -p "$HOME/.pi/agent"
-        echo '{}' > "$HOME/.pi/agent/settings.json"
-    fi
-
     PI_CYCLING_CONFIG=$(cat <<'EOF'
 {
   "enabledModels": [
@@ -363,14 +364,15 @@ EOF
     # pi-mcp-adapter is held at 2.32.1: 2.33.0 pins the MCP SDK to commit
     # tarballs on pkg.pr.new, which npm 12 refuses to fetch (EALLOWREMOTE), and
     # pi treats a failed package install as fatal, so the agent will not start
-    # at all. Unpin once upstream depends on released versions again.
-
-    merge_json_settings "$HOME/.pi/agent/settings.json" "$PI_CYCLING_CONFIG" "pi model cycling"
+    # at all. Tracked in #22.
+    #
+    # Set rather than merged: both keys are owned here, and a union would leave
+    # a renamed model pattern or an old package version behind forever.
+    set_json_settings "$HOME/.pi/agent/settings.json" "$PI_CYCLING_CONFIG" "pi model cycling"
     case $? in
         0) success "Configured pi model cycling and packages" ;;
         2) success "pi model cycling and packages already configured" ;;
     esac
-
 fi
 
 echo ""

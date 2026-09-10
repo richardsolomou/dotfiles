@@ -148,6 +148,19 @@ install_dotfiles
 ln -sfn "$DOTFILES_ROOT/.markdownlint.json" "$HOME/.markdownlint.json"
 success 'linked .markdownlint.json to home directory'
 
+# This repo started from haacked/dotfiles and still has it as `upstream`. gh
+# prefers an upstream as the base for new PRs, so without this a `gh pr create`
+# here targets that repository instead of ours.
+if command -v gh > /dev/null 2>&1 && git -C "$DOTFILES_ROOT" remote get-url upstream > /dev/null 2>&1
+then
+  if gh repo set-default richardsolomou/dotfiles > /dev/null 2>&1
+  then
+    success 'set gh default repo to richardsolomou/dotfiles'
+  else
+    info 'could not set gh default repo (not authenticated?)'
+  fi
+fi
+
 # If we're on a Mac, let's install and setup homebrew.
 if [ "$(uname -s)" == "Darwin" ]
 then
