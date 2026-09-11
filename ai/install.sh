@@ -331,7 +331,12 @@ fi
 #
 # Every environment entry marked `valueRedacted` is filled from the gateway key
 # below; t3code reads those from the secret store rather than the settings file.
-if wants t3code; then
+if wants t3code && ! command -v jq > /dev/null 2>&1; then
+    warning "jq not found - t3code provider configuration skipped"
+    info "Install jq and re-run: $0 t3code"
+fi
+
+if wants t3code && command -v jq > /dev/null 2>&1; then
     info "Configuring t3code gateway providers…"
 
     T3_BASE="${T3_BASE_DIR:-$HOME/.t3}"
@@ -342,9 +347,15 @@ if wants t3code; then
     # $ZSH/.env is the source of truth on each host: gitignored, so the key is
     # never committed, and copied across machines by hand. An already-configured
     # host also re-uses the copy in t3code's own secret store.
+    #
+    # Tolerate what a hand-copied file picks up: surrounding quotes, a trailing
+    # CR from a Windows or web editor, stray whitespace. A key that keeps any of
+    # those reaches the gateway as a 401 that looks like a credential problem.
     GATEWAY_KEY="${POSTHOG_GATEWAY_KEY:-}"
     if [ -z "$GATEWAY_KEY" ] && [ -r "$ZSH/.env" ]; then
-        GATEWAY_KEY=$(sed -n 's/^POSTHOG_GATEWAY_KEY=//p' "$ZSH/.env" | head -1)
+        GATEWAY_KEY=$(sed -n 's/^POSTHOG_GATEWAY_KEY=//p' "$ZSH/.env" | head -1 |
+            tr -d '\r' | sed -e 's/^["'"'"']//' -e 's/["'"'"']$//' -e 's/[[:space:]]*$//')
+        chmod 600 "$ZSH/.env"
     fi
     if [ -z "$GATEWAY_KEY" ]; then
         for secret in "$T3_SECRETS"/provider-env-*.bin; do
@@ -401,6 +412,13 @@ if wants t3code; then
         rm -f "$secret"
         info "Removed the stale gateway key for $instance"
     done
+
+    # A quoted or truncated paste reaches the gateway as a 401 that reads like a
+    # credential problem, so say it here instead.
+    if [ -n "$GATEWAY_KEY" ] && [ "${GATEWAY_KEY#phs_}" = "$GATEWAY_KEY" ]; then
+        warning "POSTHOG_GATEWAY_KEY does not start with phs_ - the gateway wants a personal API key"
+        info "Create one at https://us.posthog.com/settings/user-api-keys"
+    fi
 
     if [ -n "$GATEWAY_KEY" ]; then
         mkdir -p "$T3_SECRETS"
