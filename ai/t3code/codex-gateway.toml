@@ -1,0 +1,6 @@
+
+[model_providers.posthog]
+name = "PostHog AI Gateway"
+base_url = "https://ai-gateway.us.posthog.com/v1"
+env_key = "POSTHOG_GATEWAY_KEY"
+wire_api = "responses"

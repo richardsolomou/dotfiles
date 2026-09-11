@@ -8,6 +8,8 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 - `skills/` — local skills shared by the installed agent harnesses
 - `agents/` — Claude Code subagents
 - `pi/` — pi-only configuration: gateway providers, the subscription fallback extension, and MCP
+- `t3code/` — t3code provider instances that route to the gateway
+- `opencode/` — opencode config: the gateway's open-weight models
 
 ## Installation
 
@@ -37,3 +39,23 @@ The gateway key goes in `~/.pi/agent/auth.json` under each provider id, not in t
 ```
 
 Shell syntax, shellcheck, JSON, markdownlint, and a check that every skill referencing a sibling skill references one that exists. CI runs the same script on every push and pull request.
+
+## t3code
+
+t3code locks a thread to the provider driver and CLI home it started on, so the only way to keep working past a usage limit without losing the conversation is a second instance of the *same* driver and home with different credentials. `t3code/provider-instances.json` declares those twins — `phaig_claude`, `phaig_codex` and `phaig_opencode` — and `install.sh t3code` writes them into `~/.t3/userdata/settings.json`, merging per instance id so anything configured by hand on the host survives.
+
+Neither the settings nor the credentials can be symlinked. t3code saves settings through a temp file plus rename, which would replace a symlink with a regular file, and sensitive environment values live in `~/.t3/userdata/secrets` as `provider-env-<base64url instance>-<base64url variable>.bin`, mode 0600. Every environment entry marked `valueRedacted` is filled from `POSTHOG_GATEWAY_KEY`, falling back to the key pi already stores in `~/.pi/agent/auth.json`, so a host that runs pi needs no extra secret handling.
+
+Paths in that file may start with `~/`; the installer expands them, because the opencode driver takes `binaryPath` literally and the t3code server does not inherit a login shell's PATH.
+
+Codex reaches the gateway through a `[model_providers.posthog]` block appended to `~/.codex/config.toml` and selected per instance with `-c model_provider=posthog`; `-c` is used rather than `--profile` because only `-c`, `--config`, `--enable` and `--disable` reach the `codex exec` path. Claude needs no config file: `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` on the instance take precedence over the subscription login in the shared config directory, at the cost of claude.ai connectors in that instance.
+
+Both twins are named `PH·Claude` and `PH·Codex` so the rail badge reads `PH`. The badge takes the first two characters of a single-word label, or the first character of each of the first two words, splitting on whitespace as well as `_` and `-` — so `PH-Codex` would badge as `PC`, and the middle dot is what keeps it one word. The accent color is PostHog orange, which also forces the badge to render on every instance rather than only when a driver has several. Ids prefixed `phaig_` are owned by this repo: the installer replaces them and drops ones the file no longer declares, along with their now-unused key files.
+
+Subscription logins stay per host: run `claude auth login` and `codex login` on the machine. A headless host that only ever uses the gateway needs neither.
+
+## opencode
+
+`opencode/opencode.json` registers the gateway as an OpenAI-compatible provider and names the open-weight models it serves: GLM-5.2, GLM-5.3, GLM-5.3-Flash and Kimi K3. They reach no Claude or Codex instance — those enumerate models from their own CLIs, and the gateway returns `400 invalid request body` for Codex's freeform (`type: "custom"`) shell tool on every open-weight model while accepting it for OpenAI's. opencode sends plain function tools, which they accept, so `phaig_opencode` is where they are usable.
+
+The key comes from `POSTHOG_GATEWAY_KEY` through opencode's own `{env:…}` substitution, so the CLI and the t3code instance read the same one.

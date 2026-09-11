@@ -10,7 +10,7 @@ export ZSH
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-ALL_COMPONENTS="context skills agents mcp hooks permissions preferences pi"
+ALL_COMPONENTS="context skills agents mcp hooks permissions preferences pi opencode t3code"
 
 # Directories every harness scans for skills. pi also reads ~/.agents/skills,
 # the cross-harness convention.
@@ -37,6 +37,8 @@ show_help() {
     echo "  permissions  Claude Code tool permissions"
     echo "  preferences  Claude Code editor preferences"
     echo "  pi           pi gateway providers, fallback extension, Ctrl+P cycling list"
+    echo "  opencode     opencode config: the gateway's open-weight models"
+    echo "  t3code       t3code gateway provider instances and their gateway key"
     echo ""
     echo "Options:"
     echo "  --uninstall  Remove the symlinks made by context, skills, and agents"
@@ -189,7 +191,7 @@ if [ "$UNINSTALL" = "true" ]; then
 
     echo ""
     success "Agent configuration uninstalled"
-    info "Note: MCP servers, hooks, permissions, and the pi model cycling list are not removed by uninstall"
+    info "Note: MCP servers, hooks, permissions, the pi model cycling list, and t3code provider instances are not removed by uninstall"
     exit 0
 fi
 
@@ -373,6 +375,122 @@ EOF
         0) success "Configured pi model cycling and packages" ;;
         2) success "pi model cycling and packages already configured" ;;
     esac
+fi
+
+# The gateway's open-weight models (GLM, Kimi) reach no Claude or Codex
+# instance: those enumerate models from their own CLIs, and the gateway rejects
+# Codex's freeform shell tool for them. opencode speaks plain OpenAI function
+# tools, so it is where they are usable, and `t3code` registers an opencode
+# instance pointed at the same config.
+if wants opencode; then
+    link "$ZSH/ai/opencode/opencode.json" "$HOME/.config/opencode/opencode.json"
+    success "Linked opencode gateway provider config"
+fi
+
+# t3code keeps provider instances in ~/.t3/userdata/settings.json and their
+# sensitive environment values as plain 0600 files in ~/.t3/userdata/secrets, so
+# provisioning a host means writing both. Neither can be symlinked: the server
+# saves settings through a temp file plus rename, which replaces a symlink with
+# a regular file.
+#
+# The instances are gateway twins of the Claude and Codex subscriptions: same
+# driver, same CLI home, different credentials. t3code locks a thread to one
+# driver kind and home, so a twin that matches both is the only thing the model
+# picker will offer mid-thread when a subscription runs out of usage.
+#
+# Every environment entry marked `valueRedacted` is filled from the gateway key
+# below; t3code reads those from the secret store rather than the settings file.
+if wants t3code; then
+    info "Configuring t3code gateway providers…"
+
+    T3_BASE="${T3_BASE_DIR:-$HOME/.t3}"
+    T3_SETTINGS="$T3_BASE/userdata/settings.json"
+    T3_SECRETS="$T3_BASE/userdata/secrets"
+    T3_INSTANCE_FILE="$ZSH/ai/t3code/provider-instances.json"
+
+    # Same key pi uses, read from pi's auth file when the environment has none,
+    # so a host that already runs pi needs no extra secret handling.
+    GATEWAY_KEY="${POSTHOG_GATEWAY_KEY:-}"
+    if [ -z "$GATEWAY_KEY" ] && [ -f "$HOME/.pi/agent/auth.json" ]; then
+        GATEWAY_KEY=$(jq -r '(."posthog-gateway-openai".key // ."posthog-gateway-anthropic".key) // empty' "$HOME/.pi/agent/auth.json" 2>/dev/null)
+    fi
+
+    mkdir -p "$(dirname "$T3_SETTINGS")"
+    [ -f "$T3_SETTINGS" ] || echo '{}' > "$T3_SETTINGS"
+
+    # Merge per instance id so instances configured on this host by hand, and
+    # the rest of the settings file, survive. Ids prefixed `phaig_` are owned
+    # here: they are replaced wholesale, and ones this file no longer declares
+    # are dropped so a rename does not leave the old instance behind.
+    T3_CONFIG=$(jq -n \
+        --slurpfile current "$T3_SETTINGS" \
+        --slurpfile desired "$T3_INSTANCE_FILE" \
+        '($desired[0].providerInstances
+            | walk(if type == "string" and startswith("~/") then env.HOME + ltrimstr("~") else . end)) as $own
+         | {providerInstances: (
+               (($current[0].providerInstances // {})
+                 | with_entries(select(.key | startswith("phaig_") | not)))
+               + $own)}')
+
+    set_json_settings "$T3_SETTINGS" "$T3_CONFIG" "t3code gateway providers"
+    case $? in
+        0) success "Configured t3code gateway provider instances" ;;
+        2) success "t3code gateway provider instances already configured" ;;
+    esac
+
+    # provider-env-<base64url instance id>-<base64url variable name>.bin
+    b64url() { printf '%s' "$1" | base64 | tr '+/' '-_' | tr -d '=\n'; }
+
+    b64url_decode() {
+        local value="$1"
+        case $((${#value} % 4)) in
+            2) value="$value==" ;;
+            3) value="$value=" ;;
+        esac
+        printf '%s' "$value" | tr '_-' '/+' | base64 --decode 2>/dev/null
+    }
+
+    # A renamed instance leaves its key behind under the old id; it is unused
+    # but still a copy of the credential, so drop the ones we own.
+    MANAGED_IDS=$(jq -r '.providerInstances | keys[]' "$T3_INSTANCE_FILE")
+    for secret in "$T3_SECRETS"/provider-env-*.bin; do
+        [ -f "$secret" ] || continue
+        encoded="${secret##*/provider-env-}"
+        instance=$(b64url_decode "${encoded%%-*}")
+        case "$instance" in phaig_*) ;; *) continue ;; esac
+        printf '%s\n' "$MANAGED_IDS" | grep -qx "$instance" && continue
+        rm -f "$secret"
+        info "Removed the stale gateway key for $instance"
+    done
+
+    if [ -n "$GATEWAY_KEY" ]; then
+        mkdir -p "$T3_SECRETS"
+        chmod 700 "$T3_SECRETS"
+        jq -r '.providerInstances | to_entries[] | .key as $id
+                 | .value.environment[]? | select(.valueRedacted == true)
+                 | "\($id)\t\(.name)"' "$T3_INSTANCE_FILE" |
+        while IFS=$'\t' read -r instance variable; do
+            secret="$T3_SECRETS/provider-env-$(b64url "$instance")-$(b64url "$variable").bin"
+            printf '%s' "$GATEWAY_KEY" > "$secret"
+            chmod 600 "$secret"
+        done
+        success "Wrote the gateway key into t3code's secret store"
+    else
+        warning "No gateway key found - t3code gateway instances will not authenticate"
+        info "Export POSTHOG_GATEWAY_KEY and re-run: $0 t3code"
+    fi
+
+    # Shared with the subscription instance, which never selects this provider.
+    CODEX_CONFIG="${CODEX_HOME:-$HOME/.codex}/config.toml"
+    if grep -q '^\[model_providers\.posthog\]' "$CODEX_CONFIG" 2>/dev/null; then
+        success "Codex already has the gateway model provider"
+    else
+        mkdir -p "$(dirname "$CODEX_CONFIG")"
+        cat "$ZSH/ai/t3code/codex-gateway.toml" >> "$CODEX_CONFIG"
+        success "Added the gateway model provider to $CODEX_CONFIG"
+    fi
+
+    info "Subscription logins are per host: run 'claude auth login' and 'codex login' on this machine"
 fi
 
 echo ""
