@@ -383,6 +383,18 @@ fi
 # tools, so it is where they are usable, and `t3code` registers an opencode
 # instance pointed at the same config.
 if wants opencode; then
+    # opencode's own installer, not Homebrew: it keeps ~/.opencode/bin on every
+    # host, which is the path the t3code instance is configured with, and core
+    # lags the current release.
+    if [ ! -x "$HOME/.opencode/bin/opencode" ]; then
+        info "Installing opencode…"
+        if curl -fsSL https://opencode.ai/install | bash; then
+            success "Installed opencode"
+        else
+            warning "opencode install failed - PH·OpenCode will show as unavailable"
+        fi
+    fi
+
     link "$ZSH/ai/opencode/opencode.json" "$HOME/.config/opencode/opencode.json"
     success "Linked opencode gateway provider config"
 fi

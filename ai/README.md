@@ -58,4 +58,4 @@ Subscription logins stay per host: run `claude auth login` and `codex login` on 
 
 `opencode/opencode.json` registers the gateway as an OpenAI-compatible provider and names the open-weight models it serves: GLM-5.2, GLM-5.3, GLM-5.3-Flash and Kimi K3. They reach no Claude or Codex instance — those enumerate models from their own CLIs, and the gateway returns `400 invalid request body` for Codex's freeform (`type: "custom"`) shell tool on every open-weight model while accepting it for OpenAI's. opencode sends plain function tools, which they accept, so `phaig_opencode` is where they are usable.
 
-The key comes from `POSTHOG_GATEWAY_KEY` through opencode's own `{env:…}` substitution, so the CLI and the t3code instance read the same one.
+The key comes from `POSTHOG_GATEWAY_KEY` through opencode's own `{env:…}` substitution, so the CLI and the t3code instance read the same one. `install.sh opencode` runs opencode's installer when the binary is missing, rather than taking the Homebrew formula: it keeps `~/.opencode/bin` as the path on every host, which is what `phaig_opencode` is configured with, and core trails the current release.

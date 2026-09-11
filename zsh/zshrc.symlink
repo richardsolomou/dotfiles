@@ -42,6 +42,7 @@ export PNPM_HOME="$HOME/Library/pnpm"
 # ~/.local/bin outranks Homebrew: the agent CLIs installed there (claude, codex)
 # are newer than any Homebrew copy of the same name.
 for dir in \
+  "$HOME/.opencode/bin" \
   "$HOME/dev/posthog/posthog/tools/infra-scripts/mcp" \
   "$HOME/go/bin" \
   "$PNPM_HOME" \
@@ -90,6 +91,3 @@ command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 
 # --- Starship prompt ---
 command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
-
-# opencode
-export PATH=/Users/richard/.opencode/bin:$PATH
