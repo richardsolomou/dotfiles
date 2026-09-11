@@ -33,9 +33,9 @@ merge_json_settings() {
         return 1
     fi
     
-    # Ensure settings file exists. Seed it empty: this helper is used for pi's
-    # settings as well as Claude Code's, and a default model key means nothing
-    # to the other harnesses.
+    # Ensure settings file exists. Seed it empty: this helper is used for
+    # t3code's settings as well as Claude Code's, and a default model key means
+    # nothing to the other harnesses.
     if [ ! -f "$settings_file" ]; then
         mkdir -p "$(dirname "$settings_file")"
         echo '{}' > "$settings_file"
