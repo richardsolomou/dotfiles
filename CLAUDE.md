@@ -36,7 +36,7 @@ The `t3code` component declares gateway twins of the Claude and Codex subscripti
 
 The `opencode` component installs opencode when a host is missing it and links the config that registers the gateway's open-weight models, which no Claude or Codex instance can reach.
 
-The gateway credential comes from `POSTHOG_GATEWAY_KEY`, never from this repo. A machine that is already configured re-uses the key from t3code's secret store, so only the first run needs it set.
+The gateway credential lives in `$ZSH/.env` as `POSTHOG_GATEWAY_KEY`, which is gitignored and copied to each host by hand. `zshrc` exports it so a shell-run CLI authenticates, `ai/install.sh` reads it when writing t3code's secret store, and an already-configured host falls back to the copy in that store.
 
 `bin/check` validates the repo: shell syntax, shellcheck, JSON, markdownlint, and whether every skill that names a sibling skill names one that exists. CI runs the same script.
 

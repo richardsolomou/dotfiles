@@ -339,9 +339,13 @@ if wants t3code; then
     T3_SECRETS="$T3_BASE/userdata/secrets"
     T3_INSTANCE_FILE="$ZSH/ai/t3code/provider-instances.json"
 
-    # A host that is already configured re-uses the key from t3code's own secret
-    # store, so only the first run on a new machine needs the variable set.
+    # $ZSH/.env is the source of truth on each host: gitignored, so the key is
+    # never committed, and copied across machines by hand. An already-configured
+    # host also re-uses the copy in t3code's own secret store.
     GATEWAY_KEY="${POSTHOG_GATEWAY_KEY:-}"
+    if [ -z "$GATEWAY_KEY" ] && [ -r "$ZSH/.env" ]; then
+        GATEWAY_KEY=$(sed -n 's/^POSTHOG_GATEWAY_KEY=//p' "$ZSH/.env" | head -1)
+    fi
     if [ -z "$GATEWAY_KEY" ]; then
         for secret in "$T3_SECRETS"/provider-env-*.bin; do
             [ -s "$secret" ] || continue
@@ -412,7 +416,7 @@ if wants t3code; then
         success "Wrote the gateway key into t3code's secret store"
     else
         warning "No gateway key found - t3code gateway instances will not authenticate"
-        info "Export POSTHOG_GATEWAY_KEY and re-run: $0 t3code"
+        info "Set POSTHOG_GATEWAY_KEY in $ZSH/.env and re-run: $0 t3code"
     fi
 
     # Shared with the subscription instance, which never selects this provider.
