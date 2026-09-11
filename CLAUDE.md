@@ -17,24 +17,26 @@ Key files:
 
 ## Agent configuration
 
-`ai/` holds one set of instructions and skills shared by every harness (Claude Code, Codex, pi). `ai/install.sh` links them into place — nothing is copied, so repo edits apply immediately:
+`ai/` holds one set of instructions and skills shared by every harness (Claude Code, Codex, opencode). `ai/install.sh` links them into place — nothing is copied, so repo edits apply immediately:
 
-| Source | Claude Code | Codex | pi |
+| Source | Claude Code | Codex | opencode |
 | --- | --- | --- | --- |
-| `ai/AGENTS.md` | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` | `~/.pi/agent/AGENTS.md` |
+| `ai/AGENTS.md` | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` | — |
 | `ai/AGENTS.posthog.md` | `~/dev/posthog/CLAUDE.md` | `~/dev/posthog/AGENTS.md` | either of those |
 | `ai/skills/*` | `~/.claude/skills/` | `~/.codex/skills/` | `~/.agents/skills/` |
 | `ai/agents/*` | `~/.claude/agents/` | — | — |
-| `ai/pi/extensions/*` | — | — | `~/.pi/agent/extensions/` |
-| `ai/pi/mcp.json` | — | — | `~/.pi/agent/mcp.json` |
+| `ai/opencode/opencode.json` | — | — | `~/.config/opencode/opencode.json` |
+| `ai/t3code/provider-instances.json` | merged into `~/.t3/userdata/settings.json` | | |
 
 `ai/RTK.md` is Claude Code only; it is imported from `ai/AGENTS.md` with `@RTK.md`, which other harnesses ignore.
 
-`ai/install.sh` takes component names (`context skills agents mcp hooks permissions preferences pi`) and installs everything when given none. MCP servers are registered with both `claude mcp` and `codex mcp`; hooks, permissions, and preferences are Claude Code settings. `--uninstall` removes the symlinks it created.
+`ai/install.sh` takes component names (`context skills agents mcp hooks permissions preferences opencode t3code`) and installs everything when given none. MCP servers are registered with both `claude mcp` and `codex mcp`; hooks, permissions, and preferences are Claude Code settings. `--uninstall` removes the symlinks it created.
 
-The `pi` component covers what pi has no built-in answer for. `ai/pi/extensions/gateway-models.ts` registers PostHog's AI gateway as pi providers, with the model list read from the gateway's own catalog at startup and cached for twelve hours. `gateway-fallback.ts` switches to the same model on the gateway when a subscription hits its cap and switches back once a cooldown passes. `ai/pi/mcp.json` gives pi MCP: its `imports` list reads the servers already registered for Claude and Codex, and it declares the two that need no machine-specific path or credential. The component also declares the pi packages that supply MCP, subagents, a browser tool, and web search; pi installs anything missing on its next start.
+The `t3code` component declares gateway twins of the Claude and Codex subscriptions: t3code pins a thread to the driver and CLI home it started on, so a twin sharing both — with the gateway's credentials instead of the subscription's — is what the model picker will offer inside a running thread once a usage limit hits. Its settings cannot be symlinked (t3code saves through a temp file plus rename), so the component merges per instance id and writes the key into t3code's own secret store.
 
-The gateway credential lives in `~/.pi/agent/auth.json` under each provider id, never in this repo, so it resolves the same whether pi runs from a shell or as a subprocess of an orchestrator that never sources shell rc files.
+The `opencode` component installs opencode when a host is missing it and links the config that registers the gateway's open-weight models, which no Claude or Codex instance can reach.
+
+The gateway credential comes from `POSTHOG_GATEWAY_KEY`, never from this repo. A machine that is already configured re-uses the key from t3code's secret store, so only the first run needs it set.
 
 `bin/check` validates the repo: shell syntax, shellcheck, JSON, markdownlint, and whether every skill that names a sibling skill names one that exists. CI runs the same script.
 

@@ -1,13 +1,12 @@
 # AI Settings
 
-One set of instructions, skills, and MCP servers, shared by every agent harness: Claude Code, Codex, and pi.
+One set of instructions, skills, and MCP servers, shared by every agent harness: Claude Code, Codex, and opencode.
 
 - `AGENTS.md` — global instructions for all harnesses
 - `AGENTS.posthog.md` — extra rules loaded only under `~/dev/posthog`
 - `RTK.md` — rtk usage notes, imported by Claude Code only
 - `skills/` — local skills shared by the installed agent harnesses
 - `agents/` — Claude Code subagents
-- `pi/` — pi-only configuration: gateway providers, the subscription fallback extension, and MCP
 - `t3code/` — t3code provider instances that route to the gateway
 - `opencode/` — opencode config: the gateway's open-weight models
 
@@ -22,29 +21,11 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 
 Everything is symlinked, so edits here take effect without reinstalling. Adding a skill or renaming one needs a re-run; the script also prunes symlinks left behind by skills it no longer manages.
 
-## pi
-
-pi ships five tools and, by design, no MCP, subagents, browser control, or web search. `pi/` closes that gap and points pi at PostHog's AI gateway:
-
-- `pi/extensions/gateway-models.ts` registers the gateway as two providers, reading its `/v1/models` catalog at startup rather than a checked-in list, and falls back to a twelve-hour cache when the gateway is unreachable. Traits the catalog omits (reasoning, image input, output ceilings, per-model quirks) come from the catalogs pi ships, so a machine with no Claude or Codex login still describes models correctly.
-- `pi/extensions/gateway-fallback.ts` reacts to a subscription failing: it switches to the same model on the gateway, resends the pending turn, and cools that provider down (5 minutes doubling to an hour) before retrying it. Every switch is reported to stderr and the session as well as the UI, since a run driven by an orchestrator has no UI to notify.
-- `pi/mcp.json` gives pi MCP. `imports` reads the host configs already on the machine, so the servers registered for Claude and Codex work in pi without copying definitions or credentials.
-
-The gateway key goes in `~/.pi/agent/auth.json` under each provider id, not in this repo, so it resolves however pi is launched.
-
-## Checks
-
-```sh
-./bin/check
-```
-
-Shell syntax, shellcheck, JSON, markdownlint, and a check that every skill referencing a sibling skill references one that exists. CI runs the same script on every push and pull request.
-
 ## t3code
 
 t3code locks a thread to the provider driver and CLI home it started on, so the only way to keep working past a usage limit without losing the conversation is a second instance of the *same* driver and home with different credentials. `t3code/provider-instances.json` declares those twins — `phaig_claude`, `phaig_codex` and `phaig_opencode` — and `install.sh t3code` writes them into `~/.t3/userdata/settings.json`, merging per instance id so anything configured by hand on the host survives.
 
-Neither the settings nor the credentials can be symlinked. t3code saves settings through a temp file plus rename, which would replace a symlink with a regular file, and sensitive environment values live in `~/.t3/userdata/secrets` as `provider-env-<base64url instance>-<base64url variable>.bin`, mode 0600. Every environment entry marked `valueRedacted` is filled from `POSTHOG_GATEWAY_KEY`, falling back to the key pi already stores in `~/.pi/agent/auth.json`, so a host that runs pi needs no extra secret handling.
+Neither the settings nor the credentials can be symlinked. t3code saves settings through a temp file plus rename, which would replace a symlink with a regular file, and sensitive environment values live in `~/.t3/userdata/secrets` as `provider-env-<base64url instance>-<base64url variable>.bin`, mode 0600. Every environment entry marked `valueRedacted` is filled from `POSTHOG_GATEWAY_KEY`, falling back to the key already in that secret store, so only the first run on a new machine needs the variable set.
 
 Paths in that file may start with `~/`; the installer expands them, because the opencode driver takes `binaryPath` literally and the t3code server does not inherit a login shell's PATH.
 

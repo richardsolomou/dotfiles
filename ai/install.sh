@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # Install the shared agent configuration into every harness in use: Claude Code,
-# Codex, and pi. ai/AGENTS.md and ai/skills are the single source of truth; each
-# harness gets symlinks to them under whatever name it expects.
+# Codex, and opencode. ai/AGENTS.md and ai/skills are the single source of truth;
+# each harness gets symlinks to them under whatever name it expects.
 
 ZSH="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
 export ZSH
@@ -10,10 +10,10 @@ export ZSH
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-ALL_COMPONENTS="context skills agents mcp hooks permissions preferences pi opencode t3code"
+ALL_COMPONENTS="context skills agents mcp hooks permissions preferences opencode t3code"
 
-# Directories every harness scans for skills. pi also reads ~/.agents/skills,
-# the cross-harness convention.
+# Directories every harness scans for skills. opencode auto-loads both
+# ~/.claude/skills and ~/.agents/skills, the cross-harness convention.
 SKILL_DIRS="$HOME/.claude/skills $HOME/.codex/skills $HOME/.agents/skills"
 
 # Format: name|description|command|env (env optional, KEY=VALUE)
@@ -29,14 +29,13 @@ show_help() {
     echo "Installs the shared agent configuration. With no component named, installs everything."
     echo ""
     echo "Components:"
-    echo "  context      Instruction files: ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.pi/agent/AGENTS.md"
+    echo "  context      Instruction files: ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md"
     echo "  skills       ai/skills/* into each harness' skill directory"
     echo "  agents       ai/agents/* as Claude Code subagents"
     echo "  mcp          MCP servers (Claude Code and Codex)"
     echo "  hooks        Claude Code hooks"
     echo "  permissions  Claude Code tool permissions"
     echo "  preferences  Claude Code editor preferences"
-    echo "  pi           pi gateway providers, fallback extension, Ctrl+P cycling list"
     echo "  opencode     opencode config: the gateway's open-weight models"
     echo "  t3code       t3code gateway provider instances and their gateway key"
     echo ""
@@ -117,13 +116,12 @@ prune_dangling_skill_links() {
     done
 }
 
-# Claude Code reads CLAUDE.md, Codex and pi read AGENTS.md. AGENTS.posthog.md is
+# Claude Code reads CLAUDE.md, Codex reads AGENTS.md. AGENTS.posthog.md is
 # linked into ~/dev/posthog so its rules load only for sessions under there.
 context_links() {
     echo "$ZSH/ai/AGENTS.md|$HOME/.claude/CLAUDE.md"
     echo "$ZSH/ai/RTK.md|$HOME/.claude/RTK.md"
     echo "$ZSH/ai/AGENTS.md|$HOME/.codex/AGENTS.md"
-    echo "$ZSH/ai/AGENTS.md|$HOME/.pi/agent/AGENTS.md"
     if [ -d "$HOME/dev/posthog" ]; then
         echo "$ZSH/ai/AGENTS.posthog.md|$HOME/dev/posthog/AGENTS.md"
         echo "$ZSH/ai/AGENTS.posthog.md|$HOME/dev/posthog/CLAUDE.md"
@@ -174,24 +172,9 @@ if [ "$UNINSTALL" = "true" ]; then
         success "Removed agent symlinks"
     fi
 
-    if wants pi; then
-        for ext in "$ZSH"/ai/pi/extensions/*.ts; do
-            [ -f "$ext" ] || continue
-            unlink_managed "$HOME/.pi/agent/extensions/$(basename "$ext")"
-        done
-        unlink_managed "$HOME/.pi/agent/mcp.json"
-        # Hand back whatever the install step moved aside, so uninstalling
-        # restores the previous MCP config instead of leaving none.
-        if [ -f "$HOME/.pi/agent/mcp.json.local" ] && [ ! -e "$HOME/.pi/agent/mcp.json" ]; then
-            mv "$HOME/.pi/agent/mcp.json.local" "$HOME/.pi/agent/mcp.json"
-            info "Restored your previous mcp.json"
-        fi
-        success "Removed pi extension and MCP symlinks"
-    fi
-
     echo ""
     success "Agent configuration uninstalled"
-    info "Note: MCP servers, hooks, permissions, the pi model cycling list, and t3code provider instances are not removed by uninstall"
+    info "Note: MCP servers, hooks, permissions, and t3code provider instances are not removed by uninstall"
     exit 0
 fi
 
@@ -199,7 +182,7 @@ info "Installing agent configuration…"
 
 if wants context; then
     context_links | while IFS='|' read -r src dst; do link "$src" "$dst"; done
-    success "Linked instruction files for Claude Code, Codex, and pi"
+    success "Linked instruction files for Claude Code and Codex"
 fi
 
 if wants skills; then
@@ -210,7 +193,7 @@ if wants skills; then
         done
         prune_dangling_skill_links "$dir"
     done
-    success "Linked skills into Claude Code, Codex, and pi"
+    success "Linked skills into Claude Code, Codex, and opencode"
 fi
 
 if wants agents; then
@@ -238,7 +221,7 @@ if wants mcp; then
     done
 fi
 
-# Hooks, permissions, and preferences are Claude Code settings; Codex and pi
+# Hooks, permissions, and preferences are Claude Code settings; Codex and opencode
 # configure their equivalents in their own config files.
 if wants hooks; then
     info "Configuring Claude Code hooks…"
@@ -313,70 +296,6 @@ if wants permissions; then
     $ZSH/ai/configure-tool-permissions.sh
 fi
 
-# ai/pi/extensions register the PostHog AI Gateway as pi providers (model list
-# pulled from the gateway's own catalog) and move between a subscription and its
-# gateway equivalent automatically when a usage cap is hit. The gateway key is
-# stored in ~/.pi/agent/auth.json under each provider id, not here — that way it
-# resolves the same regardless of how pi is launched (interactive shell, or a
-# subprocess from an orchestrator that never sources shell rc files).
-if wants pi; then
-    info "Configuring pi model routing…"
-
-    for ext in "$ZSH"/ai/pi/extensions/*.ts; do
-        [ -f "$ext" ] || continue
-        link "$ext" "$HOME/.pi/agent/extensions/$(basename "$ext")"
-    done
-    success "Linked pi extensions (gateway providers, automatic fallback)"
-
-    # `imports` lets pi read the MCP servers already registered for Claude and
-    # Codex rather than duplicating them here; the two declared servers are the
-    # ones that need no machine-specific paths or credentials, so a box with
-    # neither of those CLIs still gets memory and browser control. Machines that
-    # had a local mcp.json keep it alongside as mcp.json.local.
-    if [ -e "$HOME/.pi/agent/mcp.json" ] && [ ! -L "$HOME/.pi/agent/mcp.json" ]; then
-        mv "$HOME/.pi/agent/mcp.json" "$HOME/.pi/agent/mcp.json.local"
-        warning "Kept your previous mcp.json as mcp.json.local"
-    fi
-    link "$ZSH/ai/pi/mcp.json" "$HOME/.pi/agent/mcp.json"
-    success "Linked pi MCP config"
-
-    PI_CYCLING_CONFIG=$(cat <<'EOF'
-{
-  "enabledModels": [
-    "anthropic/*",
-    "openai-codex/*",
-    "posthog-gateway-anthropic/*",
-    "posthog-gateway-openai/**"
-  ],
-  "packages": [
-    "npm:pi-mcp-adapter@2.32.1",
-    "npm:pi-subagents",
-    "npm:pi-agent-browser-native",
-    "npm:pi-web-access"
-  ]
-}
-EOF
-    )
-
-    # pi installs anything in `packages` that is missing on its next start, so
-    # listing them is enough. They cover what pi has no built-in answer for:
-    # MCP (which also picks up the servers registered above for Claude and
-    # Codex, browser control among them), subagents, and web search.
-    #
-    # pi-mcp-adapter is held at 2.32.1: 2.33.0 pins the MCP SDK to commit
-    # tarballs on pkg.pr.new, which npm 12 refuses to fetch (EALLOWREMOTE), and
-    # pi treats a failed package install as fatal, so the agent will not start
-    # at all. Tracked in #22.
-    #
-    # Set rather than merged: both keys are owned here, and a union would leave
-    # a renamed model pattern or an old package version behind forever.
-    set_json_settings "$HOME/.pi/agent/settings.json" "$PI_CYCLING_CONFIG" "pi model cycling"
-    case $? in
-        0) success "Configured pi model cycling and packages" ;;
-        2) success "pi model cycling and packages already configured" ;;
-    esac
-fi
-
 # The gateway's open-weight models (GLM, Kimi) reach no Claude or Codex
 # instance: those enumerate models from their own CLIs, and the gateway rejects
 # Codex's freeform shell tool for them. opencode speaks plain OpenAI function
@@ -420,11 +339,15 @@ if wants t3code; then
     T3_SECRETS="$T3_BASE/userdata/secrets"
     T3_INSTANCE_FILE="$ZSH/ai/t3code/provider-instances.json"
 
-    # Same key pi uses, read from pi's auth file when the environment has none,
-    # so a host that already runs pi needs no extra secret handling.
+    # A host that is already configured re-uses the key from t3code's own secret
+    # store, so only the first run on a new machine needs the variable set.
     GATEWAY_KEY="${POSTHOG_GATEWAY_KEY:-}"
-    if [ -z "$GATEWAY_KEY" ] && [ -f "$HOME/.pi/agent/auth.json" ]; then
-        GATEWAY_KEY=$(jq -r '(."posthog-gateway-openai".key // ."posthog-gateway-anthropic".key) // empty' "$HOME/.pi/agent/auth.json" 2>/dev/null)
+    if [ -z "$GATEWAY_KEY" ]; then
+        for secret in "$T3_SECRETS"/provider-env-*.bin; do
+            [ -s "$secret" ] || continue
+            GATEWAY_KEY=$(cat "$secret")
+            break
+        done
     fi
 
     mkdir -p "$(dirname "$T3_SETTINGS")"
