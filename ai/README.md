@@ -6,8 +6,7 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 - `AGENTS.posthog.md` — extra rules loaded only under `~/dev/posthog`
 - `RTK.md` — rtk usage notes, imported by Claude Code only
 - `skills/` — local skills shared by the installed agent harnesses
-- `agents/` — Claude Code subagents
-- `t3code/` — t3code provider instances that route to the gateway
+- `t3code/` — T3 Code provider instances that route to the gateway
 - `opencode/` — opencode config: the gateway's open-weight models
 
 ## Installation
@@ -19,7 +18,7 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 ./install.sh --help             # list components
 ```
 
-Everything is symlinked, so edits here take effect without reinstalling. Adding a skill or renaming one needs a re-run; the script also prunes symlinks left behind by skills it no longer manages.
+Everything is symlinked, so edits here take effect without reinstalling. Adding a skill or renaming one needs a re-run; the script also prunes symlinks left behind by skills it no longer manages. Skills reference their own scripts through `~/.agents/skills/<skill>/scripts/`, the cross-harness directory every install populates.
 
 ## Telegram MCP
 
@@ -40,13 +39,13 @@ ai/install.sh mcp
 
 The session string still has the authority of the Telegram account even though the exposed MCP tools are read-only. Revoke the `Telegram MCP` session under Telegram's **Settings → Devices** if the credential is ever exposed. The server does not restrict reads to particular chats.
 
-## t3code
+## T3 Code
 
-t3code locks a thread to the provider driver and CLI home it started on, so the only way to keep working past a usage limit without losing the conversation is a second instance of the *same* driver and home with different credentials. `t3code/provider-instances.json` declares those twins — `phaig_claude`, `phaig_codex` and `phaig_opencode` — and `install.sh t3code` writes them into `~/.t3/userdata/settings.json`, merging per instance id so anything configured by hand on the host survives.
+T3 Code locks a thread to the provider driver and CLI home it started on, so the only way to keep working past a usage limit without losing the conversation is a second instance of the *same* driver and home with different credentials. `t3code/provider-instances.json` declares those twins — `phaig_claude`, `phaig_codex` and `phaig_opencode` — and `install.sh t3code` writes them into `~/.t3/userdata/settings.json`, merging per instance id so anything configured by hand on the host survives.
 
-Neither the settings nor the credentials can be symlinked. t3code saves settings through a temp file plus rename, which would replace a symlink with a regular file, and sensitive environment values live in `~/.t3/userdata/secrets` as `provider-env-<base64url instance>-<base64url variable>.bin`, mode 0600. Every environment entry marked `valueRedacted` is filled from `POSTHOG_GATEWAY_KEY`, read from the environment, then from `$ZSH/.env`, then from the copy already in that secret store.
+Neither the settings nor the credentials can be symlinked. T3 Code saves settings through a temp file plus rename, which would replace a symlink with a regular file, and sensitive environment values live in `~/.t3/userdata/secrets` as `provider-env-<base64url instance>-<base64url variable>.bin`, mode 0600. Every environment entry marked `valueRedacted` is filled from `POSTHOG_GATEWAY_KEY`, read from the environment, then from `$ZSH/.env`, then from the copy already in that secret store.
 
-Paths in that file may start with `~/`; the installer expands them, because the opencode driver takes `binaryPath` literally and the t3code server does not inherit a login shell's PATH.
+Paths in that file may start with `~/`; the installer expands them, because the opencode driver takes `binaryPath` literally and the T3 Code server does not inherit a login shell's PATH.
 
 Codex reaches the gateway through a `[model_providers.posthog]` block appended to `~/.codex/config.toml` and selected per instance with `-c model_provider=posthog`; `-c` is used rather than `--profile` because only `-c`, `--config`, `--enable` and `--disable` reach the `codex exec` path. Claude needs no config file: `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` on the instance take precedence over the subscription login in the shared config directory, at the cost of claude.ai connectors in that instance.
 
@@ -58,4 +57,4 @@ Subscription logins stay per host: run `claude auth login` and `codex login` on 
 
 `opencode/opencode.json` registers the gateway as an OpenAI-compatible provider and names the open-weight models it serves: GLM-5.2, GLM-5.3, GLM-5.3-Flash and Kimi K3. They reach no Claude or Codex instance — those enumerate models from their own CLIs, and the gateway returns `400 invalid request body` for Codex's freeform (`type: "custom"`) shell tool on every open-weight model while accepting it for OpenAI's. opencode sends plain function tools, which they accept, so `phaig_opencode` is where they are usable.
 
-The key comes from `POSTHOG_GATEWAY_KEY` through opencode's own `{env:…}` substitution: inside t3code the instance supplies it, and from a shell `zshrc` exports it out of `$ZSH/.env`. `install.sh opencode` runs opencode's installer when the binary is missing, rather than taking the Homebrew formula: it keeps `~/.opencode/bin` as the path on every host, which is what `phaig_opencode` is configured with, and core trails the current release.
+The key comes from `POSTHOG_GATEWAY_KEY` through opencode's own `{env:…}` substitution: inside T3 Code the instance supplies it, and from a shell `zshrc` exports it out of `$ZSH/.env`. `install.sh opencode` runs opencode's installer when the binary is missing, rather than taking the Homebrew formula: it keeps `~/.opencode/bin` as the path on every host, which is what `phaig_opencode` is configured with, and core trails the current release.

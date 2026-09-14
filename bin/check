@@ -86,17 +86,29 @@ else
     warning "markdownlint not available - skipping"
 fi
 
+info "Checking skill names…"
+while read -r skill; do
+    dir="$(basename "$(dirname "$skill")")"
+    name="$(sed -n '2,/^---$/{s/^name: *//p;}' "$skill" | head -1)"
+    [ "$name" = "$dir" ] || { error "skill name '$name' does not match directory $dir"; FAILED=1; }
+done < <(git ls-files 'ai/skills/*/SKILL.md')
+success "Skill names match their directories"
+
 # A skill naming a sibling that no longer exists is silent breakage: the model
-# is told to load something that was deleted or renamed. Only inspect
-# backticked bare names, so paths such as `/tmp/rs-update-pr-title.txt` and
-# prose mentions do not register as references.
+# is told to load something that was deleted or renamed. A reference is a
+# backticked hyphenated name in a skill-shaped context: `x` skill, skill `x`,
+# load/apply/run/via `x`, `/x`, or a `x` → chain. Bare mentions of
+# paths, flags, and registers do not register.
 info "Checking skill cross-references…"
 DANGLING=0
 while read -r skill; do
     name="$(basename "$(dirname "$skill")")"
-    grep -ohE '`[a-z0-9][a-z0-9-]{2,40}`' "$skill" \
-        | tr -d '`' \
-        | grep -E '^(rs-|security-audit$|asd-ste100$)' \
+    {
+        grep -ohE '`[a-z0-9]+(-[a-z0-9]+)+` (skill|lens|discipline)' "$skill"
+        grep -ohE '(skill|[Ll]oad|[Aa]pply|[Rr]un|via) `[a-z0-9]+(-[a-z0-9]+)+`' "$skill" | sed -E 's/^[^`]*//'
+        grep -ohE '`/[a-z0-9]+(-[a-z0-9]+)+' "$skill" | tr -d '/'
+        grep -ohE '`[a-z0-9]+(-[a-z0-9]+)+` →' "$skill"
+    } | grep -oE '`[^`]+`' | tr -d '`' \
         | sort -u \
         | while read -r ref; do
             [ "$ref" = "$name" ] && continue
@@ -114,6 +126,34 @@ if [ -s /tmp/dotfiles-dangling-refs.$$ ]; then
 fi
 rm -f /tmp/dotfiles-dangling-refs.$$
 [ "$DANGLING" -eq 0 ] && success "Skill cross-references resolve"
+
+# Skills ship their own tests next to the scripts they cover.
+info "Running skill tests…"
+TEST_COUNT=0
+while read -r t; do
+    case "$t" in
+        *.py)
+            # Plain assert-based tests; run them without a pytest dependency.
+            python3 -B - "$t" > /tmp/dotfiles-skill-test.$$ 2>&1 <<'PY' \
+                || { error "failed: $t"; cat /tmp/dotfiles-skill-test.$$; FAILED=1; }
+import importlib.util, sys
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_file_location("t", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+for name in sorted(n for n in dir(mod) if n.startswith("test_")):
+    getattr(mod, name)()
+PY
+            ;;
+        *)
+            bash "$t" > /tmp/dotfiles-skill-test.$$ 2>&1 \
+                || { error "failed: $t"; cat /tmp/dotfiles-skill-test.$$; FAILED=1; }
+            ;;
+    esac
+    TEST_COUNT=$((TEST_COUNT + 1))
+done < <(git ls-files 'ai/skills/*/test-*' 'ai/skills/*/scripts/test-*')
+rm -f /tmp/dotfiles-skill-test.$$
+success "Skill tests ran ($TEST_COUNT files)"
 
 echo ""
 if [ "$FAILED" -eq 0 ]; then

@@ -10,7 +10,7 @@ export ZSH
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-ALL_COMPONENTS="context skills agents mcp hooks permissions preferences opencode t3code"
+ALL_COMPONENTS="context skills mcp hooks permissions preferences opencode t3code"
 
 # Directories every harness scans for skills. opencode auto-loads both
 # ~/.claude/skills and ~/.agents/skills, the cross-harness convention.
@@ -32,16 +32,15 @@ show_help() {
     echo "Components:"
     echo "  context      Instruction files: ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md"
     echo "  skills       ai/skills/* into each harness' skill directory"
-    echo "  agents       ai/agents/* as Claude Code subagents"
     echo "  mcp          MCP servers (Claude Code and Codex)"
     echo "  hooks        Claude Code hooks"
     echo "  permissions  Claude Code tool permissions"
     echo "  preferences  Claude Code editor preferences"
     echo "  opencode     opencode config: the gateway's open-weight models"
-    echo "  t3code       t3code gateway provider instances and their gateway key"
+    echo "  t3code       T3 Code gateway provider instances and their gateway key"
     echo ""
     echo "Options:"
-    echo "  --uninstall  Remove the symlinks made by context, skills, and agents"
+    echo "  --uninstall  Remove the symlinks made by context and skills"
     echo "  -h, --help   Show this help message"
     echo ""
     echo "Examples:"
@@ -165,17 +164,9 @@ if [ "$UNINSTALL" = "true" ]; then
         success "Removed skill symlinks"
     fi
 
-    if wants agents; then
-        for agent in "$ZSH"/ai/agents/*.md; do
-            [ -f "$agent" ] || continue
-            unlink_managed "$HOME/.claude/agents/$(basename "$agent")"
-        done
-        success "Removed agent symlinks"
-    fi
-
     echo ""
     success "Agent configuration uninstalled"
-    info "Note: MCP servers, hooks, permissions, and t3code provider instances are not removed by uninstall"
+    info "Note: MCP servers, hooks, permissions, and T3 Code provider instances are not removed by uninstall"
     exit 0
 fi
 
@@ -195,14 +186,6 @@ if wants skills; then
         prune_dangling_skill_links "$dir"
     done
     success "Linked skills into Claude Code, Codex, and opencode"
-fi
-
-if wants agents; then
-    for agent in "$ZSH"/ai/agents/*.md; do
-        [ -f "$agent" ] || continue
-        link "$agent" "$HOME/.claude/agents/$(basename "$agent")"
-    done
-    success "Linked Claude Code subagents"
 fi
 
 if wants mcp; then
@@ -232,7 +215,7 @@ if wants hooks; then
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
@@ -304,7 +287,7 @@ fi
 # instance pointed at the same config.
 if wants opencode; then
     # opencode's own installer, not Homebrew: it keeps ~/.opencode/bin on every
-    # host, which is the path the t3code instance is configured with, and core
+    # host, which is the path the T3 Code instance is configured with, and core
     # lags the current release.
     if [ ! -x "$HOME/.opencode/bin/opencode" ]; then
         info "Installing opencode…"
@@ -319,26 +302,26 @@ if wants opencode; then
     success "Linked opencode gateway provider config"
 fi
 
-# t3code keeps provider instances in ~/.t3/userdata/settings.json and their
+# T3 Code keeps provider instances in ~/.t3/userdata/settings.json and their
 # sensitive environment values as plain 0600 files in ~/.t3/userdata/secrets, so
 # provisioning a host means writing both. Neither can be symlinked: the server
 # saves settings through a temp file plus rename, which replaces a symlink with
 # a regular file.
 #
 # The instances are gateway twins of the Claude and Codex subscriptions: same
-# driver, same CLI home, different credentials. t3code locks a thread to one
+# driver, same CLI home, different credentials. T3 Code locks a thread to one
 # driver kind and home, so a twin that matches both is the only thing the model
 # picker will offer mid-thread when a subscription runs out of usage.
 #
 # Every environment entry marked `valueRedacted` is filled from the gateway key
-# below; t3code reads those from the secret store rather than the settings file.
+# below; T3 Code reads those from the secret store rather than the settings file.
 if wants t3code && ! command -v jq > /dev/null 2>&1; then
-    warning "jq not found - t3code provider configuration skipped"
+    warning "jq not found - T3 Code provider configuration skipped"
     info "Install jq and re-run: $0 t3code"
 fi
 
 if wants t3code && command -v jq > /dev/null 2>&1; then
-    info "Configuring t3code gateway providers…"
+    info "Configuring T3 Code gateway providers…"
 
     T3_BASE="${T3_BASE_DIR:-$HOME/.t3}"
     T3_SETTINGS="$T3_BASE/userdata/settings.json"
@@ -347,7 +330,7 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
 
     # $ZSH/.env is the source of truth on each host: gitignored, so the key is
     # never committed, and copied across machines by hand. An already-configured
-    # host also re-uses the copy in t3code's own secret store.
+    # host also re-uses the copy in T3 Code's own secret store.
     #
     # Tolerate what a hand-copied file picks up: surrounding quotes, a trailing
     # CR from a Windows or web editor, stray whitespace. A key that keeps any of
@@ -383,10 +366,10 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
                  | with_entries(select(.key | startswith("phaig_") | not)))
                + $own)}')
 
-    set_json_settings "$T3_SETTINGS" "$T3_CONFIG" "t3code gateway providers"
+    set_json_settings "$T3_SETTINGS" "$T3_CONFIG" "T3 Code gateway providers"
     case $? in
-        0) success "Configured t3code gateway provider instances" ;;
-        2) success "t3code gateway provider instances already configured" ;;
+        0) success "Configured T3 Code gateway provider instances" ;;
+        2) success "T3 Code gateway provider instances already configured" ;;
     esac
 
     # provider-env-<base64url instance id>-<base64url variable name>.bin
@@ -432,9 +415,9 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
             printf '%s' "$GATEWAY_KEY" > "$secret"
             chmod 600 "$secret"
         done
-        success "Wrote the gateway key into t3code's secret store"
+        success "Wrote the gateway key into T3 Code's secret store"
     else
-        warning "No gateway key found - t3code gateway instances will not authenticate"
+        warning "No gateway key found - T3 Code gateway instances will not authenticate"
         info "Set POSTHOG_GATEWAY_KEY in $ZSH/.env and re-run: $0 t3code"
     fi
 

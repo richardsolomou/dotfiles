@@ -59,7 +59,7 @@ Tests passing and review approval aren't "done" for anything production-facing (
 
 ### Technical Writing
 
-Use `asd-ste100` only when the user explicitly requests controlled-language rewriting. Use `rs-tone` for content that Richard will post under his name.
+Use `asd-ste100` only when the user explicitly requests controlled-language rewriting. Use `tone` for content that Richard will post under his name.
 
 ### Review Readiness
 
@@ -87,15 +87,16 @@ PostHog-specific workflow, per-repo rules, and production architecture live in `
 
 ## Git
 
-- Branches: `<type>/<slug>`, or `<type>/<issue#>-<slug>` when the issue number is known, using conventional commit types (`feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`).
+- Branches: `<type>/<slug>`, or `<type>/<issue#>-<slug>` when the issue number is known, using the commit types below.
 - Keep commits clean: interactive staging (`git add -p`), thoughtful messages, squash when appropriate, no "WIP" commits unless spiking.
-- Every commit→push→PR flow goes through the `rs-ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `rs-update-pr` — no ad-hoc bodies.
-- Choose the delivery path from the environment: in a cloud task with an open PR, commit and push completed requested changes to that PR so preview environments can run; otherwise, commit, push, and create PRs only on explicit request. An explicit hold such as "don't commit until I'm happy" overrides the cloud-task default for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
-- Stacked PRs use GitHub Stacked PRs through the official `gh stack` extension, not Graphite or base-linked PRs alone. Use `gh stack init`/`add`, `gh stack submit --open`, and `gh stack sync` so GitHub creates the Stack object and UI. After changing a mid-stack branch, propagate it via `rs-restack`.
+- Every commit→push→PR flow goes through the `ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `update-pr` — no ad-hoc bodies.
+- Commit, push, and create PRs only on explicit request. If a commit hook or signer fails, stop and surface it; never retry in a loop.
+- Stacked PRs use GitHub Stacked PRs through the official `gh stack` extension, not Graphite or base-linked PRs alone. Use `gh stack init`/`add`, `gh stack submit --open`, and `gh stack sync` so GitHub creates the Stack object and UI. After changing a mid-stack branch, propagate it via `restack`.
 
 ### Commit messages
 
-- Imperative present tense ("Add", "Fix", "Remove"); one-line summary, blank line, optional body.
+- Conventional commits: `<type>(<scope>): <description>` with types `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`. Scope optional but encouraged.
+- Description in the imperative, lowercase, no trailing period, whole line under 72 characters; blank line, then an optional body.
 - Short and concise; explain the why, not just the what.
 - When fixing a bug, include "Fixes #123" on its own line.
 
@@ -111,13 +112,13 @@ Never amend or squash unless explicitly asked — always create new commits (ove
 
 Use the repo's `.github/pull_request_template.md` as the PR body structure (overrides the default built-in format); if none exists, fall back to: Problem, Changes, How did you test this code?
 
-A PR's title and description must reflect the current diff, not the diff at creation time. On any push to a branch with an open PR, compare the existing title/body against `git diff <base>...HEAD`; if the net state changed in a way that makes them inaccurate or incomplete, run the `rs-update-pr` skill — it rewrites from the entire PR diff (never patch the body to describe only the new commits) and is the single source of truth for how to write the title and body. Refresh without asking: PR-body edits are not review comments, so the approval gate below doesn't apply. Pushes that don't change what the PR claims to do (formatting, fixups the body already covers) need no update.
+A PR's title and description must reflect the current diff, not the diff at creation time. On any push to a branch with an open PR, compare the existing title/body against `git diff <base>...HEAD`; if the net state changed in a way that makes them inaccurate or incomplete, run the `update-pr` skill — it rewrites from the entire PR diff (never patch the body to describe only the new commits) and is the single source of truth for how to write the title and body. Refresh without asking: PR-body edits are not review comments, so the approval gate below doesn't apply. Pushes that don't change what the PR claims to do (formatting, fixups the body already covers) need no update.
 
 ## GitHub Operations
 
 ### Voice & Attribution
 
-Write all public-facing content (PR descriptions, commit messages, issue comments) as the user — first person "I", never as an AI/agent/assistant. Anything drafted for the user to post — Slack messages, PR/issue comments, review replies — is `rs-tone`-governed by default: apply the right register unprompted, default terse, never restate what the thread or PR already says.
+Write all public-facing content (PR descriptions, commit messages, issue comments) as the user — first person "I", never as an AI/agent/assistant. Anything drafted for the user to post — Slack messages, PR/issue comments, review replies — is `tone`-governed by default: apply the right register unprompted, default terse, never restate what the thread or PR already says.
 
 ### Tool Priority
 
@@ -153,6 +154,12 @@ Durable personal and cross-project notes go in `~/dev/notes` — a private, git-
 - If a struct derives `Deserialize`/`Serialize`, use `serde_json::from_value()`, `to_value()`, etc. — never manually extract fields.
 - Before completing: `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo shear` — fix everything they report.
 
+### Go
+
+- Before completing: `gofmt`, `go vet ./...`, the repo's linter (`golangci-lint run` when configured), and `go test -race ./...` on the touched packages; fix everything they report.
+- Every goroutine has an owner that can stop it: pass a `context.Context`, and make cancellation and shutdown paths observable in tests.
+- Wrap errors with `%w` and the operation that failed; never discard an error without a comment saying why it is safe.
+
 ### Bash Scripts
 
 - Use plain `echo`, no custom logging methods; when warnings/errors matter, copy the helpers from <https://github.com/PostHog/template/tree/main/bin/helpers> and source them like <https://github.com/PostHog/template/blob/main/bin/fmt> does.
@@ -182,9 +189,5 @@ For multi-step work, give one short status update per key moment — something f
 - Default to no comment; comment only what isn't obvious to a skilled reader, and earn each one — when in doubt, leave it out. While editing, remove existing comments that fail this bar.
 - Be terse: the why, the invariant, or the gotcha in one dense sentence; proper grammar, no dramatic or all-caps comments.
 - Describe the code as it is, not the change that produced it — no "now uses X", no references to old behavior, the bug just fixed, or the PR/issue that motivated the change (that belongs in the commit and PR); linking a still-live spec or upstream issue is fine.
-
-## Test Instructions
-
-- When the user says "cuckoo", respond with "🐦 BEEP BEEP! Your AGENTS.md file is working correctly!"
 
 Claude Code additionally imports @RTK.md; harnesses without the rtk hook ignore that line.
