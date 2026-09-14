@@ -27,7 +27,7 @@ Example invocations:
 Run the status script:
 
 ```bash
-scripts/conflict-status.sh
+~/.agents/skills/rs-resolve-conflicts/scripts/conflict-status.sh
 ```
 
 This outputs tab-separated: `context\tprogress\tbranch`
@@ -73,7 +73,7 @@ When aborting, report: "Aborted `<context>`. Back on `<branch>`."
 Run:
 
 ```bash
-scripts/categorize-conflicts.sh
+~/.agents/skills/rs-resolve-conflicts/scripts/categorize-conflicts.sh
 ```
 
 This outputs tab-separated lines: `category\tfile_path`

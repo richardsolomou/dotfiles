@@ -38,13 +38,13 @@ Write two short sections: `Last week` and `This week`.
 For daily mode, run:
 
 ```bash
-~/.claude/skills/rs-activity-harvest/scripts/activity-dates.sh PostHog/standup day reuse
+~/.agents/skills/rs-activity-harvest/scripts/activity-dates.sh PostHog/standup day reuse
 ```
 
 For weekly mode, run:
 
 ```bash
-~/.claude/skills/rs-activity-harvest/scripts/activity-dates.sh PostHog/ai-gateway-sync week previous
+~/.agents/skills/rs-activity-harvest/scripts/activity-dates.sh PostHog/ai-gateway-sync week previous
 ```
 
 Store `window_start`, `now`, `new_file_path`, `header`, and `prev_file_path` per the harvest skill. Daily same-day reruns append only new activity. Weekly same-day reruns rebuild the same weekly artifact from the previous real sync.

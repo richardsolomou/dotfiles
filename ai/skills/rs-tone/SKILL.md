@@ -1,7 +1,7 @@
 ---
 name: rs-tone
 description: "Apply Richard's voice to anything posted under his name — Slack messages, PR descriptions and review comments, issue comments, customer replies, standup notes, X/LinkedIn posts. Use as a reference linked from other skills, or invoke directly to rewrite the previous output. TRIGGER when about to send anything Richard would post under his name, or when another skill has just produced such output; pick a register from the argument hint (defined in the body). SKIP for terminal-only output, internal tool calls, agent-to-agent messages, code comments, and commit messages."
-argument-hint: "[slack-casual|slack-status|pr-description|pr-review|external|social-post]"
+argument-hint: "[slack-casual|slack-status|pr-description|external|social-post]"
 ---
 
 # Tone
@@ -22,16 +22,16 @@ Apply this skill when the output will be posted, sent, or pasted under Richard's
 
 - Pasted into Slack → `slack-casual` for DMs / team chat / brainstorming, `slack-status` for standups / ops / incidents.
 - Posted to a PR description, RFC comment, or internal proposal → `pr-description`.
-- Posted as an inline PR review comment → `pr-review`.
+- Posted as an inline PR review comment on an internal PR → `slack-casual`, following its *Inline PR review comments* rules.
 - Posted to a customer-facing thread (Zendesk, public partner repo, public GitHub issue) → `external`.
 - Posted to X or LinkedIn as a social post → `social-post`.
 
 Skip this skill when:
 
 - The output is for the user (Richard) to read in the terminal — not posted anywhere.
-- It's a commit message — follow the repo's commit conventions in CLAUDE.md instead.
-- It's a code comment — follow the comment conventions in CLAUDE.md instead.
-- It's an internal tool call, agent message, or scratch note in `.notes/`.
+- It's a commit message — follow the commit conventions in the global instructions instead.
+- It's a code comment — follow the comment conventions in the global instructions instead.
+- It's an internal tool call, agent message, or a note archived in `~/dev/notes`.
 
 When uncertain whether the output will be posted under Richard's name, ask before applying.
 
@@ -53,7 +53,7 @@ The base is how Richard writes on Slack; registers adjust structure and polish, 
 - **Plain language, avoid jargon where possible.** Not just corporate verbs — Richard doesn't say "stood up", "leverage", "utilize", "spin up", "drive alignment", "circle back", "synergy", "bandwidth". Use plain ones — "built", "set up", "shipped", "deployed", "launched", "used". Applies to technical and industry jargon too when a plainer word says the same thing, not only corporate-speak.
 - **One thought per unit.** A comment, a bullet, a Slack message — each says one thing and stops. Don't chain.
 - **No three-dot ellipses (`...`)** — use a real ellipsis (`…`) when needed, but prefer a period or em-dash.
-- **Keep apostrophes where dropping them makes a different word.** The dropped-apostrophe habit (`slack-casual`, `pr-review`) is for informality, not confusion. Keep the apostrophe when the bare form is itself a common word: `we're` not `were`, `we'll` not `well`, `she'll`/`he'll` not `shell`/`hell`, `let's` not `lets`, `it's` not `its` when you mean "it is". Drop freely where there's no collision — `dont`, `thats`, `youre`, `im`, `couldnt`, `didnt`.
+- **Keep apostrophes where dropping them makes a different word.** The dropped-apostrophe habit (`slack-casual`) is for informality, not confusion. Keep the apostrophe when the bare form is itself a common word: `we're` not `were`, `we'll` not `well`, `she'll`/`he'll` not `shell`/`hell`, `let's` not `lets`, `it's` not `its` when you mean "it is". Drop freely where there's no collision — `dont`, `thats`, `youre`, `im`, `couldnt`, `didnt`.
 
 ## Registers
 
@@ -93,87 +93,15 @@ Default DM and team-channel chat. Brainstorming, reactions, low-stakes back-and-
 >
 > it feels like a product itself, and that may be because they control AI SDK and can just do things like `model: anthropic/claude-opus-4.7` but they dont have a way to see into it as much as we will with our LLMA glue
 
-### slack-status
+#### Inline PR review comments
 
-Standups, incident updates, team-channel status posts, ops chatter, review/unblock megaposts. Punchy and operational; minimal hedging.
-
-**Rules:**
-
-- **Same diction as `slack-casual`** — lowercase-leaning, dropped apostrophes, `rn`/`tbh`/`imo`/`afaik`/`wrt`, plain words. A status post is chat with structure, not a formal register; capitalization is mixed and nobody minds.
-- Status first, question second. `Working on it now.` / `should be fixed in 2` / `Both US and EU updated`.
-- Past tense for done items, future tense for next items. No "I will" filler — just the action.
-- Bullets (`•` or `-`) for lists. When a post covers more than one bucket, group under short plain-text labels ending in a colon (`needs some input to unblock:`, `needs an initial review:`). No setup line, no closing line.
-- Links are the pointer, not the point: `PR to <what it does>`, or a bare `#218` when that's the quickest handle. The bullet text carries the outcome; never trail a bullet with a list of links.
-- A post that needs something ends on the concrete ask (`can we ship that first?`, `lmk if im missing any important context here`).
-- Amend a long post with a trailing `EDIT:` note rather than reposting.
-- One status per message; chain only when one logically depends on another being read first.
-
-**Avoid:**
-
-- Long sentences explaining the status before giving it.
-- Hedging on facts ("I think it's deployed but I'm not sure" — go check, then post).
-- Heavy DM slang (`imma`, stretched vowels, custom emoji spam) — the structure is doing the work here; one emoji at most.
-
-**Example:**
-
-> Did:
->
-> - Vercel AI SDK OTel support ([PR](https://github.com/PostHog/posthog/pull/50662))
-> - Bin scripts for setup, build, and test ([PR](https://github.com/PostHog/posthog-js/pull/2824))
->
-> Will do:
->
-> - Continue HyperCache for flag definitions ([needs review](https://github.com/PostHog/posthog/pull/44701))
-> - Celery task migration to flags queue
-
-An incident update in the same register — chat diction, facts first, next steps as bullets:
-
-> openai's EU endpoint was stalling 11:23-11:31 UTC, requests hung ~30s then 502'd. gateway healthy the whole time (anthropic 200s on the same pods, no deploy involved)
-> no azure failover for this one - it was all gpt-4.1-nano which is deprecated, cant deploy it on foundry.
-> gonna look at a couple things:
-> • moving that caller to a model that has an azure failover pair
-> • focus on getting bedrock for gpt models
-
-### pr-description
-
-PR bodies, RFC comments, internal proposal docs (e.g. `company-internal` issues). Polished prose; structure follows the repo's PR template if present.
-
-**Rules:**
-
-- Full sentences, proper capitalization, full punctuation — because it's documentation, not because it's a different voice. The words are still yours: plain, terse, nothing you wouldn't say on Slack.
-- First person for what you did: `I traced the failure to…`, `I tested locally with…`, `I verified by inspection that…`.
-- Technical density: name modules, files, line refs, PR numbers, commit hashes when relevant.
-- Section headings come from the repo's PR template (`Problem`, `Changes`, `How did you test this code?`). Fall back to those three if no template exists.
-- Em-dashes are fine here for asides and qualifiers.
-- Code formatting (`backticks`) for symbols, paths, env vars, types.
-- For follow-ups or out-of-scope items, name them explicitly: "Worth a follow-up to add…".
-- Let the change determine the length. A small PR can be brief; a complex PR should preserve the context, decisions, risks, rollout details, and validation reviewers need. There is no line or word target.
-
-**Avoid:**
-
-- AI attribution (no "Generated with Claude Code", no "Co-Authored-By: Claude"). The dotfiles CLAUDE.md is explicit on this.
-- Recapping the diff in prose when the diff itself is on the PR — describe the *why* and the non-obvious *what*.
-- Marketing tone, hype words ("seamlessly", "robust", "comprehensive solution").
-
-**Example:**
-
-> ## Problem
->
-> The async migrations CI job and any other job using the repo-wide pytest collection is failing on master and on every new PR with `ModuleNotFoundError: No module named 'tests.conftest'`. `tools/traffic-sim/tests/__init__.py` was introduced when the tool landed, making the test directory a top-level package literally named `tests`. Repo-wide pytest collection runs from the workspace root, where `tools/traffic-sim` is not on `sys.path`, so importing `tests.conftest` fails before any tests are run.
->
-> ## Changes
->
-> Add `--ignore=tools/traffic-sim` to `addopts` in `pytest.ini`, matching the existing pattern for `tools/hogli` and `tools/hogli-commands` — likewise self-contained tools with their own test runners.
-
-### pr-review
-
-Inline PR review comments. Thorough rules live in the `rs-review-pr` skill; this is the voice summary.
+An inline review comment is `slack-casual` anchored to a line: same diction, same lowercase, same dropped apostrophes. The review discipline lives in `rs-review-pr`; the rules below are the shape a comment takes.
 
 For internal-team PRs (PostHog repos, your own repos, anywhere the audience is people who know you). For public/external PRs, use the `external` register instead.
 
 **Rules:**
 
-- **This register IS the Slack voice, anchored to a line.** Nothing about being "a review" changes the diction — write each comment exactly as you'd make the same point in the team channel. Lowercase is fine, including at the start of a comment; dropped apostrophes (`thats`, `im`, `dont`, `couldnt`, `didnt`, `wouldnt`, `isnt`, `wasnt`) are fine too. Don't be precious about mixed capitalization within a thread. The test for every drafted comment: would it be at home in #team-ai-gateway? If not, rewrite before output — generated reviews drift formal by default, and that drift is exactly what this register exists to kill.
+- **Nothing about being "a review" changes the diction.** Write each comment exactly as you'd make the same point in the team channel. The test for every drafted comment: would it be at home in #team-ai-gateway? If not, rewrite before output — generated reviews drift formal by default, and that drift is exactly what this section exists to kill.
 - Each comment is one thought, said once. Open with the actual subject — the question, the observation — not a frame or a label.
 - **Lead with the point, not the buildup.** The ask or the takeaway goes first — what you want the author to do or notice. Supporting mechanism comes after. Never bury the ask at the end of a wall of reasoning; the author should know what you want by the end of the first sentence.
 - **One sentence is the default, two is the ceiling for a normal comment.** Add the second only to carry the detail that makes it land — the line ref, the why, or the failing case. If it wants more, that's usually two findings — split them, or move the cross-cutting part to the summary. The one exception: a single finding that genuinely needs a short reasoning chain to make sense (a subtle bug, a non-obvious mechanism). Keep that together — but see the next rule.
@@ -242,6 +170,77 @@ Describe the gap, dont write the break as an imperative — and keep it short.
 
 > theres no prod-side assert here — nothing stops a hardcoded phs_ key shipping to prod, since the only guard on those defaults is `isDev()`. could we add `toBeUndefined()` for the three keys in the prod block?
 
+### slack-status
+
+Standups, incident updates, team-channel status posts, ops chatter, review/unblock megaposts. Punchy and operational; minimal hedging.
+
+**Rules:**
+
+- **Same diction as `slack-casual`** — lowercase-leaning, dropped apostrophes, `rn`/`tbh`/`imo`/`afaik`/`wrt`, plain words. A status post is chat with structure, not a formal register; capitalization is mixed and nobody minds.
+- Status first, question second. `Working on it now.` / `should be fixed in 2` / `Both US and EU updated`.
+- Past tense for done items, future tense for next items. No "I will" filler — just the action.
+- Bullets (`•` or `-`) for lists. When a post covers more than one bucket, group under short plain-text labels ending in a colon (`needs some input to unblock:`, `needs an initial review:`). No setup line, no closing line.
+- Links are the pointer, not the point: `PR to <what it does>`, or a bare `#218` when that's the quickest handle. The bullet text carries the outcome; never trail a bullet with a list of links.
+- A post that needs something ends on the concrete ask (`can we ship that first?`, `lmk if im missing any important context here`).
+- Amend a long post with a trailing `EDIT:` note rather than reposting.
+- One status per message; chain only when one logically depends on another being read first.
+
+**Avoid:**
+
+- Long sentences explaining the status before giving it.
+- Hedging on facts ("I think it's deployed but I'm not sure" — go check, then post).
+- Heavy DM slang (`imma`, stretched vowels, custom emoji spam) — the structure is doing the work here; one emoji at most.
+
+**Example:**
+
+> Did:
+>
+> - Vercel AI SDK OTel support ([PR](https://github.com/PostHog/posthog/pull/50662))
+> - Bin scripts for setup, build, and test ([PR](https://github.com/PostHog/posthog-js/pull/2824))
+>
+> Will do:
+>
+> - Continue HyperCache for flag definitions ([needs review](https://github.com/PostHog/posthog/pull/44701))
+> - Celery task migration to flags queue
+
+An incident update in the same register — chat diction, facts first, next steps as bullets:
+
+> openai's EU endpoint was stalling 11:23-11:31 UTC, requests hung ~30s then 502'd. gateway healthy the whole time (anthropic 200s on the same pods, no deploy involved)
+> no azure failover for this one - it was all gpt-4.1-nano which is deprecated, cant deploy it on foundry.
+> gonna look at a couple things:
+> • moving that caller to a model that has an azure failover pair
+> • focus on getting bedrock for gpt models
+
+### pr-description
+
+PR bodies, RFC comments, internal proposal docs (e.g. `company-internal` issues). Polished prose; structure follows the repo's PR template if present.
+
+**Rules:**
+
+- Full sentences, proper capitalization, full punctuation — because it's documentation, not because it's a different voice. The words are still yours: plain, terse, nothing you wouldn't say on Slack.
+- First person for what you did: `I traced the failure to…`, `I tested locally with…`, `I verified by inspection that…`.
+- Technical density: name modules, files, line refs, PR numbers, commit hashes when relevant.
+- Section headings come from the repo's PR template (`Problem`, `Changes`, `How did you test this code?`). Fall back to those three if no template exists.
+- No em-dashes. Use commas, periods, or parentheses for asides and qualifiers.
+- Code formatting (`backticks`) for symbols, paths, env vars, types.
+- For follow-ups or out-of-scope items, name them explicitly: "Worth a follow-up to add…".
+- Let the change determine the length. A small PR can be brief; a complex PR should preserve the context, decisions, risks, rollout details, and validation reviewers need. There is no line or word target.
+
+**Avoid:**
+
+- Recapping the diff in prose when the diff itself is on the PR — describe the *why* and the non-obvious *what*.
+- Marketing tone, hype words ("seamlessly", "robust", "comprehensive solution").
+
+**Example:**
+
+> ## Problem
+>
+> The async migrations CI job and any other job using the repo-wide pytest collection is failing on master and on every new PR with `ModuleNotFoundError: No module named 'tests.conftest'`. `tools/traffic-sim/tests/__init__.py` was introduced when the tool landed, making the test directory a top-level package literally named `tests`. Repo-wide pytest collection runs from the workspace root, where `tools/traffic-sim` is not on `sys.path`, so importing `tests.conftest` fails before any tests are run.
+>
+> ## Changes
+>
+> Add `--ignore=tools/traffic-sim` to `addopts` in `pytest.ini`, matching the existing pattern for `tools/hogli` and `tools/hogli-commands`, which are likewise self-contained tools with their own test runners.
+
 ### external
 
 Customer-facing comments (Zendesk replies, public PR threads on partner repos, public issue comments). Polished, warm, polite.
@@ -267,7 +266,7 @@ Customer-facing comments (Zendesk replies, public PR threads on partner repos, p
 
 ### social-post
 
-Short public posts on X and LinkedIn; one version runs identically on both, no platform variants. The `generate-social-posts` skill owns *what* to say (sourcing, the transferable-lesson bar, PostHog safety); this register owns how it sounds.
+Short public posts on X and LinkedIn; one version runs identically on both, no platform variants. This register owns how a post sounds; the caller decides what it says.
 
 **Rules:**
 
@@ -297,7 +296,7 @@ Other skills should name a specific register rather than duplicating rules:
 ```markdown
 ## Voice and tone
 
-Load the `rs-tone` skill with register `pr-review`. Apply the rules under that register and the common rules at the top of the doc.
+Load the `rs-tone` skill with register `slack-casual`. Apply the rules under that register and the common rules at the top of the doc.
 ```
 
 Override only when the skill needs a behavior that differs from the register — and call out the override explicitly.
@@ -309,7 +308,7 @@ Triggered either by the user (`/rs-tone [register]`) or by a model that just pro
 1. **Identify the target output.** Read the most recent assistant message in the conversation that produced user-facing content (a standup, a PR description, a review comment, an external reply, a Slack draft). If it's ambiguous which output to rewrite, ask before rewriting.
 2. **Pick the register.**
    - If the user passed an arg, use it.
-   - Otherwise infer from the source skill or output shape: `rs-standup` → `slack-status`, `rs-update-pr` → `pr-description`, `rs-review-pr` → `pr-review`, a public-thread reply → `external`, `generate-social-posts` → `social-post`, otherwise → `slack-casual`.
+   - Otherwise infer from the source skill or output shape: `rs-standup` → `slack-status`, `rs-update-pr` → `pr-description`, `rs-review-pr` → `slack-casual` (inline review comment rules), a public-thread reply → `external`, a social post draft → `social-post`, otherwise → `slack-casual`.
    - If inference is shaky, ask.
 3. **Rewrite, preserving meaning.** Apply the rules for the chosen register and the common rules. Keep all factual content — PR numbers, file paths, names, decisions. Don't add new claims, don't drop concrete details, don't fabricate. If the input is wrong, say so separately rather than silently fixing it.
 4. **Output the rewritten version only.** No diff, no "here's what I changed" preamble, no commentary. The user copies the result.

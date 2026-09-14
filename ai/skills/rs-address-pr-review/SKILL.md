@@ -129,7 +129,7 @@ Produce one section per unresolved comment, in the order they appear on the PR. 
 
 **Suggested reply** *(include when the verdict is Disagree, or when "Agree with a different fix" needs explaining on the thread)*
 
-This reply IS posted under the user's name, so load the `rs-tone` skill with `register: pr-review` and apply those rules to the reply body — but not to the rest of the walkthrough. Put the reply inside a fenced code block per the shared output rules (fence, never blockquote):
+This reply IS posted under the user's name, so load the `rs-tone` skill with `register: slack-casual` and apply its *Inline PR review comments* rules to the reply body — but not to the rest of the walkthrough. Put the reply inside a fenced code block per the shared output rules (fence, never blockquote):
 
 ```text
 <a short reply the user can post on the PR thread to push back politely or explain the chosen approach>
@@ -179,7 +179,7 @@ Plan:
 Reply with numbers to execute (e.g. "1, 2, 4"), "all" to do everything, or "none" to do nothing. You can also say "edits only" to apply file edits without committing, pushing, posting replies, or resolving — useful if you want to review the diffs locally first.
 ```
 
-Executing means: apply the edits, **commit and push them**, refresh the PR title and description against the new diff, then post replies and resolve threads (Step 8). Spell this out in the plan so the user knows a "done" reply implies a push — that's the contract. Default to doing nothing until the user picks. The "edits only" escape hatch matters because CLAUDE.md forbids posting PR review comments without explicit user approval — listing the planned replies above counts as approval *for those specific bodies*; if you change them, ask again before posting.
+Executing means: apply the edits, **commit and push them**, refresh the PR title and description against the new diff, then post replies and resolve threads (Step 8). Spell this out in the plan so the user knows a "done" reply implies a push — that's the contract. Default to doing nothing until the user picks. The "edits only" escape hatch matters because the global instructions forbid posting PR review comments without explicit user approval — listing the planned replies above counts as approval *for those specific bodies*; if you change them, ask again before posting.
 
 ### Step 8: Execute
 
@@ -199,17 +199,18 @@ Apply *all* the file edits, then commit and push, then refresh the PR body, and 
 
     If the user chose **"edits only"**, stop here without committing — they want to review the diffs locally first. In that case do not refresh the PR body, post replies, or resolve threads.
 
-3. **Refresh the PR title and description.** A review round changes the code, so the PR body written at creation time is now potentially stale. Apply the `rs-update-pr` skill to re-check the title and description against the full diff and update them if anything no longer matches. This is automatic — PR-body edits are not review comments, so do it without asking (per CLAUDE.md → Pull Request Descriptions). Do this *after* the push succeeds and *before* posting any "done" replies, so the reply and the body land together.
+3. **Refresh the PR title and description.** A review round changes the code, so the PR body written at creation time is now potentially stale. Apply the `rs-update-pr` skill to re-check the title and description against the full diff and update them if anything no longer matches. This is automatic — PR-body edits are not review comments, so do it without asking (per Pull Request Descriptions in the global instructions). Do this *after* the push succeeds and *before* posting any "done" replies, so the reply and the body land together.
 
-4. **Post the in-thread reply** for each picked thread, using the comment ID of the first comment in the thread:
+4. **Post the in-thread reply** for each picked thread, using the comment ID of the first comment in the thread. Write the reply to a temporary file with the file-writing tool (never substitute it into a shell command, per the shell-safety rules in `rs-update-pr`), then:
 
     ```bash
+    jq -n --rawfile body /tmp/rs-address-reply.md '{body: ($body | rtrimstr("\n"))}' > /tmp/rs-address-reply.json
     gh api repos/<owner>/<repo>/pulls/<number>/comments/<first-comment-databaseId>/replies \
-      --method POST \
-      -f body="<reply body>"
+      --method POST --input /tmp/rs-address-reply.json
+    rm -f /tmp/rs-address-reply.md /tmp/rs-address-reply.json
     ```
 
-    For "Agree, no open questions", answer any question the reviewer asked and briefly explain the invariant or failure mode that makes the change correct before naming what changed. Never reply with only `done` or a change summary: that makes the reviewer reconstruct the reasoning they asked for. For everything else, use the **Suggested reply** drafted in the walkthrough. The Suggested reply was already written with `rs-tone` register `pr-review` applied; completion replies should follow the same rules (no severity labels, no sign-offs, lowercase informal voice is fine).
+    For "Agree, no open questions", answer any question the reviewer asked and briefly explain the invariant or failure mode that makes the change correct before naming what changed. Never reply with only `done` or a change summary: that makes the reviewer reconstruct the reasoning they asked for. For everything else, use the **Suggested reply** drafted in the walkthrough. The Suggested reply was already written with `rs-tone` `slack-casual` applied; completion replies should follow the same rules (no severity labels, no sign-offs, lowercase informal voice is fine).
 
 5. **Resolve the thread** (only when the per-verdict rules above say to):
 
@@ -245,7 +246,7 @@ Use Shared mechanics § *Concepts to lean into* from `rs-adversarial-review` —
 
 Most of this output is for the user to read in the terminal — not posted under their name. Default assistant voice is fine for the bulk of each section.
 
-**Exception:** the **Suggested reply** subsection (used when Disagreeing or explaining a different fix) *is* posted under the user's name on the PR thread. Load the `rs-tone` skill with `register: pr-review` and apply those rules to that subsection only. Don't apply `rs-tone` to the rest of the walkthrough — it'd flatten the explanations.
+**Exception:** the **Suggested reply** subsection (used when Disagreeing or explaining a different fix) *is* posted under the user's name on the PR thread. Load the `rs-tone` skill with `register: slack-casual` and apply its *Inline PR review comments* rules to that subsection only. Don't apply `rs-tone` to the rest of the walkthrough — it'd flatten the explanations.
 
 ## Security note
 

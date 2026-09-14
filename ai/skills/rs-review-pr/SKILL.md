@@ -12,18 +12,12 @@ The normal path uses one review pass. `second-opinion` adds one fresh independen
 
 ## Modes
 
-Use an explicit `as:<mode>` argument when present. Otherwise detect the mode:
-
-- `self` — the current GitHub user authored the PR, or the target is a local branch without a PR.
-- `teammate` — the author is an organization owner, member, or collaborator.
-- `contributor` — the author is external or the PR comes from a fork.
-
-State the detected mode in one line. If detection is ambiguous, use `contributor` and explain the available override.
+Use an explicit `as:<mode>` argument when present. Otherwise detect the mode per Shared mechanics § *Detect the author mode* in `rs-adversarial-review`, state it in one line, and default to `contributor` when ambiguous.
 
 Mode changes only the review posture and output:
 
 - `self` — use the own-code counter-bias. Explain findings in the terminal and offer to apply them.
-- `teammate` — use the teammate counter-bias. Draft concise inline comments in the user's `rs-tone` `pr-review` voice.
+- `teammate` — use the teammate counter-bias. Draft concise inline comments in the user's `rs-tone` `slack-casual` voice.
 - `contributor` — use the contributor counter-bias. Draft neutral, constructive inline comments and explain unfamiliar conventions.
 
 Never post a comment, review, or approval. Never edit another author's branch.
@@ -60,7 +54,7 @@ Apply the selected counter-bias and the full `rs-adversarial-review` verificatio
 - consistency across sibling producers and consumers;
 - clarity, reuse, and scope.
 
-Run the `security-audit` flow inline when the user passes `+security` or the diff touches authentication, permissions, SQL, network requests, deserialization, file paths, secrets, or tenant boundaries. Do not start another general review pass.
+Run the `security-audit` flow inline when the user passes `+security` or the diff meets the Shared mechanics § *Security lens trigger*. Do not start another general review pass.
 
 For each candidate, identify the concrete failing scenario and try to disprove it. Drop preferences, formatter output, speculative future risks, and concerns already covered by the discussion. Keep at most five findings, ordered by impact.
 
@@ -101,7 +95,7 @@ Fix: <concrete change and any trade-off>
 
 Offer to apply selected fixes. Do not edit, stage, commit, or push until the user chooses. A calling skill can override this interaction when it already has mutation authority and a stricter action budget.
 
-For `teammate`, load `rs-tone` with `register: pr-review`. For `contributor`, use a neutral and welcoming voice without `rs-tone`. Render each comment separately:
+For `teammate`, load `rs-tone` with `register: slack-casual` and apply its *Inline PR review comments* rules. For `contributor`, use a neutral and welcoming voice without `rs-tone`. Render each comment separately:
 
 ````markdown
 File: <path>:<line> · <Blocker|Suggestion|Question>

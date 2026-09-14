@@ -21,7 +21,7 @@ An entry covers **everything from the moment of the previous entry until the mom
 ### Dates script
 
 ```bash
-~/.claude/skills/rs-activity-harvest/scripts/activity-dates.sh <notes-subdir> <header-style: day|week> <same-day: reuse|previous>
+~/.agents/skills/rs-activity-harvest/scripts/activity-dates.sh <notes-subdir> <header-style: day|week> <same-day: reuse|previous>
 ```
 
 Returns tab-separated: `<window_start>\t<now>\t<new_file_path>\t<header>\t<prev_file_path>`
@@ -52,7 +52,7 @@ Each result must follow this digest contract:
 One call fetches the whole pass concurrently — your PRs, the wider searches, and the per-repo comment sweeps:
 
 ```bash
-~/.claude/skills/rs-activity-harvest/scripts/github-harvest.sh "${window_start}" <open-key> <untouched: skip|include>
+~/.agents/skills/rs-activity-harvest/scripts/github-harvest.sh "${window_start}" <open-key> <untouched: skip|include>
 ```
 
 Emits a single JSON object:
@@ -75,7 +75,7 @@ Reading rules:
 **Your PRs only** — the wrapper's inner pass, usable standalone when the wider sweep isn't needed:
 
 ```bash
-~/.claude/skills/rs-activity-harvest/scripts/author-prs.sh "${window_start}" <open-key> <untouched: skip|include>
+~/.agents/skills/rs-activity-harvest/scripts/author-prs.sh "${window_start}" <open-key> <untouched: skip|include>
 ```
 
 Emits `{"merged": [{number, title, repo, merged_at}, …], "<open-key>": [{number, title, repo, isDraft, commits: [headline, …]}, …]}`. `merged` is PRs you authored that merged at or after `window_start`. The open list carries each PR's in-window commit headlines. `untouched: skip` drops open PRs with no commits in the window. `include` keeps the full in-flight backlog for weekly focus candidates.
@@ -106,7 +106,7 @@ If the search returns nothing useful, note that and lean on GitHub plus whatever
 Work done through PostHog Code that never reaches GitHub or Slack — investigations, live testing/dogfooding, signal-report triage, analyses. One script covers both halves (cloud task runs and local/worktree conversations), filtered to the window:
 
 ```bash
-~/.claude/skills/rs-activity-harvest/scripts/posthog-code-activity.sh "${window_start}" [window_end]
+~/.agents/skills/rs-activity-harvest/scripts/posthog-code-activity.sh "${window_start}" [window_end]
 ```
 
 - **Cloud tasks** come from the PostHog API (project 2, `created_by` me), newest-first with client-side window filtering. Needs a personal API key with the Tasks read scope in `$POSTHOG_PERSONAL_API_KEY` or keychain item `posthog-personal-api-key`; when absent the script says so — fall back to the MCP `tasks-list` tool (`created_by: 345145`, `internal: "all"`) and window-filter by `created_at` yourself, reading titles/repos only (descriptions are enormous).

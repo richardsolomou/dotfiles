@@ -87,7 +87,7 @@ PostHog-specific workflow, per-repo rules, and production architecture live in `
 
 ## Git
 
-- Branches: `<type>/<slug>`, or `<type>/<issue#>-<slug>` when the issue number is known, using conventional commit types (`feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`).
+- Branches: `<type>/<slug>`, or `<type>/<issue#>-<slug>` when the issue number is known, using the commit types below.
 - Keep commits clean: interactive staging (`git add -p`), thoughtful messages, squash when appropriate, no "WIP" commits unless spiking.
 - Every commit→push→PR flow goes through the `rs-ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `rs-update-pr` — no ad-hoc bodies.
 - Choose the delivery path from the environment: in a cloud task with an open PR, commit and push completed requested changes to that PR so preview environments can run; otherwise, commit, push, and create PRs only on explicit request. An explicit hold such as "don't commit until I'm happy" overrides the cloud-task default for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
@@ -95,7 +95,8 @@ PostHog-specific workflow, per-repo rules, and production architecture live in `
 
 ### Commit messages
 
-- Imperative present tense ("Add", "Fix", "Remove"); one-line summary, blank line, optional body.
+- Conventional commits: `<type>(<scope>): <description>` with types `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`. Scope optional but encouraged.
+- Description in the imperative, lowercase, no trailing period, whole line under 72 characters; blank line, then an optional body.
 - Short and concise; explain the why, not just the what.
 - When fixing a bug, include "Fixes #123" on its own line.
 
@@ -153,6 +154,12 @@ Durable personal and cross-project notes go in `~/dev/notes` — a private, git-
 - If a struct derives `Deserialize`/`Serialize`, use `serde_json::from_value()`, `to_value()`, etc. — never manually extract fields.
 - Before completing: `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo shear` — fix everything they report.
 
+### Go
+
+- Before completing: `gofmt`, `go vet ./...`, the repo's linter (`golangci-lint run` when configured), and `go test -race ./...` on the touched packages; fix everything they report.
+- Every goroutine has an owner that can stop it: pass a `context.Context`, and make cancellation and shutdown paths observable in tests.
+- Wrap errors with `%w` and the operation that failed; never discard an error without a comment saying why it is safe.
+
 ### Bash Scripts
 
 - Use plain `echo`, no custom logging methods; when warnings/errors matter, copy the helpers from <https://github.com/PostHog/template/tree/main/bin/helpers> and source them like <https://github.com/PostHog/template/blob/main/bin/fmt> does.
@@ -182,9 +189,5 @@ For multi-step work, give one short status update per key moment — something f
 - Default to no comment; comment only what isn't obvious to a skilled reader, and earn each one — when in doubt, leave it out. While editing, remove existing comments that fail this bar.
 - Be terse: the why, the invariant, or the gotcha in one dense sentence; proper grammar, no dramatic or all-caps comments.
 - Describe the code as it is, not the change that produced it — no "now uses X", no references to old behavior, the bug just fixed, or the PR/issue that motivated the change (that belongs in the commit and PR); linking a still-live spec or upstream issue is fine.
-
-## Test Instructions
-
-- When the user says "cuckoo", respond with "🐦 BEEP BEEP! Your AGENTS.md file is working correctly!"
 
 Claude Code additionally imports @RTK.md; harnesses without the rtk hook ignore that line.

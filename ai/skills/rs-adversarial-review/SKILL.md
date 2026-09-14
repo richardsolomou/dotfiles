@@ -77,6 +77,27 @@ Full URL → extract `owner/repo` and the number. Number only → infer the repo
 gh pr view <n> --repo <owner/repo> --json number,title,body,baseRefName,headRefName,headRefOid,state,author,files
 ```
 
+### Detect the author mode
+
+`author_association` is **not** a `gh pr view --json` field; it only exists on the REST API. One call returns it with the author and both repo owners, for fork detection:
+
+```bash
+me=$(gh api user --jq .login)
+gh api repos/<owner>/<repo>/pulls/<n> \
+  --jq '{author: .user.login, assoc: .author_association, head_owner: .head.repo.owner.login, base_owner: .base.repo.owner.login, base: .base.ref}'
+```
+
+- `author == $me` → **self**
+- `assoc ∈ {OWNER, MEMBER, COLLABORATOR}` → **teammate**
+- `assoc ∈ {CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER, NONE, MANNEQUIN}` → **contributor**
+- No PR (local branch only) → **self**
+
+A fork PR (`head_owner` differs from `base_owner`) is a strong second signal for **contributor**; if it conflicts with `assoc`, treat as contributor, the stricter posture. When still ambiguous, default to contributor and tell the user about the `as:<mode>` override.
+
+### Security lens trigger
+
+Run the `security-audit` lens when the caller asks for it, or when the diff touches authentication, permissions, SQL, network requests, deserialization, file paths, secrets, or tenant boundaries.
+
 ### Diff against the true base
 
 The base is `baseRefName` — **not always `main`/`master`**; a stacked PR branches off another feature branch. Fetch it, then three-dot diff so you see only what this branch added relative to the merge-base, not what landed on the base afterward:

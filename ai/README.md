@@ -6,7 +6,6 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 - `AGENTS.posthog.md` — extra rules loaded only under `~/dev/posthog`
 - `RTK.md` — rtk usage notes, imported by Claude Code only
 - `skills/` — local skills shared by the installed agent harnesses
-- `agents/` — Claude Code subagents
 - `t3code/` — t3code provider instances that route to the gateway
 - `opencode/` — opencode config: the gateway's open-weight models
 
@@ -19,7 +18,7 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 ./install.sh --help             # list components
 ```
 
-Everything is symlinked, so edits here take effect without reinstalling. Adding a skill or renaming one needs a re-run; the script also prunes symlinks left behind by skills it no longer manages.
+Everything is symlinked, so edits here take effect without reinstalling. Adding a skill or renaming one needs a re-run; the script also prunes symlinks left behind by skills it no longer manages. Skills reference their own scripts through `~/.agents/skills/<skill>/scripts/`, the cross-harness directory every install populates.
 
 ## t3code
 

@@ -10,7 +10,7 @@ Generate a bi-weekly sprint planning update for the AI Gateway team (configurabl
 
 ## Team Configuration
 
-All team-specific values live in `scripts/config.sh`. The helper scripts source it automatically; the inline `gh` commands in this skill source it too, so always run them with the leading `source` line shown.
+All team-specific values live in this skill's `scripts/config.sh`. The helper scripts source it automatically; the inline `gh` commands in this skill source it too, so always run them with the leading `source` line shown. Scripts are invoked through `~/.agents/skills/`, which every harness's installer populates, so the commands work from any working directory.
 
 The defaults target the **AI Gateway** team:
 
@@ -44,13 +44,7 @@ Pull the quarter goals and their statuses from the previous sprint's comment (St
   2. Jump directly to Step 13 (Archive Previous Sprint's Done Items)
   3. Exit after archiving
 
-- `/rs-sprint-planning goals` — Show what the team is currently working on by merging the current sprint plan with project board data, grouped by assignee. When this argument is present:
-  1. Run Step G1 (Fetch Team Members)
-  2. Run Step G2 (Determine Current User)
-  3. Run Step G3 (Fetch Current Sprint Plan)
-  4. Run Step G4 (Fetch Board Goals)
-  5. Run Step G5 (Merge and Display)
-  6. Exit after displaying
+- `/rs-sprint-planning goals` — Show what the team is currently working on by merging the current sprint plan with project board data, grouped by assignee. Follow `references/goals.md` in this skill's directory and exit after displaying.
 
 ## Your Task
 
@@ -61,7 +55,7 @@ Follow these steps in order. Gather as much data automatically as possible befor
 Run the helper script to find the current and previous sprint issues:
 
 ```bash
-scripts/detect-sprint.sh
+~/.agents/skills/rs-sprint-planning/scripts/detect-sprint.sh
 ```
 
 This returns tab-separated fields:
@@ -77,7 +71,7 @@ Store all these values. You need:
 ### Step 2: Fetch Team Members
 
 ```bash
-source scripts/config.sh
+source ~/.agents/skills/rs-sprint-planning/scripts/config.sh
 gh api "orgs/${SPRINT_ORG}/teams/${SPRINT_TEAM_SLUG}/members" --jq '.[].login'
 ```
 
@@ -86,7 +80,7 @@ If this fails (permissions, etc.), fall back to `SPRINT_FALLBACK_MEMBERS`, or as
 ### Step 3: Fetch Previous Sprint Comment
 
 ```bash
-scripts/fetch-previous-comment.sh <prev_number>
+~/.agents/skills/rs-sprint-planning/scripts/fetch-previous-comment.sh <prev_number>
 ```
 
 If the result is "NOT_FOUND" (e.g., the team's first sprint), skip the plan-first retro approach entirely. You'll build the retro purely from merged PRs and project board items instead, confirmed with the user.
@@ -102,8 +96,8 @@ If the result is not "NOT_FOUND", parse the comment to extract:
 For each team member, fetch their merged PRs during the **previous** sprint period. Issue all fetch calls in parallel (multiple Bash tool calls in a single response) to minimize wall-clock time:
 
 ```bash
-source scripts/config.sh
-~/.claude/skills/rs-activity-harvest/scripts/team-merged-prs.sh <username> "$SPRINT_ORG" <prev_start> <prev_end> 200 body
+source ~/.agents/skills/rs-sprint-planning/scripts/config.sh
+~/.agents/skills/rs-activity-harvest/scripts/team-merged-prs.sh <username> "$SPRINT_ORG" <prev_start> <prev_end> 200 body
 ```
 
 Store all PR data per team member. The script returns each PR's `body` (the
@@ -117,7 +111,7 @@ in-flight work the merged query misses — house retros list started-but-unfinis
 items (🟡/🔴), not just shipped work:
 
 ```bash
-scripts/fetch-team-open-prs.sh <username>
+~/.agents/skills/rs-sprint-planning/scripts/fetch-team-open-prs.sh <username>
 ```
 
 Bucket the open PRs by `createdAt`:
@@ -144,7 +138,7 @@ Results cap at 100 per page — follow the `Cursor` column until the window is c
 If `SPRINT_PROJECT_NUMBER` is empty (no board yet), skip this step — there are no board items to categorize. The plan in Step 9 is then drafted from the previous sprint's in-flight work and the user's input.
 
 ```bash
-source scripts/config.sh
+source ~/.agents/skills/rs-sprint-planning/scripts/config.sh
 [ -n "$SPRINT_PROJECT_NUMBER" ] && gh project item-list "$SPRINT_PROJECT_NUMBER" --owner "$SPRINT_ORG" --format json --limit 200
 ```
 
@@ -379,7 +373,7 @@ After handing off the update, offer to clean up the project board by archiving D
 1. Run the helper script to find archivable items:
 
    ```bash
-   scripts/archive-done-items.sh <sprint_start>
+   ~/.agents/skills/rs-sprint-planning/scripts/archive-done-items.sh <sprint_start>
    ```
 
 2. If the result is an empty array, skip silently — no prompt needed.
@@ -393,102 +387,8 @@ After handing off the update, offer to clean up the project board by archiving D
 4. If the user confirms, archive each item:
 
    ```bash
-   source scripts/config.sh
+   source ~/.agents/skills/rs-sprint-planning/scripts/config.sh
    gh project item-archive "$SPRINT_PROJECT_NUMBER" --owner "$SPRINT_ORG" --id <item-id>
    ```
-
-## Goals Workflow
-
-These steps apply when the `goals` argument is provided. They run independently of the main sprint planning workflow.
-
-### Step G1: Fetch Team Members
-
-Follow Step 2 (Fetch Team Members) from the main workflow.
-
-### Step G2: Determine Current User
-
-```bash
-gh api user --jq .login
-```
-
-This user's section is highlighted in the output. If the API call fails, fall back to the output of `git config user.email` and match against team member handles.
-
-### Step G3: Fetch Current Sprint Plan
-
-1. Detect the current sprint using Step 1 (Detect Sprint Context) from the main workflow.
-
-2. Fetch the team's comment from the current sprint issue:
-
-   ```bash
-   scripts/fetch-previous-comment.sh <current_number>
-   ```
-
-3. If the result is "NOT_FOUND", skip this step (no sprint plan exists yet). The output will rely solely on board data from Step G4.
-
-4. If a comment is found, parse the **Plan** section to extract each team member's planned items. Each item may be plain text or a `[title](url)` link.
-
-### Step G4: Fetch Board Goals
-
-Run the helper script to fetch In Progress and Todo items with assignee data:
-
-```bash
-scripts/fetch-board-goals.sh
-```
-
-This returns a JSON array of items, each with `id`, `title`, `status`, `url`, `type`, `number`, and `assignees` fields.
-
-### Step G5: Merge and Display
-
-Merge the sprint plan (Step G3) with the project board (Step G4) into a single view per team member.
-
-**Merge strategy:**
-
-1. Start from the sprint plan items as the baseline for each person.
-2. For each board item, check if it matches a plan item by URL, issue/PR number, or keyword similarity in the title.
-3. Matched items: use the board item's status (In Progress / Todo) and URL, preserving the plan's item description.
-4. Unmatched plan items (not on the board): include as-is from the plan, without a status subheading.
-5. Unmatched board items (not in the plan): append under a **"New (not in sprint plan):"** subheading.
-6. If no sprint plan exists (Step G3 returned NOT_FOUND), display board items only, grouped by status as before.
-
-**Output format:**
-
-```markdown
-## Team Goals - {SPRINT_TEAM_NAME}
-
-[Project Board](https://github.com/orgs/{SPRINT_ORG}/projects/{SPRINT_PROJECT_NUMBER})
-
-**--> @currentuser** (you)
-
-**In Progress:**
-- [Item from plan that's in progress on board](url)
-
-**Todo:**
-- [Item from plan that's todo on board](url)
-
-**Other planned:**
-- Item from plan not on board
-
-**New (not in sprint plan):**
-- [Board item not in plan](url) - In Progress
-
----
-
-@teammate
-
-**In Progress:**
-- [Their item](url)
-
----
-
-### Unassigned
-- [Orphaned item](url) - In Progress
-- Draft board item title - Todo
-```
-
-**Display rules:**
-
-- Current user appears first with `**-->**` prefix and `(you)` suffix; other members alphabetical; only members with at least one item.
-- Items with URLs use `[title](url)` links; DraftIssues show plain text; items with multiple assignees appear under each.
-- Unassigned items at the bottom in their own section; side quests from the sprint plan under their own heading per person.
 
 The output template in Step 10 is the authoritative format reference (synthesis and bullet rules live in Step 7). Never offer to post and never run `gh issue comment` unprompted — the user posts the comment themselves (Step 12).

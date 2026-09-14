@@ -18,7 +18,7 @@ This skill produces the async prep — the review and a HOGS scaffold — and, o
 
 ## Team Configuration
 
-All team-specific values live in `scripts/config.sh`. The helper scripts source it automatically; the inline `gh`/`git` commands in this skill source it too, so always run them with the leading `source` line shown.
+All team-specific values live in this skill's `scripts/config.sh`. The helper scripts source it automatically; the inline `gh`/`git` commands in this skill source it too, so always run them with the leading `source` line shown. Scripts are invoked through `~/.agents/skills/`, which every harness's installer populates, so the commands work from any working directory.
 
 The defaults target the **AI Gateway** team:
 
@@ -61,7 +61,7 @@ Follow these steps in order. Gather as much data automatically as possible befor
 ### Step 1: Detect Quarter Context
 
 ```bash
-scripts/detect-quarter.sh
+~/.agents/skills/rs-quarterly-planning/scripts/detect-quarter.sh
 ```
 
 Returns tab-separated fields:
@@ -72,7 +72,7 @@ Store these. `cur_*` is the quarter being **reviewed**; `next_*` is the quarter 
 ### Step 2: Fetch Team Members
 
 ```bash
-source scripts/config.sh
+source ~/.agents/skills/rs-quarterly-planning/scripts/config.sh
 gh api "orgs/${QP_ORG}/teams/${QP_TEAM_SLUG}/members" --jq '.[].login'
 ```
 
@@ -83,7 +83,7 @@ If this fails (permissions, etc.), fall back to `QP_FALLBACK_MEMBERS`, or ask th
 Read the team's existing objectives page — the goals being reviewed — from the local posthog.com checkout:
 
 ```bash
-source scripts/config.sh
+source ~/.agents/skills/rs-quarterly-planning/scripts/config.sh
 cat "$QP_OBJECTIVES_PATH"
 ```
 
@@ -94,8 +94,8 @@ If the file is missing or `QP_POSTHOG_COM_DIR` isn't a checkout, note it and ask
 For each team member, fetch their merged PRs across the **current** quarter (`cur_start` to `cur_end`). Issue all fetch calls in parallel (multiple Bash tool calls in one response):
 
 ```bash
-source scripts/config.sh
-~/.claude/skills/rs-activity-harvest/scripts/team-merged-prs.sh <username> "$QP_ORG" <cur_start> <cur_end> 500
+source ~/.agents/skills/rs-quarterly-planning/scripts/config.sh
+~/.agents/skills/rs-activity-harvest/scripts/team-merged-prs.sh <username> "$QP_ORG" <cur_start> <cur_end> 500
 ```
 
 Store all PR data per member. A quarter is a lot of PRs — you'll synthesize, not list, them. The fetch is deliberately title-only (hundreds of bodies would swamp the context at quarter scale); when a flagship or ambiguous item needs more than its title to score an objective, fetch that PR's body selectively with `gh pr view <url> --json body`.
@@ -171,7 +171,7 @@ Reached after Step 8, or directly via the `pr` argument (in which case ask the u
 ### Step P1: Verify the Repo
 
 ```bash
-source scripts/config.sh
+source ~/.agents/skills/rs-quarterly-planning/scripts/config.sh
 git -C "$QP_POSTHOG_COM_DIR" rev-parse --is-inside-work-tree && \
   git -C "$QP_POSTHOG_COM_DIR" status --short
 ```
@@ -181,7 +181,7 @@ If it isn't a checkout, stop and tell the user where `QP_POSTHOG_COM_DIR` should
 ### Step P2: Branch off the latest default branch
 
 ```bash
-source scripts/config.sh
+source ~/.agents/skills/rs-quarterly-planning/scripts/config.sh
 git -C "$QP_POSTHOG_COM_DIR" fetch origin
 default_branch=$(gh repo view PostHog/posthog.com --json defaultBranchRef --jq .defaultBranchRef.name)
 git -C "$QP_POSTHOG_COM_DIR" switch -c "${QP_TEAM_PAGE_SLUG}-objectives-$(echo "$next_label" | tr 'A-Z ' 'a-z-')" "origin/${default_branch}"
@@ -200,24 +200,22 @@ Run the repo's formatter if it's wired up (`bin/fmt`, or `pnpm prettier`/the doc
 Never push or open a PR without explicit user confirmation. On confirmation:
 
 ```bash
-source scripts/config.sh
+source ~/.agents/skills/rs-quarterly-planning/scripts/config.sh
 git -C "$QP_POSTHOG_COM_DIR" add "$QP_OBJECTIVES_PATH"
 git -C "$QP_POSTHOG_COM_DIR" commit -m "${QP_TEAM_NAME} ${next_label} objectives"
 git -C "$QP_POSTHOG_COM_DIR" push -u origin HEAD
 ```
 
-Open the PR with `gh`, using the repo's PR template if present (`.github/pull_request_template.md`); otherwise a short Problem / Changes body, written in the `rs-tone` `pr-description` register. Request review from `QP_BLITZSCALE_REVIEWER` — if it's empty, ask the user who the team's Blitzscale member is before opening.
+Write the PR body with the `rs-update-pr` skill (it owns the template handling, structure, and voice) to a temporary file, never substituted into the shell command. Request review from `QP_BLITZSCALE_REVIEWER` — if it's empty, ask the user who the team's Blitzscale member is before opening.
 
 ```bash
-source scripts/config.sh
+source ~/.agents/skills/rs-quarterly-planning/scripts/config.sh
 reviewer_flag=""
 [ -n "$QP_BLITZSCALE_REVIEWER" ] && reviewer_flag="--reviewer $QP_BLITZSCALE_REVIEWER"
 gh pr create --repo "PostHog/posthog.com" \
   --title "${QP_TEAM_NAME} ${next_label} objectives" \
-  --body "$(cat <<'EOF'
-<the PR body>
-EOF
-)" $reviewer_flag
+  --body-file /tmp/rs-quarterly-pr-body.md $reviewer_flag
+rm -f /tmp/rs-quarterly-pr-body.md
 ```
 
 Report the PR URL.

@@ -45,7 +45,7 @@ If all changes are clearly related to one logical change, stage everything. If t
 
 ### Step 4: Commit
 
-Write a conventional-commit message (`<type>(<scope>): <description>`, under 72 characters, lowercase description, no trailing period) per CLAUDE.md → Git → Commit messages — that section owns the type list and body rules.
+Write the commit message per Commit messages in the global instructions — that section owns the format, the type list, and the body rules.
 
 ```sh
 git commit -m "$(cat <<'EOF'
@@ -98,15 +98,15 @@ Check if a PR already exists for this branch:
 gh pr view --json number,url 2>/dev/null
 ```
 
-**If a PR already exists**, the changes have just been pushed to it, so its title and description are now potentially stale. Apply the `rs-update-pr` skill to refresh both against the full diff, then show the URL. Do not skip this — a PR that already exists is exactly the case where the description drifts. (See CLAUDE.md → Pull Request Descriptions: refreshing is automatic, no approval needed.)
+**If a PR already exists**, the changes have just been pushed to it, so its title and description are now potentially stale. Apply the `rs-update-pr` skill to refresh both against the full diff, then show the URL. Do not skip this — a PR that already exists is exactly the case where the description drifts. (See Pull Request Descriptions in the global instructions: refreshing is automatic, no approval needed.)
 
 **If no PR exists**, create one. Write the title and body using the `rs-update-pr` skill — it is the single source of truth for the title rules, the description structure, the context-sensitive length guidance, and the voice. Use the commit message title as the starting point for the PR title.
 
+Write the title and body to temporary files with the file-writing tool, following the shell-safety rules in `rs-update-pr` (never substitute generated text into a shell command), then:
+
 ```sh
-gh pr create --title "<title>" --body "$(cat <<'EOF'
-PR description here
-EOF
-)"
+gh pr create --title "$(cat /tmp/rs-ship-title.txt)" --body-file /tmp/rs-ship-body.md
+rm -f /tmp/rs-ship-title.txt /tmp/rs-ship-body.md
 ```
 
 ### Step 8: Report

@@ -10,7 +10,7 @@ export ZSH
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-ALL_COMPONENTS="context skills agents mcp hooks permissions preferences opencode t3code"
+ALL_COMPONENTS="context skills mcp hooks permissions preferences opencode t3code"
 
 # Directories every harness scans for skills. opencode auto-loads both
 # ~/.claude/skills and ~/.agents/skills, the cross-harness convention.
@@ -31,7 +31,6 @@ show_help() {
     echo "Components:"
     echo "  context      Instruction files: ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md"
     echo "  skills       ai/skills/* into each harness' skill directory"
-    echo "  agents       ai/agents/* as Claude Code subagents"
     echo "  mcp          MCP servers (Claude Code and Codex)"
     echo "  hooks        Claude Code hooks"
     echo "  permissions  Claude Code tool permissions"
@@ -40,7 +39,7 @@ show_help() {
     echo "  t3code       t3code gateway provider instances and their gateway key"
     echo ""
     echo "Options:"
-    echo "  --uninstall  Remove the symlinks made by context, skills, and agents"
+    echo "  --uninstall  Remove the symlinks made by context and skills"
     echo "  -h, --help   Show this help message"
     echo ""
     echo "Examples:"
@@ -164,14 +163,6 @@ if [ "$UNINSTALL" = "true" ]; then
         success "Removed skill symlinks"
     fi
 
-    if wants agents; then
-        for agent in "$ZSH"/ai/agents/*.md; do
-            [ -f "$agent" ] || continue
-            unlink_managed "$HOME/.claude/agents/$(basename "$agent")"
-        done
-        success "Removed agent symlinks"
-    fi
-
     echo ""
     success "Agent configuration uninstalled"
     info "Note: MCP servers, hooks, permissions, and t3code provider instances are not removed by uninstall"
@@ -194,14 +185,6 @@ if wants skills; then
         prune_dangling_skill_links "$dir"
     done
     success "Linked skills into Claude Code, Codex, and opencode"
-fi
-
-if wants agents; then
-    for agent in "$ZSH"/ai/agents/*.md; do
-        [ -f "$agent" ] || continue
-        link "$agent" "$HOME/.claude/agents/$(basename "$agent")"
-    done
-    success "Linked Claude Code subagents"
 fi
 
 if wants mcp; then
@@ -231,7 +214,7 @@ if wants hooks; then
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",

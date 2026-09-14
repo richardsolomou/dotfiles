@@ -7,7 +7,7 @@ description: "Update a pull request's title and description based on the actual 
 
 Update the current branch's PR title and description to reflect the actual changes.
 
-This skill is also the **single source of truth for how to write a PR title and body** — the title rules, the description structure, the length guidance, and the voice. Other skills that push code (`rs-ship`, `rs-address-pr-review`, `rs-pr-shepherd`, `rs-restack`) apply this skill as a sub-step instead of restating its rules. Per CLAUDE.md, a PR's title and body must always reflect the current diff, so any push to a branch with an open PR ends with a refresh through this skill — automatically, without asking.
+This skill is also the **single source of truth for how to write a PR title and body** — the title rules, the description structure, the length guidance, and the voice. Other skills that push code (`rs-ship`, `rs-address-pr-review`, `rs-pr-shepherd`, `rs-restack`) apply this skill as a sub-step instead of restating its rules. Per the global instructions, a PR's title and body must always reflect the current diff, so any push to a branch with an open PR ends with a refresh through this skill — automatically, without asking.
 
 ## Workflow
 
@@ -42,7 +42,7 @@ This skill is also the **single source of truth for how to write a PR title and 
 - Use conventional commit format: `<type>(<scope>): <description>`
 - Keep under 72 characters
 - Use lowercase description, no period at the end
-- Types: the conventional commit types from CLAUDE.md → Git (`feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`)
+- Types: the conventional commit types listed under Commit messages in the global instructions
 - Scope is optional but encouraged
 
 **Description rules:**
@@ -82,10 +82,7 @@ After drafting, re-read for reviewer questions. Add missing context that affects
 
 Load the `rs-tone` skill with `register: pr-description` before drafting anything. Apply that register and the common rules at the top of the doc.
 
-Overrides on top of the register:
-
-- No em-dashes. Use commas, periods, or parentheses. The `pr-description` register allows em-dashes; this skill does not.
-- No AI smell: no formulaic openers ("This PR…", "In this change…"), no marketing words ("seamlessly", "robust", "comprehensive"), no closing sign-offs, no padding.
+No AI smell: no formulaic openers ("This PR…", "In this change…"), no closing sign-offs, no padding.
 
 Finally, update the PR without putting generated content in a shell command. Write the title and body to temporary files with the available file-writing tool, then build the API payload from those files:
 

@@ -16,24 +16,7 @@ This is the multi-agent counterpart to `rs-review-pr`: it borrows the discipline
 
 ## Modes — detect, don't ask
 
-Resolve the mode from the PR, state it, and proceed. Only override when the user passes `as:<mode>`.
-
-`author_association` is **not** a `gh pr view --json` field — it only exists on the REST API. Fetch it with `gh api`, which also returns the author and both repo owners (for fork detection) in one call:
-
-```bash
-me=$(gh api user --jq .login)
-gh api repos/<owner>/<repo>/pulls/<number> \
-  --jq '{author: .user.login, assoc: .author_association, head_owner: .head.repo.owner.login, base_owner: .base.repo.owner.login, base: .base.ref}'
-```
-
-- `author == $me` → **self**
-- `assoc ∈ {OWNER, MEMBER, COLLABORATOR}` → **teammate**
-- `assoc ∈ {CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER, NONE, MANNEQUIN}` → **contributor**
-- No PR (local branch only) → **self**
-
-A fork PR (`head_owner` differs from `base_owner`) is a strong second signal for **contributor** — if it conflicts with `assoc`, treat as contributor (the stricter posture).
-
-State the detected mode in one line before reviewing (`Detected: contributor PR (fork, author_association=NONE) — reviewing with the contributor posture.`). Posture differs enough that a silent guess is wrong; an `as:` override is the escape hatch.
+Resolve the mode from the PR per Shared mechanics § *Detect the author mode* in `rs-adversarial-review`, state it in one line before reviewing (`Detected: contributor PR (fork, author_association=NONE) — reviewing with the contributor posture.`), and proceed. Only override when the user passes `as:<mode>`. Posture differs enough that a silent guess is wrong; an `as:` override is the escape hatch.
 
 ## What each mode changes
 
@@ -42,11 +25,11 @@ State the detected mode in one line before reviewing (`Detected: contributor PR 
 | Counter-bias (from `rs-adversarial-review`) | own-code | teammate | contributor |
 | `security-audit` lens | on-demand¹ | on-demand¹ | **default on** |
 | Convention drift | normal | assume shared conventions | flag **and educate** (link the pattern, explain why) |
-| Voice | none — terminal, blunt | `rs-tone` `slack-casual` | neutral, professional, welcoming — **no `rs-tone`** (it's the user's internal voice, wrong for an outside contributor) |
+| Voice | none — terminal, blunt | `rs-tone` `slack-casual` (inline review comment rules) | neutral, professional, welcoming — **no `rs-tone`** (it's the user's internal voice, wrong for an outside contributor) |
 | Destination | terminal walkthrough + offer to apply fixes | drafted inline comments | drafted inline comments |
 | Bar | ship-it | merge | stricter — code you own forever |
 
-¹ on-demand = run the security lens if `+security` is passed, or if the diff touches auth / permissions / SQL / network / deserialization / file-path handling. `-security` forces it off.
+¹ on-demand = run the security lens if `+security` is passed, or if the diff meets the Shared mechanics § *Security lens trigger*. `-security` forces it off.
 
 The engine below is identical across modes. Only this config block differs.
 
@@ -176,13 +159,13 @@ Then run an **anchor audit** over the final rendered set, not just the raw findi
 
 ### Step 6: Apply voice before rendering
 
-For teammate reviews, load `rs-tone` before drafting the final output and apply the `slack-casual` register to every inline comment body. Do not wait for the user to request tone. Preserve technical meaning, PR grouping, severity, anchors, and one fenced block per comment. The headings and recommended actions may remain structured; the text inside each review-comment fence must be Slack casual.
+For teammate reviews, load `rs-tone` before drafting the final output and apply the `slack-casual` register, with its *Inline PR review comments* rules, to every inline comment body. Do not wait for the user to request tone. Preserve technical meaning, PR grouping, severity, anchors, and one fenced block per comment. The headings and recommended actions may remain structured; the text inside each review-comment fence must be Slack casual.
 
 If `rs-tone` is unavailable, say so before the review and apply its known `slack-casual` rules directly; do not silently fall back to generic review prose.
 
 ### Step 7: Render the complete review set
 
-**self** — terminal walkthrough in the `rs-review-pr` self format (`## <n>. <path>:<line> — <gist>`, what's wrong / the concept / proposed fix), then offer to apply the fixes as that skill's Render by mode step does. No `rs-tone`. `rs-ship` when the user is ready. (self mode never posts — it's your own pre-push pass.)
+**self** — terminal walkthrough in the `rs-review-pr` self format, then offer to apply the fixes as that skill's Render by mode step does. No `rs-tone`. `rs-ship` when the user is ready. (self mode never posts — it's your own pre-push pass.)
 
 **teammate / contributor** — render each finding as an inline comment, anchored to its `file:line` on the new side. Voice by mode:
 
@@ -191,7 +174,7 @@ If `rs-tone` is unavailable, say so before the review and apply its known `slack
 
 Then branch on draft-vs-post:
 
-- **Default (one-shot) — DRAFT, do not post.** Show each comment ready to paste one at a time, exactly like `rs-review-pr`, and offer to post on the user's say-so. Honours the standing rule (CLAUDE.md → PR Review Comments): never post review comments without explicit approval. Per Shared mechanics § *Output rules*, each comment's body goes inside its own fenced code block — the anchor (`<file>:<line>`) and bucket on a line *outside* the fence, the copyable comment text *inside* it:
+- **Default (one-shot) — DRAFT, do not post.** Show each comment ready to paste one at a time, exactly like `rs-review-pr`, and offer to post on the user's say-so. Honours the standing rule (PR Review Comments in the global instructions): never post review comments without explicit approval. Per Shared mechanics § *Output rules*, each comment's body goes inside its own fenced code block — the anchor (`<file>:<line>`) and bucket on a line *outside* the fence, the copyable comment text *inside* it:
 
   ````markdown
   **`<file>:<line>` · <Blocker|Suggestion> · `[<lens>]`**
@@ -228,7 +211,7 @@ Never answer a correction with only "done", a list of edits, or a summary of wha
 
 ## Loop mode
 
-`post` is what makes the swarm hands-off; it is the **only** path that posts without per-comment approval, and it always carries the bot marker. Passing `post` (or invoking under `/loop` with it) *is* the explicit approval CLAUDE.md → PR Review Comments requires — the user opts in per run, and the bot marker keeps the automation unmistakable. Drive the cadence externally — e.g. under `/loop` on a teammate's or contributor's PR:
+`post` is what makes the swarm hands-off; it is the **only** path that posts without per-comment approval, and it always carries the bot marker. Passing `post` (or invoking under `/loop` with it) *is* the explicit approval the global instructions' PR Review Comments rule requires — the user opts in per run, and the bot marker keeps the automation unmistakable. Drive the cadence externally — e.g. under `/loop` on a teammate's or contributor's PR:
 
 ```text
 /loop 15m rs-review-swarm <pr-url> post

@@ -33,7 +33,7 @@ gh stack sync
 
 ### Step 4: Refresh PRs whose scope changed
 
-For each restacked branch whose own diff changed (conflict resolutions that altered behaviour, dropped commits), apply `rs-update-pr` — automatic, no ask (per CLAUDE.md → Pull Request Descriptions). A pure restack that only rewrites parent commits needs no refresh.
+For each restacked branch whose own diff changed (conflict resolutions that altered behaviour, dropped commits), apply `rs-update-pr` — automatic, no ask (per Pull Request Descriptions in the global instructions). A pure restack that only rewrites parent commits needs no refresh.
 
 ### Step 5: Report
 
