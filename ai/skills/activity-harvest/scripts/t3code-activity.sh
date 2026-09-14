@@ -11,6 +11,12 @@ WINDOW_START="${1:?usage: t3code-activity.sh <window_start> [window_end]}"
 WINDOW_END="${2:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 DB="${T3_STATE_DB:-$HOME/.t3/userdata/state.sqlite}"
 
+# The instants are spliced into SQL below, so only accept ISO 8601 shapes.
+for instant in "$WINDOW_START" "$WINDOW_END"; do
+  [[ "$instant" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$ ]] \
+    || { echo "not an ISO 8601 instant: $instant" >&2; exit 2; }
+done
+
 command -v sqlite3 > /dev/null 2>&1 || { echo "(sqlite3 not installed - T3 Code pass skipped)"; exit 0; }
 [ -r "$DB" ] || { echo "(no T3 Code state at $DB - T3 Code pass skipped)"; exit 0; }
 

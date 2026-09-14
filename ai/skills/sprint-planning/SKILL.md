@@ -44,7 +44,7 @@ Pull the quarter goals and their statuses from the previous sprint's comment (St
   2. Jump directly to Step 13 (Archive Previous Sprint's Done Items)
   3. Exit after archiving
 
-- `/sprint-planning goals` — Show what the team is currently working on by merging the current sprint plan with project board data, grouped by assignee. Follow `references/goals.md` in this skill's directory and exit after displaying.
+- `/sprint-planning goals` — Show what the team is currently working on by merging the current sprint plan with project board data, grouped by assignee. Follow `~/.agents/skills/sprint-planning/references/goals.md` and exit after displaying.
 
 ## Your Task
 

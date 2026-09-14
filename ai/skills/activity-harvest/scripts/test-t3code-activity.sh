@@ -50,6 +50,9 @@ check "empty window prints nothing" "$out_empty" ""
 out_missing="$(T3_STATE_DB=/nonexistent/state.sqlite "$script" 2026-09-13T00:00:00Z)"
 check "missing database is reported, not fatal" "$out_missing" "(no T3 Code state at /nonexistent/state.sqlite - T3 Code pass skipped)"
 
+status=0; T3_STATE_DB="$db" "$script" "2026-09-13T00:00:00Z' OR 1=1 --" > /dev/null 2>&1 || status=$?
+check "malformed instant is rejected before reaching SQL" "$status" "2"
+
 echo
 echo "Results: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
