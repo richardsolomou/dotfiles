@@ -1,6 +1,6 @@
 ---
 name: standup
-description: "Generate a daily standup or weekly AI Gateway sync from GitHub, Slack, and t3code activity. Use for standup notes, daily updates, 'what did I do yesterday?', or the Monday AI Gateway weekly sync."
+description: "Generate a daily standup or weekly AI Gateway sync from GitHub, Slack, and T3 Code activity. Use for standup notes, daily updates, 'what did I do yesterday?', or the Monday AI Gateway weekly sync."
 argument-hint: "[weekly]"
 ---
 
@@ -61,7 +61,7 @@ Daily mode uses:
 
 - GitHub: `github-harvest.sh "${window_start}" active skip`.
 - Slack: follow the harvest skill's Slack query and exact timestamp filter.
-- t3code: `t3code-activity.sh "${window_start}" "${now}"`.
+- T3 Code: `t3code-activity.sh "${window_start}" "${now}"`.
 
 Weekly mode uses:
 

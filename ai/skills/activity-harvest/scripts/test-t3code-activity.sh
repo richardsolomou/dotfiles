@@ -48,7 +48,7 @@ out_empty="$(T3_STATE_DB="$db" "$script" 2026-10-01T00:00:00Z 2026-10-02T00:00:0
 check "empty window prints nothing" "$out_empty" ""
 
 out_missing="$(T3_STATE_DB=/nonexistent/state.sqlite "$script" 2026-09-13T00:00:00Z)"
-check "missing database is reported, not fatal" "$out_missing" "(no t3code state at /nonexistent/state.sqlite - t3code pass skipped)"
+check "missing database is reported, not fatal" "$out_missing" "(no T3 Code state at /nonexistent/state.sqlite - T3 Code pass skipped)"
 
 echo
 echo "Results: $pass passed, $fail failed"

@@ -55,7 +55,7 @@ done
 # --- Secrets ---
 # $ZSH/.env is gitignored and per-host. The PostHog gateway key has to reach
 # agent CLIs through their own process environment: opencode resolves it with
-# {env:…} and Codex with `env_key`, and t3code injects it only for the
+# {env:…} and Codex with `env_key`, and T3 Code injects it only for the
 # instances it spawns, not for one started from a shell.
 if [ -r "$ZSH/.env" ]; then
   gateway_key="$(sed -n 's/^POSTHOG_GATEWAY_KEY=//p' "$ZSH/.env" | head -1)"

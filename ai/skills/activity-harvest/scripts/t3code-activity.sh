@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # t3code-activity.sh <window_start> [window_end]
-# Threads in t3code's local state that received a prompt inside the window.
+# Threads in T3 Code's local state that received a prompt inside the window.
 # Instants are ISO 8601 UTC. One tab-separated line per thread:
 #   first_in_window_prompt_ts  project  branch  title  pr_urls  in-window prompts
 # The database is read in place, read-only; the desktop app can stay open.
@@ -11,8 +11,8 @@ WINDOW_START="${1:?usage: t3code-activity.sh <window_start> [window_end]}"
 WINDOW_END="${2:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 DB="${T3_STATE_DB:-$HOME/.t3/userdata/state.sqlite}"
 
-command -v sqlite3 > /dev/null 2>&1 || { echo "(sqlite3 not installed - t3code pass skipped)"; exit 0; }
-[ -r "$DB" ] || { echo "(no t3code state at $DB - t3code pass skipped)"; exit 0; }
+command -v sqlite3 > /dev/null 2>&1 || { echo "(sqlite3 not installed - T3 Code pass skipped)"; exit 0; }
+[ -r "$DB" ] || { echo "(no T3 Code state at $DB - T3 Code pass skipped)"; exit 0; }
 
 # Compare as epochs so a fractional-second or +00:00 instant still lands.
 sqlite3 -readonly -tabs "$DB" "

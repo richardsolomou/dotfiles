@@ -38,7 +38,7 @@ The `same-day` argument sets re-run semantics when `new_file_path` already exist
 
 ## Run the passes concurrently
 
-The GitHub, Slack, and t3code passes are independent. Issue them as parallel tool calls when the runtime permits it. Do not spawn agents only to collect activity.
+The GitHub, Slack, and T3 Code passes are independent. Issue them as parallel tool calls when the runtime permits it. Do not spawn agents only to collect activity.
 
 Each result must follow this digest contract:
 
@@ -101,9 +101,9 @@ Then make sense of what remains:
 
 If the search returns nothing useful, note that and lean on GitHub plus whatever the user adds.
 
-## t3code harvest
+## T3 Code harvest
 
-Work driven through t3code that never reaches GitHub or Slack: investigations, live testing, debugging that ended without a PR. Threads live in t3code's local state database, read in place and read-only, so the app can stay open:
+Work driven through T3 Code that never reaches GitHub or Slack: investigations, live testing, debugging that ended without a PR. Threads live in T3 Code's local state database, read in place and read-only, so the app can stay open:
 
 ```bash
 ~/.agents/skills/activity-harvest/scripts/t3code-activity.sh "${window_start}" [window_end]

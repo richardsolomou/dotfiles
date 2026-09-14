@@ -34,7 +34,7 @@ merge_json_settings() {
     fi
     
     # Ensure settings file exists. Seed it empty: this helper is used for
-    # t3code's settings as well as Claude Code's, and a default model key means
+    # T3 Code's settings as well as Claude Code's, and a default model key means
     # nothing to the other harnesses.
     if [ ! -f "$settings_file" ]; then
         mkdir -p "$(dirname "$settings_file")"
