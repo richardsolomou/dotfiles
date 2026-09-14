@@ -4,7 +4,7 @@ git/gitconfig.local.symlink
 .claude/
 .context/
 
-# Per-host secrets read by ai/install.sh and zsh/zshrc.symlink (POSTHOG_GATEWAY_KEY)
+# Per-host secrets; see .env.example for the keys
 .env
 .env.local
 
