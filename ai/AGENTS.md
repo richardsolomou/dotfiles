@@ -59,7 +59,7 @@ Tests passing and review approval aren't "done" for anything production-facing (
 
 ### Technical Writing
 
-Use `asd-ste100` only when the user explicitly requests controlled-language rewriting. Use `rs-tone` for content that Richard will post under his name.
+Use `asd-ste100` only when the user explicitly requests controlled-language rewriting. Use `tone` for content that Richard will post under his name.
 
 ### Review Readiness
 
@@ -89,9 +89,9 @@ PostHog-specific workflow, per-repo rules, and production architecture live in `
 
 - Branches: `<type>/<slug>`, or `<type>/<issue#>-<slug>` when the issue number is known, using the commit types below.
 - Keep commits clean: interactive staging (`git add -p`), thoughtful messages, squash when appropriate, no "WIP" commits unless spiking.
-- Every commit→push→PR flow goes through the `rs-ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `rs-update-pr` — no ad-hoc bodies.
+- Every commit→push→PR flow goes through the `ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `update-pr` — no ad-hoc bodies.
 - Choose the delivery path from the environment: in a cloud task with an open PR, commit and push completed requested changes to that PR so preview environments can run; otherwise, commit, push, and create PRs only on explicit request. An explicit hold such as "don't commit until I'm happy" overrides the cloud-task default for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
-- Stacked PRs use GitHub Stacked PRs through the official `gh stack` extension, not Graphite or base-linked PRs alone. Use `gh stack init`/`add`, `gh stack submit --open`, and `gh stack sync` so GitHub creates the Stack object and UI. After changing a mid-stack branch, propagate it via `rs-restack`.
+- Stacked PRs use GitHub Stacked PRs through the official `gh stack` extension, not Graphite or base-linked PRs alone. Use `gh stack init`/`add`, `gh stack submit --open`, and `gh stack sync` so GitHub creates the Stack object and UI. After changing a mid-stack branch, propagate it via `restack`.
 
 ### Commit messages
 
@@ -112,13 +112,13 @@ Never amend or squash unless explicitly asked — always create new commits (ove
 
 Use the repo's `.github/pull_request_template.md` as the PR body structure (overrides the default built-in format); if none exists, fall back to: Problem, Changes, How did you test this code?
 
-A PR's title and description must reflect the current diff, not the diff at creation time. On any push to a branch with an open PR, compare the existing title/body against `git diff <base>...HEAD`; if the net state changed in a way that makes them inaccurate or incomplete, run the `rs-update-pr` skill — it rewrites from the entire PR diff (never patch the body to describe only the new commits) and is the single source of truth for how to write the title and body. Refresh without asking: PR-body edits are not review comments, so the approval gate below doesn't apply. Pushes that don't change what the PR claims to do (formatting, fixups the body already covers) need no update.
+A PR's title and description must reflect the current diff, not the diff at creation time. On any push to a branch with an open PR, compare the existing title/body against `git diff <base>...HEAD`; if the net state changed in a way that makes them inaccurate or incomplete, run the `update-pr` skill — it rewrites from the entire PR diff (never patch the body to describe only the new commits) and is the single source of truth for how to write the title and body. Refresh without asking: PR-body edits are not review comments, so the approval gate below doesn't apply. Pushes that don't change what the PR claims to do (formatting, fixups the body already covers) need no update.
 
 ## GitHub Operations
 
 ### Voice & Attribution
 
-Write all public-facing content (PR descriptions, commit messages, issue comments) as the user — first person "I", never as an AI/agent/assistant. Anything drafted for the user to post — Slack messages, PR/issue comments, review replies — is `rs-tone`-governed by default: apply the right register unprompted, default terse, never restate what the thread or PR already says.
+Write all public-facing content (PR descriptions, commit messages, issue comments) as the user — first person "I", never as an AI/agent/assistant. Anything drafted for the user to post — Slack messages, PR/issue comments, review replies — is `tone`-governed by default: apply the right register unprompted, default terse, never restate what the thread or PR already says.
 
 ### Tool Priority
 

@@ -95,18 +95,20 @@ done < <(git ls-files 'ai/skills/*/SKILL.md')
 success "Skill names match their directories"
 
 # A skill naming a sibling that no longer exists is silent breakage: the model
-# is told to load something that was deleted or renamed. Two shapes count as a
-# reference: a backticked name of an existing skill's shape (`rs-*`), and any
-# backticked name followed by the word "skill". Paths such as
-# `/tmp/rs-update-pr-title.txt` and prose mentions do not register.
+# is told to load something that was deleted or renamed. A reference is a
+# backticked hyphenated name in a skill-shaped context: `x` skill, skill `x`,
+# load/apply/run/via `x`, `/x`, or a `x` → chain. Bare mentions of
+# paths, flags, and registers do not register.
 info "Checking skill cross-references…"
 DANGLING=0
 while read -r skill; do
     name="$(basename "$(dirname "$skill")")"
     {
-        grep -ohE '`rs-[a-z0-9-]{2,40}`' "$skill"
-        grep -ohE '`[a-z0-9][a-z0-9-]{2,40}` skill' "$skill" | sed 's/ skill$//'
-    } | tr -d '`' \
+        grep -ohE '`[a-z0-9]+(-[a-z0-9]+)+` (skill|lens|discipline)' "$skill"
+        grep -ohE '(skill|[Ll]oad|[Aa]pply|[Rr]un|via) `[a-z0-9]+(-[a-z0-9]+)+`' "$skill" | sed -E 's/^[^`]*//'
+        grep -ohE '`/[a-z0-9]+(-[a-z0-9]+)+' "$skill" | tr -d '/'
+        grep -ohE '`[a-z0-9]+(-[a-z0-9]+)+` →' "$skill"
+    } | grep -oE '`[^`]+`' | tr -d '`' \
         | sort -u \
         | while read -r ref; do
             [ "$ref" = "$name" ] && continue
@@ -132,9 +134,10 @@ while read -r t; do
     case "$t" in
         *.py)
             # Plain assert-based tests; run them without a pytest dependency.
-            python3 - "$t" > /tmp/dotfiles-skill-test.$$ 2>&1 <<'PY' \
+            python3 -B - "$t" > /tmp/dotfiles-skill-test.$$ 2>&1 <<'PY' \
                 || { error "failed: $t"; cat /tmp/dotfiles-skill-test.$$; FAILED=1; }
 import importlib.util, sys
+sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_file_location("t", sys.argv[1])
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

@@ -4,7 +4,7 @@ git/gitconfig.local.symlink
 .claude/
 .context/
 
-# Local secrets loaded by bin/sync-skills (POSTHOG_PERSONAL_API_KEY, etc.)
+# Per-host secrets read by ai/install.sh and zsh/zshrc.symlink (POSTHOG_GATEWAY_KEY)
 .env
 .env.local
 
