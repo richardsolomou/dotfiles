@@ -217,7 +217,7 @@ Never answer a correction with only "done", a list of edits, or a summary of wha
 /loop 15m review-swarm <pr-url> post
 ```
 
-Each pass re-reviews the current HEAD and posts a fresh review. It **never edits the author's branch** — on someone else's PR the only action is commenting; the fixing is the author responding to the comments. Reacting to CI, conflicts, and incoming feedback on your *own* open PR is `pr-shepherd`, not this skill.
+Each pass re-reviews the current HEAD and posts a fresh review. It **never edits the author's branch** — on someone else's PR the only action is commenting; the fixing is the author responding to the comments. Reacting to CI, conflicts, and incoming feedback on your *own* open PR is `babysit`, not this skill.
 
 ## Graceful degradation
 
