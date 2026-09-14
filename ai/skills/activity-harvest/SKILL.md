@@ -38,7 +38,7 @@ The `same-day` argument sets re-run semantics when `new_file_path` already exist
 
 ## Run the passes concurrently
 
-The GitHub, Slack, and PostHog Code passes are independent. Issue them as parallel tool calls when the runtime permits it. Do not spawn agents only to collect activity.
+The GitHub, Slack, and t3code passes are independent. Issue them as parallel tool calls when the runtime permits it. Do not spawn agents only to collect activity.
 
 Each result must follow this digest contract:
 
@@ -101,20 +101,17 @@ Then make sense of what remains:
 
 If the search returns nothing useful, note that and lean on GitHub plus whatever the user adds.
 
-## PostHog Code harvest
+## t3code harvest
 
-Work done through PostHog Code that never reaches GitHub or Slack — investigations, live testing/dogfooding, signal-report triage, analyses. One script covers both halves (cloud task runs and local/worktree conversations), filtered to the window:
+Work driven through t3code that never reaches GitHub or Slack: investigations, live testing, debugging that ended without a PR. Threads live in t3code's local state database, read in place and read-only, so the app can stay open:
 
 ```bash
-~/.agents/skills/activity-harvest/scripts/posthog-code-activity.sh "${window_start}" [window_end]
+~/.agents/skills/activity-harvest/scripts/t3code-activity.sh "${window_start}" [window_end]
 ```
 
-- **Cloud tasks** come from the PostHog API (project 2, `created_by` me), newest-first with client-side window filtering. Needs a personal API key with the Tasks read scope in `$POSTHOG_PERSONAL_API_KEY` or keychain item `posthog-personal-api-key`; when absent the script says so — fall back to the MCP `tasks-list` tool (`created_by: 345145`, `internal: "all"`) and window-filter by `created_at` yourself, reading titles/repos only (descriptions are enormous).
-- **Local sessions** are swept from `~/.posthog-code/sessions/`, keeping only sessions with a prompt timestamped inside the window and showing only those prompts. Cloud-mirror sessions (`/tmp/workspace` cwd) are excluded — the cloud half already covers them.
+One tab-separated line per thread that received a prompt inside the window: the first in-window prompt instant, the project relative to `~/dev`, the branch, the thread title, any linked PR URLs, and the in-window prompts joined with ` | ` and truncated to 240 characters.
 
-This is a **memory-jogger, not a primary source**: most tasks wrap work that already surfaces in the GitHub or Slack passes. An item earns material only when its outcome is invisible to the other passes. Ignore blank tasks, greetings, and meta tasks such as "find my old conversation". A burst of near-identical test prompts can be evidence of live testing. The personal-repo rule applies here too: drop cloud tasks against `richardsolomou/*` and local sessions whose working directory is a personal project.
-
-## Archive to notes
+This is a **memory-jogger, not a primary source**: most threads wrap work that already surfaces in the GitHub or Slack passes, and a linked PR URL is the join key for folding them together. A thread earns material only when its outcome is invisible to the other passes. Ignore greetings, one-word follow-ups, and meta threads. A burst of near-identical prompts can be evidence of live testing. The personal-repo rule applies here too: drop threads whose project is outside `posthog/`.
 
 Write the entry as plain markdown at `new_file_path`, ending with the marker the next run reads — do not omit it:
 

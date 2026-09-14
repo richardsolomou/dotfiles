@@ -90,7 +90,7 @@ PostHog-specific workflow, per-repo rules, and production architecture live in `
 - Branches: `<type>/<slug>`, or `<type>/<issue#>-<slug>` when the issue number is known, using the commit types below.
 - Keep commits clean: interactive staging (`git add -p`), thoughtful messages, squash when appropriate, no "WIP" commits unless spiking.
 - Every commit→push→PR flow goes through the `ship` skill: stage explicit file paths (never `git add -A`), and write PR titles/bodies via `update-pr` — no ad-hoc bodies.
-- Choose the delivery path from the environment: in a cloud task with an open PR, commit and push completed requested changes to that PR so preview environments can run; otherwise, commit, push, and create PRs only on explicit request. An explicit hold such as "don't commit until I'm happy" overrides the cloud-task default for the session. If a commit hook or signer fails, stop and surface it; never retry in a loop.
+- Commit, push, and create PRs only on explicit request. If a commit hook or signer fails, stop and surface it; never retry in a loop.
 - Stacked PRs use GitHub Stacked PRs through the official `gh stack` extension, not Graphite or base-linked PRs alone. Use `gh stack init`/`add`, `gh stack submit --open`, and `gh stack sync` so GitHub creates the Stack object and UI. After changing a mid-stack branch, propagate it via `restack`.
 
 ### Commit messages
