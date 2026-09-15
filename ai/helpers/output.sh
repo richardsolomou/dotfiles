@@ -9,19 +9,19 @@ NC='\033[0m' # No Color
 
 # Output functions
 error() {
-    echo "${RED}Error: $1${NC}" >&2
+    printf '%b%s%b\n' "$RED" "Error: $1" "$NC" >&2
 }
 
 warning() {
-    echo "${YELLOW}Warning: $1${NC}"
+    printf '%b%s%b\n' "$YELLOW" "Warning: $1" "$NC"
 }
 
 success() {
-    echo "${GREEN}✓ $1${NC}"
+    printf '%b%s%b\n' "$GREEN" "✓ $1" "$NC"
 }
 
 info() {
-    echo "${BLUE}$1${NC}"
+    printf '%b%s%b\n' "$BLUE" "$1" "$NC"
 }
 
 # Exit with error message
