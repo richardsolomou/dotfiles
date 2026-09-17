@@ -1,35 +1,36 @@
 ---
 name: sprint-planning
-description: "Write the bi-weekly sprint planning update for the AI Gateway team, ready to post as a GitHub comment on the sprint issue. Use when the user asks to write/prep the sprint planning update or retro, post the sprint comment, archive the board's old Done items (`archive`), or show what the team is working on (`goals`)."
+description: "Write the bi-weekly sprint planning update for the Context & MCP team, ready to post as a GitHub comment on the sprint issue. Use when the user asks to write/prep the sprint planning update or retro, post the sprint comment, archive the board's old Done items (`archive`), or show what the team is working on (`goals`)."
 argument-hint: "[archive|goals]"
 ---
 
 # Sprint Planning
 
-Generate a bi-weekly sprint planning update for the AI Gateway team (configurable for other teams via `scripts/config.sh`), ready to post as a GitHub comment on the sprint planning issue.
+Generate a bi-weekly sprint planning update for the Context & MCP team (configurable for other teams via `scripts/config.sh`), ready to post as a GitHub comment on the sprint planning issue.
 
 ## Team Configuration
 
 All team-specific values live in this skill's `scripts/config.sh`. The helper scripts source it automatically; the inline `gh` commands in this skill source it too, so always run them with the leading `source` line shown. Scripts are invoked through `~/.agents/skills/`, which every harness's installer populates, so the commands work from any working directory.
 
-The defaults target the **AI Gateway** team:
+The defaults target the **Context & MCP** team:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `SPRINT_TEAM_SLUG` | `team-ai-gateway` | GitHub team slug under the org |
-| `SPRINT_TEAM_NAME` | `AI Gateway` | Display name used in prose |
+| `SPRINT_TEAM_SLUG` | `team-context-mcp` | GitHub team slug under the org |
+| `SPRINT_TEAM_NAME` | `Context & MCP` | Display name used in prose |
+| `SPRINT_SLACK_CHANNEL` | `team-context-and-mcp` | Slack channel name used for team activity |
 | `SPRINT_PROJECT_NUMBER` | _(unset)_ | Project board number — empty until the team has a board |
-| `SPRINT_GOALS_URL` | `https://posthog.com/teams/ai-gateway#goals` | Goals page link |
-| `SPRINT_COMMENT_HEADER` | `# Team AI Gateway` | Markdown heading identifying the team's comment |
+| `SPRINT_GOALS_URL` | `https://posthog.com/teams/context-and-mcp#objectives` | Goals page link |
+| `SPRINT_COMMENT_HEADER` | `# Team Context & MCP` | Markdown heading identifying the team's comment |
 | `SPRINT_ORG` | `PostHog` | GitHub org |
 | `SPRINT_REPO` | `PostHog/posthog` | Repo holding sprint issues |
-| `SPRINT_FALLBACK_MEMBERS` | `richardsolomou brandonleung` | Space-separated handles used only if the members API fails |
+| `SPRINT_FALLBACK_MEMBERS` | `richardsolomou adboio JakeRuth` | Space-separated handles used only if the members API fails |
 
 Override any value with an environment variable, or edit the defaults in `config.sh`.
 
 In the output templates below, `{SPRINT_…}` placeholders refer to these config values; read them from `config.sh` (or `source` it) and substitute the resolved values before presenting output.
 
-> **No project board yet:** the AI Gateway team does not have a project board, so `SPRINT_PROJECT_NUMBER` is empty by default. The board steps (Step 5, Step 13, and the board half of the `goals` workflow) detect this and skip cleanly — the plan is built from in-flight work and the user's input instead. When the team creates a board, set `SPRINT_PROJECT_NUMBER` in `config.sh` and these steps light up automatically.
+> **No project board configured:** `SPRINT_PROJECT_NUMBER` is empty by default. The board steps (Step 5, Step 13, and the board half of the `goals` workflow) detect this and skip cleanly, so the plan is built from in-flight work and the user's input instead. Set `SPRINT_PROJECT_NUMBER` in `config.sh` when the team has a board.
 >
 > **Prerequisite (once a board exists):** the board scripts call `gh project`, which needs the `read:project` scope. If they fail with a missing-scope error, run `gh auth refresh -s read:project` once.
 
@@ -129,7 +130,7 @@ bodies here too.
 PRs miss a lot of real sprint work — incidents handled, decisions driven, cross-team RFC input, demos, and each member's own stated focus for next sprint. Search Slack for the previous sprint window with `mcp__slack__conversations_search_messages`, three passes:
 
 1. **Your own messages** — `filter_users_from` with your user ID, per the `activity-harvest` Slack rules (day-granular dates; post-filter to the window).
-2. **Each teammate's messages in the team channel** — `filter_users_from: <their user ID>` + `filter_in_channel: <team channel ID>`. This is where their launch updates, incident triage, and "my focus next week is…" posts live; those focus posts are plan gold.
+2. **Each teammate's messages in the team channel** — resolve `SPRINT_SLACK_CHANNEL` to its channel ID once, then use `filter_users_from: <their user ID>` + `filter_in_channel: <team channel ID>`. This is where their launch updates, incident triage, and "my focus next week is…" posts live; those focus posts are plan gold.
 3. **Your DMs with each teammate** — `filter_in_im_or_mpim` takes the `@username` form; passing the `D…` channel ID fails with "user not found".
 
 Results cap at 100 per page — follow the `Cursor` column until the window is covered (the earliest sprint days are on the later pages). Treat incident threads as retro candidates and use 🟢 only when a message explicitly records the completed outcome; decision threads can support 🟡 items, demo/talk appearances can support side quests, and stated next focus can seed the plan. **Private-DM process conversations and interpersonal feedback never go in the company-wide comment**, however relevant they feel.

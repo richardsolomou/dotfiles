@@ -1,12 +1,12 @@
 ---
 name: quarterly-planning
-description: "Prep quarterly planning for the AI Gateway team the PostHog way — quarter review, HOGS, themes, and next quarter's objectives PR on posthog.com. Use when the user asks to prep/run quarterly planning, write the quarter retro/review, draft the HOGS, or open/update the objectives PR. Configurable for other teams via `scripts/config.sh`."
+description: "Prep quarterly planning for the Context & MCP team the PostHog way — quarter review, HOGS, themes, and next quarter's objectives PR on posthog.com. Use when the user asks to prep/run quarterly planning, write the quarter retro/review, draft the HOGS, or open/update the objectives PR. Configurable for other teams via `scripts/config.sh`."
 argument-hint: "[review|hogs|pr]"
 ---
 
 # Quarterly Planning
 
-Prep and run quarterly planning for the **AI Gateway** team (configurable for other teams via `scripts/config.sh`), following PostHog's [goal-setting process](https://posthog.com/handbook/company/goal-setting). The end product is a PR on the team's `objectives.mdx` page setting next quarter's goals, tagged for the relevant Blitzscale member to review.
+Prep and run quarterly planning for the **Context & MCP** team (configurable for other teams via `scripts/config.sh`), following PostHog's [goal-setting process](https://posthog.com/handbook/company/goal-setting). The end product is a PR on the team's `objectives.mdx` page setting next quarter's goals, tagged for the relevant Blitzscale member to review.
 
 The process, per the handbook:
 
@@ -20,19 +20,19 @@ This skill produces the async prep — the review and a HOGS scaffold — and, o
 
 All team-specific values live in this skill's `scripts/config.sh`. The helper scripts source it automatically; the inline `gh`/`git` commands in this skill source it too, so always run them with the leading `source` line shown. Scripts are invoked through `~/.agents/skills/`, which every harness's installer populates, so the commands work from any working directory.
 
-The defaults target the **AI Gateway** team:
+The defaults target the **Context & MCP** team:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `QP_ORG` | `PostHog` | GitHub org (members API + PR search) |
-| `QP_TEAM_SLUG` | `team-ai-gateway` | GitHub team slug under the org |
-| `QP_TEAM_NAME` | `AI Gateway` | Display name used in prose |
-| `QP_TEAM_PAGE_SLUG` | `ai-gateway` | Folder under `contents/teams/` on posthog.com |
+| `QP_TEAM_SLUG` | `team-context-mcp` | GitHub team slug under the org |
+| `QP_TEAM_NAME` | `Context & MCP` | Display name used in prose |
+| `QP_TEAM_PAGE_SLUG` | `context-and-mcp` | Folder under `contents/teams/` on posthog.com |
 | `QP_POSTHOG_COM_DIR` | `~/dev/posthog/posthog.com` | Local checkout of the posthog.com repo |
 | `QP_OBJECTIVES_PATH` | *(derived)* | Path to the team's `objectives.mdx` |
-| `QP_GOALS_URL` | `https://posthog.com/teams/ai-gateway#objectives` | Goals page link |
+| `QP_GOALS_URL` | `https://posthog.com/teams/context-and-mcp#objectives` | Goals page link |
 | `QP_BLITZSCALE_REVIEWER` | *(unset)* | Handle to tag on the objectives PR — ask if empty |
-| `QP_FALLBACK_MEMBERS` | `richardsolomou brandonleung` | Handles used only if the members API fails |
+| `QP_FALLBACK_MEMBERS` | `richardsolomou adboio JakeRuth` | Handles used only if the members API fails |
 
 Override any value with an environment variable, or edit the defaults in `config.sh`. In the templates below, `{QP_…}` placeholders refer to these values; `source config.sh` and substitute the resolved values before presenting output.
 
@@ -194,7 +194,7 @@ default_branch=$(gh repo view PostHog/posthog.com --json defaultBranchRef --jq .
 git -C "$QP_POSTHOG_COM_DIR" switch -c "${QP_TEAM_PAGE_SLUG}-objectives-$(echo "$next_label" | tr 'A-Z ' 'a-z-')" "origin/${default_branch}"
 ```
 
-(Name the branch descriptively, e.g. `ai-gateway-objectives-q3-2026`.)
+(Name the branch descriptively, e.g. `context-and-mcp-objectives-q3-2026`.)
 
 ### Step P3: Update objectives.mdx
 

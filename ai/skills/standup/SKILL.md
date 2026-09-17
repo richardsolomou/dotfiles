@@ -1,12 +1,12 @@
 ---
 name: standup
-description: "Generate a daily standup or weekly AI Gateway sync from GitHub, Slack, and T3 Code activity. Use for standup notes, daily updates, 'what did I do yesterday?', or the Monday AI Gateway weekly sync."
+description: "Generate a daily standup or weekly Context & MCP sync from GitHub, Slack, and T3 Code activity. Use for standup notes, daily updates, 'what did I do yesterday?', or the Monday Context & MCP weekly sync."
 argument-hint: "[weekly]"
 ---
 
 # Standup and Weekly Sync
 
-Generate a terse activity update in the user's voice and archive it in the notes repo. Default to a daily retrospective. Use weekly mode when the user says `weekly`, `AI Gateway sync`, or `Monday sync`.
+Generate a terse activity update in the user's voice and archive it in the notes repo. Default to a daily retrospective. Use weekly mode when the user says `weekly`, `Context & MCP sync`, or `Monday sync`.
 
 Load `activity-harvest` for activity windows, source queries, and archive mechanics. Load `tone` with `register: slack-status` before composing.
 
@@ -44,7 +44,7 @@ For daily mode, run:
 For weekly mode, run:
 
 ```bash
-~/.agents/skills/activity-harvest/scripts/activity-dates.sh PostHog/ai-gateway-sync week previous
+~/.agents/skills/activity-harvest/scripts/activity-dates.sh PostHog/context-and-mcp-sync week previous
 ```
 
 Store `window_start`, `now`, `new_file_path`, `header`, and `prev_file_path` per the harvest skill. Daily same-day reruns append only new activity. Weekly same-day reruns rebuild the same weekly artifact from the previous real sync.
@@ -107,7 +107,7 @@ Weekly output shape:
 <!-- generated-at: <now> -->
 ```
 
-Present the weekly draft and wait for the user's additions or removals. Then write the confirmed version to `new_file_path` with commit prefix `ai-gateway-sync:`. On a same-day rerun, regenerate both sections but preserve focus items the user added manually.
+Present the weekly draft and wait for the user's additions or removals. Then write the confirmed version to `new_file_path` with commit prefix `context-and-mcp-sync:`. On a same-day rerun, regenerate both sections but preserve focus items the user added manually.
 
 Use the harvest skill's archive procedure to commit and push the notes repository. A failed notes push does not invalidate the local file.
 
