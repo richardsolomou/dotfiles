@@ -59,22 +59,22 @@ Run independent source reads concurrently with parallel tool calls. Do not spawn
 
 Daily mode uses:
 
-- GitHub: `github-harvest.sh "${window_start}" active skip`.
+- GitHub: `github-harvest.sh "${window_start}" "${now}" active skip`.
 - Slack: follow the harvest skill's Slack query and exact timestamp filter.
 - T3 Code: `t3code-activity.sh "${window_start}" "${now}"`.
 
 Weekly mode uses:
 
-- GitHub: `github-harvest.sh "${window_start}" open include`. Merged and recently changed PRs inform `Last week`. All open PRs are candidates for `This week`.
+- GitHub: `github-harvest.sh "${window_start}" "${now}" open include`. Merged and recently changed PRs inform `Last week`. All open PRs are candidates for `This week`.
 - Slack: follow the harvest skill's Slack query and exact timestamp filter.
 
-Group related source items into one work stream. Fold a Slack discussion and its PR into one item. Drop greetings, reactions, automated noise, and activity from personal repositories.
+Group related source items into one work stream. Fold a Slack discussion and its PR into one item. Drop greetings, reactions, automated noise, and activity from personal repositories. Reconcile prior focus items against their live merged, closed, draft, or open state before carrying them forward.
 
 ### 4. Compose
 
-Compose the selected mode using the style rules above. The activity sources help find work. They do not define the output structure.
+Compose the selected mode using the style rules above. The activity sources help find work. They do not define the output structure. Match verbs to evidence: use `shipped` or `fixed` only for merged or explicit completion evidence; use `started` or `continuing` for in-window open work; use `investigated` or `planning` for T3 prompts and intent-only Slack messages unless another source proves the outcome.
 
-If activity is thin, say so because meetings or offline work may be missing. In weekly mode, finish with one direct question about additions or removals from the focus list.
+If activity is thin, say so because meetings or offline work may be missing. If a required source failed or truncated, present the incomplete draft and do not archive until the source succeeds or the user explicitly accepts the gap. In weekly mode, finish with one direct question about additions or removals from the focus list.
 
 ### 5. Archive
 
@@ -107,7 +107,7 @@ Weekly output shape:
 <!-- generated-at: <now> -->
 ```
 
-Write it to `new_file_path` with commit prefix `ai-gateway-sync:`. On a same-day rerun, regenerate both sections but preserve focus items the user added manually.
+Present the weekly draft and wait for the user's additions or removals. Then write the confirmed version to `new_file_path` with commit prefix `ai-gateway-sync:`. On a same-day rerun, regenerate both sections but preserve focus items the user added manually.
 
 Use the harvest skill's archive procedure to commit and push the notes repository. A failed notes push does not invalidate the local file.
 

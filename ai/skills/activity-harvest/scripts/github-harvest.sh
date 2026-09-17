@@ -4,7 +4,7 @@
 # a single JSON object. Wraps author-prs.sh — see its header for the hard-won
 # query lore (gh api over gh pr, pagination direction, stale search filters).
 #
-# Usage: github-harvest.sh <since> <open-key> <untouched: skip|include>
+# Usage: github-harvest.sh <since> <until> <open-key> <untouched: skip|include>
 #   Arguments pass through to author-prs.sh; see its header.
 #
 # Output JSON:
@@ -28,9 +28,10 @@
 set -euo pipefail
 shopt -s nullglob
 
-since="${1:?usage: github-harvest.sh <since ISO-8601 instant> <open-key> <skip|include>}"
-open_key="${2:?open-key required, e.g. active or open}"
-untouched="${3:?untouched mode required: skip|include}"
+since="${1:?usage: github-harvest.sh <since> <until> <open-key> <skip|include>}"
+until="${2:?until ISO-8601 instant required}"
+open_key="${3:?open-key required, e.g. active or open}"
+untouched="${4:?untouched mode required: skip|include}"
 user="richardsolomou"
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -42,25 +43,47 @@ note() { echo "$1" >> "$dir/errors.txt"; echo "warning: $1" >&2; }
 
 strip='sub("https://api.github.com/repos/"; "")'
 
-"$here/author-prs.sh" "$since" "$open_key" "$untouched" > "$dir/author.json" &
+"$here/author-prs.sh" "$since" "$until" "$open_key" "$untouched" > "$dir/author.json" &
 author_pid=$!
 
 {
-    gh api search/issues --method GET -f per_page=100 \
-        -f q="involves:${user} updated:>=${since} org:PostHog" \
-        --jq "[.items[] | {number, title, state, url: .html_url, repo: (.repository_url | ${strip}), is_pr: (.pull_request != null)}]" \
-        > "$dir/involved.json" || { echo '[]' > "$dir/involved.json"; note "involves search failed"; }
-    gh api search/issues --method GET -f per_page=100 \
-        -f q="reviewed-by:${user} is:pr updated:>=${since} org:PostHog" \
-        --jq "[.items[] | {number, title, state, url: .html_url, repo: (.repository_url | ${strip})}]" \
-        > "$dir/reviewed.json" || { echo '[]' > "$dir/reviewed.json"; note "reviewed-by search failed"; }
+    if gh api search/issues --method GET -f per_page=100 \
+        -f q="involves:${user} updated:>=${since} org:PostHog" --paginate --slurp \
+        > "$dir/involved_pages.json"; then
+        jq "[.[].items[] | {number, title, state, updated_at, url: .html_url, repo: (.repository_url | ${strip}), is_pr: (.pull_request != null)}]" \
+            "$dir/involved_pages.json" > "$dir/involved_candidates.json"
+        jq --arg until "$until" '[.[] | select(.updated_at < $until) | del(.updated_at)]' \
+            "$dir/involved_candidates.json" > "$dir/involved.json"
+        total=$(jq '.[0].total_count // 0' "$dir/involved_pages.json")
+        captured=$(jq 'length' "$dir/involved_candidates.json")
+        ((captured < total)) && note "involves search truncated: captured ${captured} of ${total}"
+    else
+        echo '[]' > "$dir/involved_candidates.json"
+        echo '[]' > "$dir/involved.json"
+        note "involves search failed"
+    fi
+    if gh api search/issues --method GET -f per_page=100 \
+        -f q="reviewed-by:${user} is:pr updated:>=${since} org:PostHog" --paginate --slurp \
+        > "$dir/reviewed_pages.json"; then
+        jq "[.[].items[] | {number, title, state, updated_at, url: .html_url, repo: (.repository_url | ${strip})}]" \
+            "$dir/reviewed_pages.json" > "$dir/reviewed_candidates.json"
+        jq --arg until "$until" '[.[] | select(.updated_at < $until) | del(.updated_at)]' \
+            "$dir/reviewed_candidates.json" > "$dir/reviewed.json"
+        total=$(jq '.[0].total_count // 0' "$dir/reviewed_pages.json")
+        captured=$(jq 'length' "$dir/reviewed_candidates.json")
+        ((captured < total)) && note "reviewed-by search truncated: captured ${captured} of ${total}"
+    else
+        echo '[]' > "$dir/reviewed_candidates.json"
+        echo '[]' > "$dir/reviewed.json"
+        note "reviewed-by search failed"
+    fi
 } &
 search_pid=$!
 
 wait "$author_pid" || { echo "{\"merged\": [], \"${open_key}\": []}" > "$dir/author.json"; note "author-prs.sh failed"; }
 wait "$search_pid"
 
-repos=$(jq -r '.. | objects | .repo? // empty' "$dir/author.json" "$dir/involved.json" "$dir/reviewed.json" | sort -u)
+repos=$(jq -r '.. | objects | .repo? // empty' "$dir/author.json" "$dir/involved_candidates.json" "$dir/reviewed_candidates.json" | sort -u)
 
 # The comment endpoints return ALL users' comments; --paginate is load-bearing —
 # on a busy repo more than a page arrives within even a one-day window, silently
@@ -69,13 +92,13 @@ i=0
 for repo in $repos; do
     i=$((i + 1))
     gh api "repos/${repo}/issues/comments?since=${since}&per_page=100" --paginate --slurp \
-        | jq --arg repo "$repo" --arg user "$user" \
-            '[(add // []) | .[] | select(.user.login == $user)
+        | jq --arg repo "$repo" --arg user "$user" --arg since "$since" --arg until "$until" \
+            '[(add // []) | .[] | select(.user.login == $user and .created_at >= $since and .created_at < $until)
               | {repo: $repo, issue: (.issue_url | split("/") | last), created_at, body: ((.body // "")[0:500])}]' \
         > "$dir/ic_${i}.json" || { echo '[]' > "$dir/ic_${i}.json"; note "issue comments failed: $repo"; } &
     gh api "repos/${repo}/pulls/comments?since=${since}&per_page=100" --paginate --slurp \
-        | jq --arg repo "$repo" --arg user "$user" \
-            '[(add // []) | .[] | select(.user.login == $user)
+        | jq --arg repo "$repo" --arg user "$user" --arg since "$since" --arg until "$until" \
+            '[(add // []) | .[] | select(.user.login == $user and .created_at >= $since and .created_at < $until)
               | {repo: $repo, pr: (.pull_request_url | split("/") | last), created_at, body: ((.body // "")[0:500])}]' \
         > "$dir/rc_${i}.json" || { echo '[]' > "$dir/rc_${i}.json"; note "review comments failed: $repo"; } &
 done
@@ -98,11 +121,11 @@ while IFS=$'\t' read -r repo number; do
     grep -qxF "${repo}#${number}" <<< "$have" && continue
     j=$((j + 1))
     gh api "repos/${repo}/pulls/${number}/reviews?per_page=100" --paginate --slurp \
-        | jq --arg repo "$repo" --arg n "$number" --arg user "$user" --arg since "$since" \
-            '[(add // []) | .[] | select(.user.login == $user and .submitted_at != null and .submitted_at >= $since)
+        | jq --arg repo "$repo" --arg n "$number" --arg user "$user" --arg since "$since" --arg until "$until" \
+            '[(add // []) | .[] | select(.user.login == $user and .submitted_at != null and .submitted_at >= $since and .submitted_at < $until)
               | {repo: $repo, pr: $n, submitted_at, state, body: ((.body // "")[0:500])}]' \
         > "$dir/rv_${j}.json" || { echo '[]' > "$dir/rv_${j}.json"; note "reviews failed: ${repo}#${number}"; } &
-done < <(jq -r '.[] | "\(.repo)\t\(.number)"' "$dir/reviewed.json")
+done < <(jq -r '.[] | "\(.repo)\t\(.number)"' "$dir/reviewed_candidates.json")
 wait
 collect "$dir/reviews.json" "$dir"/rv_*.json
 

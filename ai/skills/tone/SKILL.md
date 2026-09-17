@@ -311,8 +311,8 @@ Triggered either by the user (`/tone [register]`) or by a model that just produc
    - If the user passed an arg, use it.
    - Otherwise infer from the source skill or output shape: `standup` → `slack-status`, `update-pr` → `pr-description`, `review-pr` → `slack-casual` (inline review comment rules), a public-thread reply → `external`, a social post draft → `social-post`, otherwise → `slack-casual`.
    - If inference is shaky, ask.
-3. **Rewrite, preserving meaning.** Apply the rules for the chosen register and the common rules. Keep all factual content — PR numbers, file paths, names, decisions. Don't add new claims, don't drop concrete details, don't fabricate. If the input is wrong, say so separately rather than silently fixing it.
-4. **Output the rewritten version only.** No diff, no "here's what I changed" preamble, no commentary. The user copies the result.
+3. **Rewrite, preserving meaning.** Apply the rules for the chosen register and the common rules. Keep all factual content — PR numbers, file paths, names, decisions. Don't add new claims, don't drop concrete details, don't fabricate. If a material claim is known false or unsupported and cannot be verified, do not emit a polished paste-ready version of it. Name the claim and ask for a correction or source.
+4. **When a rewrite proceeds, output the rewritten version only.** No diff, no "here's what I changed" preamble, no commentary. The Step 3 evidence bailout is the exception: name the unsupported claim and ask for what is needed instead of producing copyable text.
 5. **If the original is already on-register, say so** with a one-line note rather than producing a near-identical rewrite.
 
 ### Multi-output rewrites

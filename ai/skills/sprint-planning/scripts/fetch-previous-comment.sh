@@ -31,7 +31,7 @@ comment=$(gh api "repos/${SPRINT_REPO}/issues/${issue_number}/comments?per_page=
   --paginate \
   --jq '.[]' 2>/dev/null \
   | jq -s --arg hdr "$SPRINT_COMMENT_HEADER" \
-      '[.[] | select(.body | split("\n") | map(sub("[ \t\r]+$"; "")) | index($hdr) != null)] | first | .body // empty') \
+      '[.[] | select(.body | split("\n") | map(sub("[ \t\r]+$"; "")) | index($hdr) != null)] | sort_by(.updated_at // .created_at) | last | .body // empty') \
   || comment=""
 
 if [[ -z "$comment" ]]; then

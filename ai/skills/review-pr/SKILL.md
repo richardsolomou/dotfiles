@@ -1,14 +1,16 @@
 ---
 name: review-pr
-description: "Review one pull request or the current branch, explain its intent briefly, and return only verified findings. Supports self, teammate, and contributor modes plus one optional independent second opinion. Use for PR review, self-review, or a deeper review without a multi-agent swarm."
-argument-hint: "[pr-url|pr-number] [as:self|teammate|contributor] [second-opinion] [+security]"
+description: "Review a pull request, local working tree, stack, or PR set and return only verified findings. Uses one focused pass by default; use deep or swarm language for adaptive multi-lens review. Supports self, teammate, and contributor modes."
+argument-hint: "[pr-url|pr-number ...] [deep] [second-opinion] [focus:<area>] [rounds:<n>] [as:self|teammate|contributor] [post] [+security|-security]"
 ---
 
 # Review PR
 
-Review one PR against its true base. Orient the user briefly, verify every concern, and return a small set of actionable findings. An empty review is valid.
+Review code against its true base. Orient the user briefly, verify every concern, and return a small set of actionable findings. An empty review is valid.
 
-The normal path uses one review pass. `second-opinion` adds one fresh independent reviewer. It never starts several lenses or repeats until convergence.
+The normal path reviews one PR or local working tree once. `second-opinion` adds one fresh independent reviewer without starting a full multi-lens review.
+
+Use deep mode when the user says `deep`, `swarm`, requests multiple lenses or rounds, supplies multiple target PRs, or asks for a stack/cross-repo review. Read [references/deep-review.md](references/deep-review.md) and follow it instead of the workflow below. Keep ordinary reviews on this entrypoint so they do not pay the context and coordination cost of deep mode.
 
 ## Modes
 
@@ -26,11 +28,17 @@ Never post a comment, review, or approval. Never edit another author's branch.
 
 ### 1. Build one review packet
 
-Load `adversarial-review`. Resolve the target per its shared mechanics. For a local branch without a PR, identify the real parent branch and review the working diff.
+Load `adversarial-review`. Resolve the target per its shared mechanics. For a local branch without a PR, identify the real parent branch and build the complete target per Shared mechanics § *Local working tree packets*.
 
-Fetch the base and create one three-dot diff. Record the base, HEAD, changed files, full diff, and commit log. Read each changed file plus the relevant callers and type definitions. Read existing PR discussion before forming findings. Do not repeat a concern that another reviewer already raised.
+For a PR, fetch the base and build the diff from the recorded merge-base and head SHAs per Shared mechanics §§ *Diff against the true base* and *PR packets*. Record the target identity, base, HEAD, changed files, full diff, and commit log. For a local target, read its final working-tree files. Read each changed file plus the relevant callers and type definitions. Read existing PR discussion before forming findings. Do not repeat a concern that another reviewer already raised.
 
-Treat the packet as immutable. If HEAD changes during the review, discard the findings and stop. Do not silently review a different revision.
+Mark changed files as hand-written, generated, vendored, or dependency artifacts using repository configuration and file markers. Review the generator or source definition rather than treating generated output as authored logic; still inspect generated output when it is the shipped contract.
+
+Load only local context that can change the judgement: applicable `AGENTS.md` files, repository review standards, CI workflows covering the changed paths, incident notes matched to the affected subsystem, and previously verified review lessons when those artifacts exist. Do not block an ordinary review because optional context is absent.
+
+Classify the pass as an **initial review** or a **fix round**. It is a fix round when the commits or discussion show that the author is responding to earlier review feedback. For a fix round, record each earlier concern, the code changed for it, and every analogous site found by search. Verify that the fix addresses the concern without introducing a sibling inconsistency or regression; do not merely re-run the initial-review checklist over the whole diff.
+
+Treat the packet as immutable. If HEAD or a local working-tree fingerprint changes during the review, discard the findings and stop. Do not silently review a different revision.
 
 ### 2. Orient briefly
 
@@ -54,7 +62,21 @@ Apply the selected counter-bias and the full `adversarial-review` verification b
 - consistency across sibling producers and consumers;
 - clarity, reuse, and scope.
 
-Run the `security-audit` flow inline when the user passes `+security` or the diff meets the Shared mechanics § *Security lens trigger*. Do not start another general review pass.
+Before forming findings, run Shared discipline § *Discovery sweeps* and follow its results into the relevant callers and stack layers.
+
+When the change moves money, credits, quota, or another conserved balance, write the state transitions in order before reviewing them: reserve/hold, execute, settle/commit, release/refund, and every retry or failure exit. Ask which durable fact makes each transition idempotent and which actor owns recovery from a partial transition.
+
+Interrogate tests rather than counting them:
+
+- Which named test fails if each meaningful addition is deleted or inverted?
+- Does each assertion rule out a specific wrong outcome, or can it pass through a permissive matcher, mock, or unrelated validation error?
+- Is the expected value independent of the implementation and fixture that produced the actual value?
+- Do boundary fixtures cross the threshold instead of stopping beside it?
+- When two hand-maintained sets must agree, what test ties them together?
+
+For every added or materially changed inline comment, ask: can the information be derived from the code; is this the shortest accurate explanation; is it necessary; and does it describe the code's current invariant rather than a change, PR, or commit? Raise a comment concern only when the answer exposes real maintenance cost, not as a style nit.
+
+Run the `security-audit` flow inline when the user passes `+security` or the diff meets the Shared mechanics § *Security lens trigger*. Give it the recorded packet and require a read-only audit; it must not create reproducer tests, edit files, or rebuild the target diff during review. Do not start another general review pass.
 
 For each candidate, identify the concrete failing scenario and try to disprove it. Drop preferences, formatter output, speculative future risks, and concerns already covered by the discussion. Keep at most five findings, ordered by impact.
 
@@ -68,7 +90,7 @@ Missing tests alone are a suggestion. They become a blocker only when they expos
 
 ### 4. Add one optional second opinion
 
-Skip this section unless the user passed `second-opinion` or explicitly requested a deeper review.
+Skip this section unless the user passed `second-opinion`. Requests for a deeper review route to deep mode before this workflow starts.
 
 Launch one fresh read-only reviewer. Give it only the immutable review packet, existing discussion, selected counter-bias, and the verification bar. Tell it to return verified candidate findings and to accept an empty result. It must not edit, post, or launch more agents.
 

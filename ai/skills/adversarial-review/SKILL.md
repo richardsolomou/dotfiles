@@ -38,6 +38,16 @@ Bias differs by context. Name it and counter it explicitly:
 
 Before a candidate becomes a finding, actively try to disprove it. The discipline is constructing the failure scenario, not listing categories. "Edge cases" is not a finding; "passing `[]byte{}` here causes a nil deref at `parse.go:84`" is.
 
+Start with questions, before applying a category checklist:
+
+- What does this change assume about its inputs, callers, ordering, state, and environment?
+- Which realistic input or interleaving would violate each assumption?
+- Where does every new or changed value originate, and which consumers trust it?
+- What observable evidence would prove the concern, and what evidence would falsify it?
+- If the changed behaviour were deleted or inverted, which test would fail for the intended reason?
+
+Follow the answers into the code. Do not answer from the diff alone, and do not turn an unanswered question into a finding. If the repository, tests, pinned dependency, or reachable environment cannot verify a load-bearing assertion, say what could not be verified and why; then drop it or classify it as an unresolved question if the caller supports that output.
+
 For each candidate concern:
 
 - **Re-read the actual code, not the diff hunk.** Look at the surrounding function, the callers, the type definition. Often the concern is already handled three lines above or in a wrapper not in the diff.
@@ -45,7 +55,13 @@ For each candidate concern:
 - **Look for counterexamples in the same repo.** If you're flagging a pattern, is the existing pattern used successfully elsewhere? The codebase convention may be deliberate.
 - **Construct the failing scenario.** Pass `nil`, `""`, a 10MB input, a concurrent caller, a malformed UTF-8 string. What breaks?
 
+Before output, be able to state four things internally: the claim, the concrete evidence, the failing scenario, and the disproof attempt. A candidate missing any one of them is not ready.
+
 If the concern doesn't survive verification, drop it.
+
+### Discovery sweeps
+
+Before forming findings, search once for every producer and consumer of new members, sibling implementations of changed behaviour, payloads parsed after they were already decoded, and relevant contracts in adjacent stack layers. Put the bounded results in the review packet so specialist reviewers can follow relevant leads without each repeating the repository-wide search.
 
 ### Defensibility bar
 
@@ -54,6 +70,8 @@ The bar is: **"I can defend this finding if challenged."**
 Concerns that wouldn't survive polite pushback shouldn't be raised in the first place — whether the pushback would come from the PR author, a co-reviewer, or your own future self reading the finding back.
 
 When genuinely uncertain whether a concern is real, return to verification rather than raise on a guess. If after verification it's still ambiguous, that's a signal the concern probably isn't load-bearing — drop it, or note it as something you considered but couldn't confirm.
+
+Do not substitute a numerical confidence score for verification. A low-confidence appendix still makes the author spend attention disproving speculation; keep uncertain leads in working notes unless the caller explicitly asks for exploratory hypotheses.
 
 ### Skip nitpicks
 
@@ -64,6 +82,12 @@ If a formatter would normalise it, the formatter can fix it. Don't spend a findi
 ### Don't drop real concerns for politeness
 
 The defensibility bar is for accuracy, not politeness. Don't drop a real concern because it feels awkward to raise, or because the other party (author, reviewer) is senior to you. Letting a real issue ship is worse than the awkwardness of bringing it up. If a finding survives verification and meets the defensibility bar, raise it.
+
+### Learn only from resolved evidence
+
+Do not turn a plausible finding into permanent review doctrine. A recurring lesson is eligible for capture only after it was accepted and fixed, reproduced, or verified by a mutation that makes the relevant test fail. Record the narrow trigger, the failure mechanism, and the question that would expose it; do not preserve PR-specific names or the rejected solution.
+
+During a review, report candidates normally and do not silently edit standards or memory. A workflow that observes a qualifying outcome ends with `Lesson candidate: <trigger> → <failure mechanism> → <question that exposes it>` and offers to update the narrowest relevant skill or `AGENTS.md`; workflows that end before the outcome do nothing. Promote repeated lessons and retire superseded entries so the review corpus stays useful instead of only growing.
 
 ## Shared mechanics
 
@@ -100,17 +124,28 @@ Run the `security-audit` lens when the caller asks for it, or when the diff touc
 
 ### Diff against the true base
 
-The base is `baseRefName` — **not always `main`/`master`**; a stacked PR branches off another feature branch. Fetch it, then three-dot diff so you see only what this branch added relative to the merge-base, not what landed on the base afterward:
+The base is `baseRefName` — **not always `main`/`master`**; a stacked PR branches off another feature branch. Fetch it, resolve and record the exact merge-base SHA, then diff that SHA against the recorded head so later base movement cannot change the packet:
 
 ```bash
 git fetch origin <baseRefName>
-git diff origin/<baseRefName>...HEAD
-git log --oneline origin/<baseRefName>..HEAD
+git merge-base origin/<baseRefName> <head-sha>
+git diff <merge-base-sha> <head-sha>
+git log --oneline <merge-base-sha>..<head-sha>
 ```
 
-Read each changed file in the working tree, not just the diff hunks — you need the surrounding function, the callers, and the type definitions.
+Read each changed file in full, not just the diff hunks — you need the surrounding function, callers, and type definitions.
 
 When the PR is part of a stack, check the PRs above it before flagging: a concern an upstack PR already fixes is not a finding — drop it, or note it's addressed upstack.
+
+### PR packets
+
+A PR packet is commit-based. Read changed files from the recorded head SHA with `git show <head-sha>:<path>` or from a clean isolated checkout verified at that SHA. For a deleted path, read its base-side content with `git show <merge-base-sha>:<path>` and inspect its remaining callers at the head. Never combine a committed PR diff with dirty working-tree file contents. If the available checkout has local changes, use another clean worktree or commit-addressed reads; do not clean or overwrite the user's files.
+
+### Local working tree packets
+
+A local review target is the complete final working state, not only the commit at `HEAD`. Run the bundled `scripts/local-review-packet.sh <base-ref>` once to emit a fingerprint header followed by one net diff from the merge-base to the current working tree, including staged, unstaged, and untracked non-ignored files. New untracked files appear as additions, and locally replaced committed code appears only in its final form. If the helper rejects filtered paths, nested repositories, special files, or an input/output bound, narrow the target or build a safe manual packet rather than weakening the guard or silently truncating it.
+
+Use the emitted fingerprint to identify the target as `working-tree@<HEAD>:<fingerprint>`. Recompute it with `--fingerprint` before rendering or applying fixes. A changed fingerprint invalidates the packet even when `HEAD` has not moved.
 
 ### Fetch the existing discussion
 

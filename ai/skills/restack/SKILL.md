@@ -15,7 +15,7 @@ You must be on a branch tracked by the official `gh stack` extension.
 
 ### Step 1: Assess the Stack
 
-Run `gh stack view --json` and confirm the current branch, trunk, branch order, PRs, and `needsRebase` state.
+Run `gh stack view --json` and confirm the current branch, trunk, branch order, PRs, and `needsRebase` state. Record each branch's tip SHA and its own diff or stable patch ID against its parent; this is the immutable before-state for deciding whether a PR's scope changes.
 
 If there are no dependent branches, stop and tell the user there is nothing to restack.
 
@@ -33,8 +33,8 @@ gh stack sync
 
 ### Step 4: Refresh PRs whose scope changed
 
-For each restacked branch whose own diff changed (conflict resolutions that altered behaviour, dropped commits), apply `update-pr` — automatic, no ask (per Pull Request Descriptions in the global instructions). A pure restack that only rewrites parent commits needs no refresh.
+After sync, compare each branch's own diff with its recorded before-state. For each branch whose semantic own diff changed (conflict resolutions that altered behaviour, dropped commits), apply `update-pr` — automatic, no ask (per Pull Request Descriptions in the global instructions). A pure restack that only rewrites parent commits needs no refresh.
 
 ### Step 5: Report
 
-Display which branches were restacked and pushed.
+Read the final `gh stack view --json` and display which branches were restacked and pushed. Do not infer the final stack from the pre-rebase snapshot.

@@ -17,12 +17,15 @@ git diff --stat
 git diff --staged --stat
 git log --oneline -5
 git branch --show-current
+git remote show origin | grep 'HEAD branch'
 gh pr view --json state,url 2>/dev/null || true
 ```
 
 If there are no changes (staged or unstaged), stop and tell the user there's nothing to ship.
 
 If the current branch has a merged or closed PR, do not push new commits to it. Fetch the remote base branch, create a fresh branch from `origin/<base>`, and replay only the unmerged changes before continuing. Verify the new branch has no existing PR.
+
+If the current branch is the remote's default branch, stop before staging or committing and ask the user to create a feature branch. Do not leave a local commit on the default branch and then discover that no PR can be opened.
 
 If the user asks for one self-contained PR per repository, inspect each existing PR's base before shipping. Do not preserve a stacked base: consolidate the required prerequisite diff onto the trunk-based PR and close any superseded PRs in that repository.
 
@@ -56,7 +59,7 @@ EOF
 )"
 ```
 
-### Step 5: Determine the Base Branch
+### Step 5: Confirm the Base Branch
 
 Figure out the base branch for the PR:
 
@@ -64,7 +67,7 @@ Figure out the base branch for the PR:
 git remote show origin | grep 'HEAD branch'
 ```
 
-If the current branch IS the main branch, stop and ask the user to create a feature branch first. Do not create PRs from main to main.
+Use the default branch recorded before the commit as the PR base. If the remote default changed during the run, stop and reassess instead of guessing.
 
 ### Step 6: Push
 
