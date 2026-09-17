@@ -55,13 +55,13 @@ Skip resolved threads by default. Mention how many were skipped in a one-line no
 
 ### Step 3: Read the code around each comment
 
-For each unresolved comment, read the actual file at the commented line so the explanation is grounded in current code rather than the diff hunk alone:
+Capture the PR head SHA in Step 1. For each unresolved comment, read the actual file at that commit so the explanation is grounded in one immutable revision rather than the diff hunk or a moving checkout:
 
 ```bash
 git show <head-sha>:<file>
 ```
 
-Or read from the working tree if the PR branch is checked out. Read enough surrounding context (the function, its callers, the type definition) to actually understand what the reviewer is pointing at.
+Read enough surrounding context (the function, its callers, the type definition) to actually understand what the reviewer is pointing at. Do not substitute working-tree contents for the captured PR commit.
 
 ### Step 4: Understand the reviewer's intent
 
@@ -98,7 +98,7 @@ Land on one of four verdicts for each comment. **Bias hard toward the first thre
 3. **Disagree** — the claim is wrong on the facts. Explain why, and draft a polite reply the user can post on the thread to push back.
 4. **Unsure** — last resort, per the Step 4 inference bar. Reserve it for things like: behaviour depends on a runtime config you can't see, the right answer hinges on a product decision (security policy, retention policy) that isn't in the code, or callers exist outside this repo whose contract you don't know.
 
-Be willing to disagree. The point of this skill is for the user to learn — telling them a reviewer is wrong (when they are) is more useful than letting a bad change land. Be equally willing to *agree and propose a fix* under uncertainty: a confident wrong guess that the user can correct is more useful than a non-answer.
+Be willing to disagree. The point of this skill is for the user to learn — telling them a reviewer is wrong (when they are) is more useful than letting a bad change land. If the interpretation determines a code change, do not mark Agree or Disagree until repository code, a test, or authoritative documentation supports it. Otherwise use Unsure and name the missing evidence.
 
 ### Step 6: Write the walkthrough
 
@@ -117,7 +117,7 @@ Produce one section per unresolved comment, in the order they appear on the PR. 
 
 **Is the reviewer right?**
 
-<Verdict: Agree / Agree with a different fix / Disagree / Unsure. Then 2–5 sentences explaining the reasoning — what you checked, what evidence supports or contradicts the claim. Be specific: cite the line you re-read, the caller you traced, the doc you mentally referenced. If you Disagree, this is where you explain *why* the reviewer is wrong on the facts. If you're Unsure, list exactly what'd need to be checked to decide.>
+<Verdict: Agree / Agree with a different fix / Disagree / Unsure. Then 2–5 sentences explaining the reasoning — what you checked, what evidence supports or contradicts the claim. Be specific: cite the exact repository location, test result, or authoritative documentation. If you Disagree, this is where you explain *why* the reviewer is wrong on the facts. If you're Unsure, list exactly what'd need to be checked to decide.>
 
 **Concepts**
 
@@ -185,7 +185,7 @@ Executing means: apply the edits, **commit and push them**, refresh the PR title
 
 Apply *all* the file edits, then commit and push, then refresh the PR body, and only then post replies and resolve threads. The ordering is the whole point — **a "done" reply must never go out before the change is actually pushed**, or the reviewer sees the reply, assumes the PR is updated, and merges stale code.
 
-1. **Apply every picked file edit.** Use the diffs shown in the walkthrough — don't re-derive them. Apply all of them before moving on, so the round lands as one push.
+1. **Revalidate the target, then apply every picked file edit.** Confirm that the remote PR head still equals the SHA captured in Step 1. If it moved, stop and rebuild the walkthrough against the new head. Otherwise use the diffs shown in the walkthrough — don't re-derive them. Apply all of them before moving on, so the round lands as one push.
 
 2. **Commit and push the edits as one review round.** Stage the edits, commit with a message naming the round (e.g. `Address review feedback`), and push to the PR branch:
 

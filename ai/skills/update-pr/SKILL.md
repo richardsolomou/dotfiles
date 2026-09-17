@@ -11,22 +11,27 @@ This skill is also the **single source of truth for how to write a PR title and 
 
 ## Workflow
 
-1. Get the current branch name and find its PR:
+1. Resolve and pin the target PR once. Record the repository, PR number, base ref, and head SHA:
 
    ```sh
-   gh pr view --json number,title,body,baseRefName
+   repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+   gh pr view --json number,title,body,baseRefName,headRefOid
    ```
 
-2. Get the full diff against the base branch:
+2. Fetch the recorded base and PR head, verify the fetched head SHA, then read the immutable full diff:
 
    ```sh
-   git diff $(gh pr view --json baseRefName -q '.baseRefName')...HEAD
+   git fetch origin <baseRefName>
+   git fetch origin pull/<number>/head
+   test "$(git rev-parse FETCH_HEAD)" = "<headRefOid>"
+   merge_base=$(git merge-base "origin/<baseRefName>" "<headRefOid>")
+   git diff "$merge_base" "<headRefOid>"
    ```
 
 3. Get the commit log for context on intent:
 
    ```sh
-   git log --oneline $(gh pr view --json baseRefName -q '.baseRefName')..HEAD
+   git log --oneline "$merge_base".."<headRefOid>"
    ```
 
 4. Check for a PR template in the repo:
@@ -75,6 +80,7 @@ Rules:
 - Problem: the constraint, bug, or motivation, including impact and relevant background when they are not obvious.
 - Changes: the intent, non-obvious decisions, important behavior, compatibility or rollout considerations, and explicitly deferred scope. Skip only details that are fully obvious from the title and diff.
 - How did you test: name the tests added or run, manual scenarios exercised, and any validation gaps. Give enough detail for a reviewer to understand what was and was not verified.
+- Claim only commands and scenarios observed in the current run or explicitly supplied by the user. Test files in the diff, commit messages, CI configuration, and an earlier PR body do not prove execution. If evidence is unavailable, ask what ran; when the workflow cannot pause, write `Not run` and state the exact validation gap.
 
 After drafting, re-read for reviewer questions. Add missing context that affects correctness, risk, rollout, or validation; then delete only repetition, padding, and scene-setting that does not help answer those questions.
 
@@ -84,12 +90,12 @@ Load the `tone` skill with `register: pr-description` before drafting anything. 
 
 No AI smell: no formulaic openers ("This PR…", "In this change…"), no closing sign-offs, no padding.
 
-Finally, update the PR without putting generated content in a shell command. Write the title and body to temporary files with the available file-writing tool, then build the API payload from those files:
+Immediately before updating, fetch the recorded PR number again and compare its `headRefOid` and `baseRefName` with the pinned values. If either moved, discard the draft and rebuild it from the new immutable target. Then update that captured repository and PR number without putting generated content in a shell command. Write the title and body to temporary files with the available file-writing tool, then build the API payload from those files:
 
 ```sh
 jq -n --rawfile title /tmp/update-pr-title.txt --rawfile body /tmp/update-pr-body.md '{title: ($title | rtrimstr("\n")), body: ($body | rtrimstr("\n"))}' > /tmp/update-pr.json
-gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pulls/<number>" --method PATCH --input /tmp/update-pr.json
-gh pr view <number> --json title,body | jq '{title,body}' > /tmp/update-pr-actual.json
+gh api "repos/<captured-repo>/pulls/<captured-number>" --method PATCH --input /tmp/update-pr.json
+gh pr view <captured-number> --repo <captured-repo> --json title,body | jq '{title,body}' > /tmp/update-pr-actual.json
 diff -u /tmp/update-pr.json /tmp/update-pr-actual.json
 ```
 

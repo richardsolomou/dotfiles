@@ -1,14 +1,16 @@
 ---
 name: review-pr
-description: "Review one pull request or the current branch, explain its intent briefly, and return only verified findings. Supports self, teammate, and contributor modes plus one optional independent second opinion. Use for PR review, self-review, or a deeper review without a multi-agent swarm."
-argument-hint: "[pr-url|pr-number] [as:self|teammate|contributor] [second-opinion] [+security]"
+description: "Review a pull request, local working tree, stack, or PR set and return only verified findings. Uses one focused pass by default; use deep or swarm language for adaptive multi-lens review. Supports self, teammate, and contributor modes."
+argument-hint: "[pr-url|pr-number ...] [deep] [second-opinion] [focus:<area>] [rounds:<n>] [as:self|teammate|contributor] [post] [+security|-security]"
 ---
 
 # Review PR
 
-Review one PR against its true base. Orient the user briefly, verify every concern, and return a small set of actionable findings. An empty review is valid.
+Review code against its true base. Orient the user briefly, verify every concern, and return a small set of actionable findings. An empty review is valid.
 
-The normal path uses one review pass. `second-opinion` adds one fresh independent reviewer. It never starts several lenses or repeats until convergence.
+The normal path reviews one PR or local working tree once. `second-opinion` adds one fresh independent reviewer without starting a full multi-lens review.
+
+Use deep mode when the user says `deep`, `swarm`, requests multiple lenses or rounds, supplies multiple target PRs, or asks for a stack/cross-repo review. Read [references/deep-review.md](references/deep-review.md) and follow it instead of the workflow below. Keep ordinary reviews on this entrypoint so they do not pay the context and coordination cost of deep mode.
 
 ## Modes
 
@@ -88,7 +90,7 @@ Missing tests alone are a suggestion. They become a blocker only when they expos
 
 ### 4. Add one optional second opinion
 
-Skip this section unless the user passed `second-opinion` or explicitly requested a deeper review.
+Skip this section unless the user passed `second-opinion`. Requests for a deeper review route to deep mode before this workflow starts.
 
 Launch one fresh read-only reviewer. Give it only the immutable review packet, existing discussion, selected counter-bias, and the verification bar. Tell it to return verified candidate findings and to accept an empty result. It must not edit, post, or launch more agents.
 

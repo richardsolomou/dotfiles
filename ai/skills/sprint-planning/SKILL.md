@@ -68,6 +68,8 @@ Store all these values. You need:
 - `prev_number` for fetching the previous comment
 - `prev_start` and `prev_end` for the previous sprint's PR date range
 
+Verify that today's date falls within `sprint_start` through `sprint_end`. The detector can fall back to the nearest past or future issue when no issue contains today; if that happens, show the detected issue and dates and ask the user to confirm before continuing. If detection returns `NOT_FOUND`, stop and ask which sprint issue to use.
+
 ### Step 2: Fetch Team Members
 
 ```bash
@@ -114,11 +116,10 @@ items (🟡/🔴), not just shipped work:
 ~/.agents/skills/sprint-planning/scripts/fetch-team-open-prs.sh <username>
 ```
 
-Bucket the open PRs by `createdAt`:
+Bucket the open PRs by activity, not creation date alone:
 
-- Opened on or before `prev_end` → in-progress **retro** items (🟡) — work
-  carried through last sprint but not yet merged.
-- Opened after `prev_end` → in-flight **plan** seeds — what they're working on now.
+- An open PR is an in-progress **retro** item (🟡) only when its commits, comments, reviews, or `updatedAt` show activity during `[prev_start, prev_end)`. An older open PR with no in-window activity is stale evidence: omit it from the retro unless another source shows the work continued.
+- An open PR with activity on or after `prev_end` is an in-flight **plan** seed.
 
 `isDraft` marks early/WIP work; a non-draft open PR is review-ready. Read the
 bodies here too.
@@ -131,7 +132,9 @@ PRs miss a lot of real sprint work — incidents handled, decisions driven, cros
 2. **Each teammate's messages in the team channel** — `filter_users_from: <their user ID>` + `filter_in_channel: <team channel ID>`. This is where their launch updates, incident triage, and "my focus next week is…" posts live; those focus posts are plan gold.
 3. **Your DMs with each teammate** — `filter_in_im_or_mpim` takes the `@username` form; passing the `D…` channel ID fails with "user not found".
 
-Results cap at 100 per page — follow the `Cursor` column until the window is covered (the earliest sprint days are on the later pages). Fold findings into the retro (incidents → 🟢 outcomes, decision threads → 🟡 items, demo/talk appearances → side quests) and the plan (their stated next focus). **Private-DM process conversations and interpersonal feedback never go in the company-wide comment**, however relevant they feel.
+Results cap at 100 per page — follow the `Cursor` column until the window is covered (the earliest sprint days are on the later pages). Treat incident threads as retro candidates and use 🟢 only when a message explicitly records the completed outcome; decision threads can support 🟡 items, demo/talk appearances can support side quests, and stated next focus can seed the plan. **Private-DM process conversations and interpersonal feedback never go in the company-wide comment**, however relevant they feel.
+
+Record any unresolved user or channel IDs, failed searches, truncated pagination, or uncovered dates. A Slack statement of intent is evidence that work was planned or investigated, not that it completed, unless the message explicitly records the completed outcome.
 
 ### Step 5: Fetch Project Board Items
 
@@ -144,7 +147,7 @@ source ~/.agents/skills/sprint-planning/scripts/config.sh
 
 Categorize items by status column:
 
-- **Done** items inform the retro
+- **Done** items inform the retro only when timestamped evidence places completion within `[prev_start, prev_end)`. For linked issues or PRs, fetch the target and inspect `closed_at` or `merged_at`. If the board item has no authoritative completion timestamp, treat it as corroboration only rather than assigning it to this sprint.
 - **In Progress** and **Todo** items inform the plan
 - **In Review** and **Approved** items are treated as **In Progress** for planning purposes. These are PR-based items that may lack board assignees. For each, fetch the PR author with `gh pr view <number> --repo <owner/repo> --json author --jq .author.login` and use that as the assignee. Only include items whose author is a current team member.
 
@@ -175,19 +178,19 @@ Start from what was **planned**, not what was shipped.
 
 Extract previous plan items: From the previous sprint comment (Step 3), parse each person's planned items. These become the retro checklist.
 
-Auto-resolve statuses: For each planned item, search the merged PRs (Step 4) for a match by:
+Build candidate matches: For each planned item, search the merged PRs (Step 4) for a match by:
 
 - Issue number or PR number overlap
 - Keyword similarity in titles
 - Explicit references
 
-If a matching merged PR is found, mark the item as done. Keep the PR's URL on hand for the rare case a reader would want to open it, but the bullet text is the outcome, not the PR title.
+Keyword similarity only nominates a candidate. Mark an item done only when an exact issue/PR reference, the PR body, board history, or an explicit completion statement ties the shipped work to the planned outcome. Otherwise leave it unresolved for Step 8. Keep the PR's URL on hand for the rare case a reader would want to open it, but the bullet text is the outcome, not the PR title.
 
 Identify side quests: Any merged PRs that don't map to a planned item are candidate "side quests" or unplanned work.
 
 Path B - No previous plan (first sprint or NOT_FOUND):
 
-Build the retro from merged PRs and project board "Done" items, grouping each person's work and presenting it for confirmation. Then add in-progress items from the open/draft PRs fetched in Step 4 (those opened on or before `prev_end`) so the retro reflects started-but-unfinished work, the way house retros do — not only what shipped. Prefix every item with a status emoji: `🟢` for shipped outcomes, `🟡` for each distinct in-progress workstream (collapse only PRs that are part of the same workstream).
+Build the retro from merged PRs and project board "Done" items, grouping each person's work and presenting it for confirmation. Then add in-progress items from the open/draft PRs fetched in Step 4 only when they have activity in `[prev_start, prev_end)`, so the retro reflects started-but-unfinished work without reviving stale PRs. Prefix every item with a status emoji: `🟢` for shipped outcomes, `🟡` for each distinct in-progress workstream (collapse only PRs that are part of the same workstream).
 
 **Synthesize, don't transcribe.** The retro audience is the wider company, not the team. Read each PR's description (Step 4 fetches it) and translate the raw PRs into plain-language outcomes:
 
@@ -265,7 +268,9 @@ Wait for the user's response.
 
 ### Step 10: Generate the Update
 
-**Fact-check the draft against the PR bodies first.** Synthesis from titles drifts. For a non-trivial sprint, spawn one verification agent per team member (in parallel) that reads the merged + open PR data from Step 4 and returns:
+**Build an evidence ledger before writing.** For every retro and plan bullet, record the supporting PR, issue, board transition, or explicit Slack completion statement, its timestamp, and which part of the claim it supports. A source can nominate a claim without proving it. If the evidence does not establish completion, scope, or timing, weaken the wording or mark the item unresolved.
+
+**Fact-check the draft against the evidence ledger.** Synthesis from titles drifts. For a non-trivial sprint, spawn one verification agent per team member (in parallel) that reads the merged + open PR data from Step 4 and the other cited evidence, then returns:
 
 - Per bullet: SUPPORTED (cite PR numbers), OVERSTATED (how to reword), WRONG, or MISCATEGORIZED (claimed 🟢 but still open/draft, or 🟡 but actually merged).
 - Any substantial merged work MISSING from every bullet.

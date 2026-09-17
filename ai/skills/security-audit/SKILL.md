@@ -20,15 +20,15 @@ Use extended thinking throughout. Read carefully before reporting.
 
 Audit target: $ARGUMENTS
 
-Resolve the target as follows:
+Resolve the target once and pin branch or PR reviews to immutable base and head SHAs. Print those SHAs in the report. Resolve the target as follows:
 
-- Empty: audit the current branch's diff against the main branch (`git diff $(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main)...HEAD`).
-- `branch`: same as above.
-- A PR number or URL: `gh pr diff <ref>` plus `gh pr view <ref>` for context.
+- Empty: audit the complete local working state against its real parent. Use `adversarial-review`'s local working-tree packet when available so staged, unstaged, and untracked changes share one fingerprint.
+- A branch name: resolve its remote tip and merge base to immutable SHAs, then audit that commit range without reading dirty working-tree versions of changed files.
+- A PR number or URL: record its base ref and head SHA, fetch both, and audit `git diff <merge-base-sha> <head-sha>` plus commit-addressed file contents. Do not combine the PR diff with dirty working-tree files.
 - A file or directory path: read it directly and audit its contents.
 - A free-form description (e.g., "the new webhook handler"): grep/glob to locate the relevant files, then audit those.
 
-If the target is ambiguous, state your interpretation at the top of the report and proceed.
+If two plausible target scopes would materially change the findings, ask which one the user means. Otherwise state the narrow interpretation at the top and proceed.
 
 ## Calibration — read this first
 
@@ -202,15 +202,15 @@ For each candidate finding:
 
 If any of those four steps fails, the finding is not real — drop it.
 
-## Reproducer tests (local branch audits)
+## Reproducer tests (approved fix rounds)
 
-When auditing a **local branch** (not a read-only PR audit), for each confirmed finding write a test that reproduces the vulnerability. The test must fail against the current vulnerable code and pass once the fix is applied — i.e. it asserts the secure behavior, not the buggy behavior.
+An initial audit is read-only. Use existing tests or non-persistent probes to verify candidates, and do not leave reproducer files in the target. After the report, when the user explicitly approves a fix, write a test for each approved finding before changing the implementation. The test must fail against the current vulnerable code and pass once the fix is applied — i.e. it asserts the secure behavior, not the buggy behavior.
 
 - Place the test next to the existing test module for the affected code (same `tests/` layout the repo already uses).
 - Exercise the real entrypoint (HTTP route, task, tool call) — not just the inner helper — so the test would catch a regression at the boundary, not only at the line that was patched.
 - For IDOR / tenant-crossover bugs, set up two tenants/users in the test and assert that user A receives 403/404 (or filtered-out results) when targeting user B's resource.
 - For injection bugs, send the malicious payload and assert the dangerous side effect did **not** occur (no extra row written, no file read outside the allowed root, no outbound request to the attacker host).
-- Run the test before applying any fix and confirm it fails for the expected reason. Include the failing output (or a one-line summary of it) in the finding so the reviewer can see the bug is demonstrable, not theoretical.
+- Run the test before applying any fix and confirm it fails for the expected reason. Include the failing output, or a one-line summary, in the fix-round update and amend the finding record if one is being maintained.
 - If a finding genuinely cannot be expressed as an automated test (e.g. it depends on infrastructure not available in the test environment), say so explicitly in the finding and explain why.
 
 ## After reporting (local branch audits)
@@ -280,4 +280,4 @@ If the target or context does not make these clear, ask:
 3. Is this code reachable from a public route, an authenticated route, or only an admin/internal route?
 4. **If this is agent code:** what tools / MCP servers does it expose, what credentials do those tools run as, what untrusted content sources reach the model context, and how is tool output rendered to the user?
 
-If you cannot get answers, state your assumptions at the top of the report and proceed.
+If authoritative reachability, ownership, or input-control evidence remains unavailable, report that part of coverage as blocked and do not file assumption-dependent findings. Ask only when two plausible answers would materially change the result.

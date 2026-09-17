@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# t3code-activity.sh <window_start> [window_end]
+# t3code-activity.sh <window_start> <window_end>
 # Threads in T3 Code's local state that received a prompt inside the window.
 # Instants are ISO 8601 UTC. One tab-separated line per thread:
 #   first_in_window_prompt_ts  project  branch  title  pr_urls  in-window prompts
@@ -7,8 +7,8 @@
 # T3_STATE_DB overrides the database path (tests point it at a fixture).
 set -euo pipefail
 
-WINDOW_START="${1:?usage: t3code-activity.sh <window_start> [window_end]}"
-WINDOW_END="${2:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+WINDOW_START="${1:?usage: t3code-activity.sh <window_start> <window_end>}"
+WINDOW_END="${2:?window_end required}"
 DB="${T3_STATE_DB:-$HOME/.t3/userdata/state.sqlite}"
 
 # The instants are spliced into SQL below, so only accept ISO 8601 shapes.

@@ -106,7 +106,7 @@ Track which lock files need regeneration (handled in Step 3).
 
 **2. Migrations (`migration`)**
 
-Do not auto-resolve. Ask the user how to proceed for each migration file. Common options:
+Do not auto-resolve. First ask which migrations and schema effects must exist after the operation, and whether either migration is already represented upstream. Show the commit identity behind each side, then map the intended final state to one of these implementation choices:
 
 - Accept theirs (`git checkout --theirs <file>`) — during merge/cherry-pick/revert this is the incoming branch; during rebase this is the commit being replayed (i.e., your branch)
 - Accept ours (`git checkout --ours <file>`) — during merge/cherry-pick/revert this is the current branch; during rebase this is the upstream branch you're rebasing onto
@@ -152,14 +152,14 @@ When the base section is empty or contains substantially less code than both sid
 
 | Base | HEAD vs Incoming | Action |
 | --- | --- | --- |
-| Empty or missing code | >95% similar (after normalizing whitespace) | **Auto-resolve**: keep HEAD version, report to user |
-| Empty or missing code | 70-95% similar | **Ask user**: show both versions side-by-side, explain likely stacked PR context |
-| Empty or missing code | <70% similar | **Ask user**: true divergence, present both options |
+| Empty or missing code | Stack or commit history proves both hunks are the same patch, and their normalized results are identical | **Auto-resolve**: keep HEAD version, report the proof |
+| Empty or missing code | Similar but not identical | **Ask user**: show both versions side-by-side; similarity suggests a duplicate but does not prove one |
+| Empty or missing code | Clearly different | **Ask user**: true divergence, present both options |
 | Present | Both modified | **Ask user**: standard conflict, present analysis |
 
 For auto-resolutions, always report clearly what was resolved and why:
 
-> Auto-resolved `src/feature.ts` hunk at line 42: stacked PR duplicate (HEAD and incoming are 98% similar with empty base). Kept HEAD version.
+> Auto-resolved `src/feature.ts` hunk at line 42: stack history identifies both sides as the same patch, and their normalized results are identical. Kept HEAD version.
 
 For all other cases, present the conflict to the user with your analysis and recommendation, then apply their choice.
 

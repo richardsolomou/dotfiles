@@ -1,10 +1,11 @@
 #!/bin/bash
 # Gather authored GitHub PR activity since a given moment.
 #
-# Usage: author-prs.sh <since> <open-key> <untouched: skip|include>
+# Usage: author-prs.sh <since> <until> <open-key> <untouched: skip|include>
 #
 #   since      ISO 8601 instant, e.g. 2026-06-16T18:30:00Z (a bare YYYY-MM-DD
 #              also works — treated as that day's start).
+#   until      Exclusive ISO 8601 end instant for the activity window.
 #   open-key   JSON key for the open-PR list ("active" for standup,
 #              "open" for standup weekly mode).
 #   untouched  skip    -> drop open PRs with no commits in the window
@@ -12,13 +13,13 @@
 #
 # Emits a single JSON object:
 #   {
-#     "merged":     [ {number, title, repo, merged_at}, ... ],   # merged at/after since
+#     "merged":     [ {number, title, repo, merged_at}, ... ],   # merged in [since, until)
 #     "<open-key>": [ {number, title, repo, isDraft, commits: [headline, ...]}, ... ]
 #   }
 #
 # The GitHub `merged:`/`updated:` qualifiers and commit-date compares all accept
 # a full timestamp, and ISO 8601 sorts lexicographically, so sub-day precision
-# Just Works — the window starts at the previous entry, not the start of its day.
+# Just Works — the window is the immutable half-open interval [since, until).
 #
 # Why this script exists (do not regress):
 #   - `gh pr view --json commits` shells out to git and fails with
@@ -31,18 +32,36 @@
 
 set -euo pipefail
 
-since="${1:?usage: author-prs.sh <since ISO-8601 instant> <open-key> <skip|include>}"
-open_key="${2:?open-key required, e.g. active or open}"
-untouched="${3:?untouched mode required: skip|include}"
+since="${1:?usage: author-prs.sh <since> <until> <open-key> <skip|include>}"
+until="${2:?until ISO-8601 instant required}"
+open_key="${3:?open-key required, e.g. active or open}"
+untouched="${4:?untouched mode required: skip|include}"
 user="richardsolomou"
 
-merged=$(gh api search/issues --method GET \
-    -f q="author:${user} is:pr is:merged merged:>=${since} org:PostHog" \
-    --jq '[.items[] | {number, title, repo: (.repository_url | sub("https://api.github.com/repos/"; "")), merged_at: .pull_request.merged_at}]')
+require_complete_search() {
+    local label="$1" payload="$2" total captured
+    total=$(jq '.[0].total_count // 0' <<< "$payload")
+    captured=$(jq '[.[].items[]] | length' <<< "$payload")
+    if ((captured < total)); then
+        echo "${label} search truncated: captured ${captured} of ${total}" >&2
+        return 1
+    fi
+}
 
-open_prs=$(gh api search/issues --method GET \
+merged_pages=$(gh api search/issues --method GET -f per_page=100 \
+    -f q="author:${user} is:pr is:merged merged:${since}..${until} org:PostHog" \
+    --paginate --slurp)
+require_complete_search "merged PR" "$merged_pages"
+merged=$(jq --arg since "$since" --arg until "$until" \
+        '[.[].items[] | select(.pull_request.merged_at >= $since and .pull_request.merged_at < $until)
+          | {number, title, repo: (.repository_url | sub("https://api.github.com/repos/"; "")), merged_at: .pull_request.merged_at}]' \
+        <<< "$merged_pages")
+
+open_pages=$(gh api search/issues --method GET -f per_page=100 \
     -f q="author:${user} is:pr is:open org:PostHog" \
-    --jq '.items[] | "\(.number)\t\(.repository_url | sub("https://api.github.com/repos/"; ""))\t\(.title)"')
+    --paginate --slurp)
+require_complete_search "open PR" "$open_pages"
+open_prs=$(jq -r '.[] | .items[] | "\(.number)\t\(.repository_url | sub("https://api.github.com/repos/"; ""))\t\(.title)"' <<< "$open_pages")
 
 open="[]"
 while IFS=$'\t' read -r number repo title; do
@@ -52,7 +71,8 @@ while IFS=$'\t' read -r number repo title; do
     # document); --slurp wraps the pages into an array-of-arrays, so `add`
     # flattens them before filtering.
     commits=$(gh api "repos/${repo}/pulls/${number}/commits?per_page=100" --paginate --slurp \
-        | jq "[(add // []) | .[] | select(.commit.committer.date >= \"${since}\") | .commit.message | split(\"\n\")[0]]")
+        | jq --arg since "$since" --arg until "$until" \
+            '[(add // []) | .[] | select(.commit.committer.date >= $since and .commit.committer.date < $until) | .commit.message | split("\n")[0]]')
     if [[ "$untouched" == "skip" && "$(echo "$commits" | jq 'length')" -eq 0 ]]; then
         continue
     fi

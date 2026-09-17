@@ -1,10 +1,4 @@
----
-name: review-swarm
-description: "Adaptive multi-lens review of a PR, local working tree, or PR set, using a combined reviewer for small low-risk diffs and independent specialist subagents for deeper work. Validates every comment against its target's changed lines and synthesises a deduped review. Use for swarm reviews, stacked or cross-repo reviews, repeated review passes, or when more coverage than review-pr is needed."
-argument-hint: "[pr-url|pr-number ...] [context:<pr-url> ...] [focus:<area>] [rounds:<n>] [as:self|teammate|contributor] [post] [+security|-security]"
----
-
-# Review Swarm
+# Deep Review
 
 Adapt review depth to the change, fanning out independent specialist reviewers when size or risk justifies it, then synthesise their findings into one deduped review per target. More coverage than a single-pass `review-pr`; in deep mode, independence is what surfaces what one read misses.
 
@@ -12,7 +6,7 @@ The unit of review is one immutable target: a PR against its true base or a loca
 
 Who wrote the code—yourself, a teammate, or an external contributor—sets the posture, tone, and destination independently of review depth. The skill detects that itself.
 
-This is the multi-agent counterpart to `review-pr`: it borrows the discipline from `adversarial-review` and follows `review-pr` for orientation and self-review rendering, with the voice from `tone`. Coverage is the point, but reviewer output is capped so weak findings cannot bury important ones.
+This is `review-pr`'s multi-agent mode. It borrows the discipline from `adversarial-review` and follows the entrypoint for orientation and self-review rendering, with the voice from `tone`. Coverage is the point, but reviewer output is capped so weak findings cannot bury important ones.
 
 ## Modes — detect, don't ask
 
@@ -83,7 +77,7 @@ TARGET working-tree@<head>:<fingerprint>
 
 The diff, changed files, file classifications, hand-written line count, changed-line manifest, discussion, relevant context summaries, HEAD SHA, and local fingerprint when applicable form the immutable review packet for that target. Classify it as an **initial review** or a **fix round** from the commits and discussion. For a fix round, also include a mutation table with one row per earlier concern: the concern, the code changed to address it, every analogous site found by search, and the test or observation that would fail if the fix were removed. If HEAD or the local fingerprint changes during the review, discard its findings and rebuild the packet before continuing.
 
-**Read the existing discussion before launching reviewers** per Shared mechanics § *Fetch the existing discussion*, and pass it to synthesis (Step 5). Note constraints the author has stated, and — in loop/`post` mode — every prior `🤖 review-swarm` comment, so the next pass doesn't re-post what's already on the PR.
+**Read the existing discussion before launching reviewers** per Shared mechanics § *Fetch the existing discussion*, and pass it to synthesis (Step 5). Note constraints the author has stated, and — in loop/`post` mode — every prior `🤖 review-pr deep` comment, so the next pass doesn't re-post what's already on the PR.
 
 Prepare context-only PRs separately. Read their descriptions, diffs, and discussion only for contracts or assumptions needed by a target. Do not include their changed files in a target's review packet and do not anchor target comments to context-only changes.
 
@@ -160,7 +154,7 @@ Before reading finding bodies, validate every candidate against its target packe
 
 Reject or re-anchor invalid candidates before synthesis. Re-anchoring means finding a semantically relevant changed line **in the same target**; never choose an arbitrary nearby changed line merely because GitHub accepts it. If the concern only exists on an unchanged line, another target, or generally across a stack, move it to the owning target's summary without an inline anchor. Do not output an invalid `file:line` under any circumstances.
 
-Collect findings separately per target. **Dedup within that target**: same `file:line` within ~5 lines, or clearly the same concern → merge into one, listing every round and lens that flagged it. Convergence across independent rounds raises confidence; repetition is not a reason to print duplicates. For PR targets, **drop anything already raised in that PR's existing discussion**, and in `post` mode skip findings matching a prior `🤖 review-swarm` comment at the same `file:line` so loop passes don't re-post.
+Collect findings separately per target. **Dedup within that target**: same `file:line` within ~5 lines, or clearly the same concern → merge into one, listing every round and lens that flagged it. Convergence across independent rounds raises confidence; repetition is not a reason to print duplicates. For PR targets, **drop anything already raised in that PR's existing discussion**, and in `post` mode skip findings matching a prior `🤖 review-pr deep` comment at the same `file:line` so loop passes don't re-post.
 
 You own the final bucket (lens buckets are inputs). Apply the `adversarial-review` defensibility bar one more time across the merged set — drop anything that wouldn't survive pushback. An inline comment must anchor to a line **inside a changed hunk on the new side** — that's all GitHub will accept. A concern about code this PR didn't touch (a pre-existing bug, an untouched caller) folds into the summary framed as out-of-scope; it is never an inline comment on an unchanged line. Anything with no anchorable line also folds into the summary (keep the one or two that matter, drop the rest).
 
@@ -215,7 +209,7 @@ Then branch on draft-vs-post:
 - **`post` argument present (loop mode) — auto-post.** Post one atomic review via the GitHub Reviews API (`event: "COMMENT"` — never APPROVE/REQUEST_CHANGES; the bot does not gate merging), inline comments plus a short top-level summary. Every posted comment starts with the bot marker so it's unmistakably automated:
 
   ```markdown
-  🤖 **review-swarm** · `[<lens>]` · **<Blocker|Suggestion>**
+  🤖 **review-pr deep** · `[<lens>]` · **<Blocker|Suggestion>**
   ```
 
   Build the payload in a temp JSON file and POST with `gh api repos/<owner>/<repo>/pulls/<n>/reviews --input <file>`. If a single inline comment is rejected (line not in diff), drop it (mention it in the summary only if it's a Blocker). If the whole POST fails, print the findings locally.
@@ -231,7 +225,7 @@ Never answer a correction with only "done", a list of edits, or a summary of wha
 `post` is what makes the swarm hands-off; it is the **only** path that posts without per-comment approval, and it always carries the bot marker. Passing `post` (or invoking under `/loop` with it) *is* the explicit approval the global instructions' PR Review Comments rule requires — the user opts in per run, and the bot marker keeps the automation unmistakable. Drive the cadence externally — e.g. under `/loop` on a teammate's or contributor's PR:
 
 ```text
-/loop 15m review-swarm <pr-url> post
+/loop 15m review-pr <pr-url> deep post
 ```
 
 Each pass re-reviews the current HEAD and posts a fresh review. It **never edits the author's branch** — on someone else's PR the only action is commenting; the fixing is the author responding to the comments. Reacting to CI, conflicts, and incoming feedback on your *own* open PR is `babysit`, not this skill.

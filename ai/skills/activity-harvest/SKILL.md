@@ -10,7 +10,7 @@ Shared mechanics for the cadence skills. Each caller defines its own cadence, st
 
 ## The window
 
-An entry covers **everything from the moment of the previous entry until the moment of this run** — a timestamp window, not a calendar day/week. Each archived entry ends with a `generated-at:` marker; the next run reads it as `window_start`.
+An entry covers the immutable half-open interval **`[window_start, window_end)`** — a timestamp window, not a calendar day/week. `window_start` is the previous archived entry's `generated-at:` marker; `window_end` is the `now` returned by the dates script. Pass both instants to every source query so activity arriving during composition cannot appear in two entries.
 
 - **No overlap, no duplication.** Work already reported is before `window_start` and won't be picked up again.
 - **No gaps.** Everything since the last entry is in scope, even if that was longer ago than the nominal cadence.
@@ -52,7 +52,7 @@ Each result must follow this digest contract:
 One call fetches the whole pass concurrently — your PRs, the wider searches, and the per-repo comment sweeps:
 
 ```bash
-~/.agents/skills/activity-harvest/scripts/github-harvest.sh "${window_start}" <open-key> <untouched: skip|include>
+~/.agents/skills/activity-harvest/scripts/github-harvest.sh "${window_start}" "${now}" <open-key> <untouched: skip|include>
 ```
 
 Emits a single JSON object:
@@ -75,10 +75,10 @@ Reading rules:
 **Your PRs only** — the wrapper's inner pass, usable standalone when the wider sweep isn't needed:
 
 ```bash
-~/.agents/skills/activity-harvest/scripts/author-prs.sh "${window_start}" <open-key> <untouched: skip|include>
+~/.agents/skills/activity-harvest/scripts/author-prs.sh "${window_start}" "${now}" <open-key> <untouched: skip|include>
 ```
 
-Emits `{"merged": [{number, title, repo, merged_at}, …], "<open-key>": [{number, title, repo, isDraft, commits: [headline, …]}, …]}`. `merged` is PRs you authored that merged at or after `window_start`. The open list carries each PR's in-window commit headlines. `untouched: skip` drops open PRs with no commits in the window. `include` keeps the full in-flight backlog for weekly focus candidates.
+Emits `{"merged": [{number, title, repo, merged_at}, …], "<open-key>": [{number, title, repo, isDraft, commits: [headline, …]}, …]}`. `merged` is PRs you authored that merged inside `[window_start, window_end)`. The open list carries each PR's in-window commit headlines. `untouched: skip` drops open PRs with no commits in the window. `include` keeps the full in-flight backlog for weekly focus candidates.
 
 Use the scripts rather than reaching for `gh` directly — they bake in lessons that are easy to regress: `gh pr view --json commits` dies outside a clone (everything uses `gh api`); `gh search prs --merged` has stale date filtering; the per-PR commits endpoint pages oldest-first, so recent commits need pagination; the comment endpoints return all users' comments, so skipping `--paginate` silently drops yours on busy repos.
 
@@ -87,10 +87,10 @@ Use the scripts rather than reaching for `gh` directly — they bake in lessons 
 Much of the work never reaches GitHub — debugging in a thread, incident response, design decisions, unblocking others, cross-team coordination. Search your own messages with `mcp__slack__conversations_search_messages` using its **structured filters** (not Slack search-operator syntax):
 
 - `filter_users_from: "U0A008HMS48"` — always the user ID; name/handle lookups don't reliably resolve in this tool.
-- `filter_date_after: <date part of window_start>` — just `YYYY-MM-DD` (day-granular, inclusive). Omit any before/on filter so the window runs through now.
+- `filter_date_after: <date part of window_start>` — just `YYYY-MM-DD` (day-granular, inclusive). Omit any before/on filter, then enforce the frozen upper bound during post-filtering.
 - `limit: 100`
 
-Because the Slack filter is only day-granular, **post-filter the results to the exact window**: drop any message whose `Time` is at or before `window_start`.
+Because the Slack filter is only day-granular, **post-filter the results to the exact half-open window**: keep messages whose `Time` is at or after `window_start` and before `now`.
 
 Then make sense of what remains:
 
@@ -106,14 +106,18 @@ If the search returns nothing useful, note that and lean on GitHub plus whatever
 Work driven through T3 Code that never reaches GitHub or Slack: investigations, live testing, debugging that ended without a PR. Threads live in T3 Code's local state database, read in place and read-only, so the app can stay open:
 
 ```bash
-~/.agents/skills/activity-harvest/scripts/t3code-activity.sh "${window_start}" [window_end]
+~/.agents/skills/activity-harvest/scripts/t3code-activity.sh "${window_start}" "${now}"
 ```
 
 One tab-separated line per thread that received a prompt inside the window: the first in-window prompt instant, the project relative to `~/dev`, the branch, the thread title, any linked PR URLs, and the in-window prompts joined with ` | ` and truncated to 240 characters.
 
 This is a **memory-jogger, not a primary source**: most threads wrap work that already surfaces in the GitHub or Slack passes, and a linked PR URL is the join key for folding them together. A thread earns material only when its outcome is invisible to the other passes. Ignore greetings, one-word follow-ups, and meta threads. A burst of near-identical prompts can be evidence of live testing. The personal-repo rule applies here too: drop threads whose project is outside `posthog/`.
 
-Write the entry as plain markdown at `new_file_path`, ending with the marker the next run reads — do not omit it:
+Before writing, ask: which source supports each completion or outcome claim, and does another source contradict it? A source item may nominate a work stream, but intent, a prompt, or an open artifact does not prove completion.
+
+If any required pass failed or was truncated, show an explicitly incomplete draft and name the pass that must be rerun. Do not write or replace the archived entry, and do not advance `generated-at`, unless the caller explicitly defined that pass as optional. An empty successful pass is not a failure.
+
+Write the complete entry as plain markdown at `new_file_path`, ending with the marker the next run reads — do not omit it:
 
 ```text
 <!-- generated-at: <now> -->
@@ -132,4 +136,4 @@ The `diff --cached --quiet` guard skips a no-op commit. If the push fails (offli
 ## Notes
 
 - The local files are the archive *and* the source of truth for the window: each entry's `generated-at:` marker is what the next run reads for `window_start`.
-- The window is timestamp-precise on both passes: GitHub qualifiers take the full ISO instant directly; Slack is day-granular, so you post-filter by message `Time`.
+- The window is timestamp-precise across all source passes: pass both bounds to GitHub and T3 Code; Slack is day-granular, so post-filter by message `Time`.

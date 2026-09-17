@@ -67,7 +67,9 @@ Follow these steps in order. Gather as much data automatically as possible befor
 Returns tab-separated fields:
 `cur_label\tcur_start\tcur_end\tnext_label\tnext_start\tnext_end\tdays_until_cur_end`
 
-Store these. `cur_*` is the quarter being **reviewed**; `next_*` is the quarter being **planned**. Use `days_until_cur_end` to note where in the cycle we are: ~21 days out is when Blitzscale sets direction, ~14 days out is when the team meeting runs, and goals should merge before `cur_end`. If we're well outside that window, say so but proceed — the user may be planning early or catching up.
+Store these. `cur_*` is the quarter being **reviewed**; `next_*` is the quarter being **planned**. Use `days_until_cur_end` to note where in the cycle we are: ~21 days out is when Blitzscale sets direction, ~14 days out is when the team meeting runs, and goals should merge before `cur_end`.
+
+If the request names a quarter, or `days_until_cur_end` is outside the closing 21-day window, show the inferred review and planning labels and ask the user to confirm them before fetching evidence. For catch-up planning, rerun `detect-quarter.sh <date-in-review-quarter>` so the intended quarter becomes `cur_*`. If the confirmed review quarter is still open, label the result `review to date` and do not infer a miss from work that has not happened yet.
 
 ### Step 2: Fetch Team Members
 
@@ -86,6 +88,8 @@ Read the team's existing objectives page — the goals being reviewed — from t
 source ~/.agents/skills/quarterly-planning/scripts/config.sh
 cat "$QP_OBJECTIVES_PATH"
 ```
+
+Extract only the objectives section whose heading matches the confirmed `cur_label`. If no section matches, or more than one does, stop scoring and ask which section is authoritative. This prevents a page that already rolled forward or retains historical quarters from supplying the wrong goals.
 
 If the file is missing or `QP_POSTHOG_COM_DIR` isn't a checkout, note it and ask the user for this quarter's objectives (or treat as a first-time team with no prior goals). **Capture the file's exact format** — heading style (`### Q2 2026 objectives`), goal heading style (`#### Goal N: Title`), owner-tagging convention (`(Driver: <TeamMember name="…" />)`, `(owner)` in a summary, or none), and the description / "What we'll ship" labels. The new quarter must match this format exactly.
 
@@ -107,6 +111,9 @@ This is the async 20%. For **each current objective** (Step 3), assess how it la
 - 🟢 **Hit** — shipped and the outcome held.
 - 🟡 **Partial** — meaningful progress, not all the way there.
 - 🔴 **Missed** — little or no movement. Note why if it's clear from the work (descoped, blocked, displaced by other priorities).
+- ❓ **Unverified** — shipment evidence exists, but the objective's pass/fail outcome cannot be established from available sources.
+
+Before scoring, ask of each objective: what exact claim makes it pass or fail; which source proves shipment; which authoritative source proves the outcome held; and what evidence would falsify the score? A PR body or linked issue can prove shipment. Adoption, reliability, customer, revenue, or incident outcomes need the corresponding metric or operational evidence. Keyword similarity may nominate a relevant PR but never proves the objective. Ask the user for the missing outcome evidence instead of upgrading shipped output to 🟢 or absence of PRs to 🔴.
 
 **Synthesize, don't transcribe.** Map PRs onto objectives by keyword/area and collapse related PRs into plain-language outcomes a reader outside the team understands — not PR titles. Flag notable work that didn't map to any objective (off-goal work — fine in moderation, a signal if it dominated). Keep links rare: at most one representative PR link per flagship outcome.
 
@@ -149,7 +156,7 @@ Present 3–6 themes, each one line, and ask which to turn into objectives.
 
 ### Step 8: Draft Next Quarter's Objectives
 
-Turn the agreed themes into objectives that clear the **good-goal bar** above. Aim for as few as the work honestly needs. For each: a short title, a one/two-line motivation, and a tight "What we'll ship" list of leading indicators, each tagged with an owner from the team.
+Turn the agreed themes into objectives that clear the **good-goal bar** above. Aim for as few as the work honestly needs. For each, ask: what observable fact makes this pass; what would falsify success; are the targets grounded in a baseline; which counter-metric prevents gaming; and who owns recovery when a dependency slips? Then write a short title, a one/two-line motivation, and a tight "What we'll ship" list of leading indicators, each tagged with an owner from the team.
 
 Render them **in the exact format of the existing `objectives.mdx`** (Step 3) — same heading levels, same owner-tagging convention, same labels — under a new `{next_label}` quarter heading. Output as raw markdown in a code block so it can be reviewed and dropped straight into the file.
 
