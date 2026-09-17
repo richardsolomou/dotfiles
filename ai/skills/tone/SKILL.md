@@ -102,7 +102,7 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 
 **Rules:**
 
-- **Nothing about being "a review" changes the diction.** Write each comment exactly as you'd make the same point in the team channel. The test for every drafted comment: would it be at home in #team-ai-gateway? If not, rewrite before output — generated reviews drift formal by default, and that drift is exactly what this section exists to kill.
+- **Nothing about being "a review" changes the diction.** Write each comment exactly as you'd make the same point in the team channel. The test for every drafted comment: would it be at home in #team-context-and-mcp? If not, rewrite before output — generated reviews drift formal by default, and that drift is exactly what this section exists to kill.
 - Each comment is one thought, said once. Open with the actual subject — the question, the observation — not a frame or a label.
 - **Lead with the point, not the buildup.** The ask or the takeaway goes first — what you want the author to do or notice. Supporting mechanism comes after. Never bury the ask at the end of a wall of reasoning; the author should know what you want by the end of the first sentence.
 - **One sentence is the default, two is the ceiling for a normal comment.** Add the second only to carry the detail that makes it land — the line ref, the why, or the failing case. If it wants more, that's usually two findings — split them, or move the cross-cutting part to the summary. The one exception: a single finding that genuinely needs a short reasoning chain to make sense (a subtle bug, a non-obvious mechanism). Keep that together — but see the next rule.

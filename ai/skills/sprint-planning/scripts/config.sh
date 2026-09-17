@@ -5,7 +5,7 @@
 # before invoking the skill, or by editing the defaults below. Scripts source
 # this file; the SKILL.md inline commands source it too.
 #
-# Defaults target the AI Gateway team. To run the update for another team,
+# Defaults target the Context & MCP team. To run the update for another team,
 # export the variables before invoking, e.g.:
 #
 #   export SPRINT_TEAM_SLUG="team-ai-observability"
@@ -21,10 +21,13 @@ SPRINT_ORG="${SPRINT_ORG:-PostHog}"
 SPRINT_REPO="${SPRINT_REPO:-PostHog/posthog}"
 
 # GitHub team slug under SPRINT_ORG (used for the members API).
-SPRINT_TEAM_SLUG="${SPRINT_TEAM_SLUG:-team-ai-gateway}"
+SPRINT_TEAM_SLUG="${SPRINT_TEAM_SLUG:-team-context-mcp}"
 
 # Human-readable team name used in prose and prompts.
-SPRINT_TEAM_NAME="${SPRINT_TEAM_NAME:-AI Gateway}"
+SPRINT_TEAM_NAME="${SPRINT_TEAM_NAME:-Context & MCP}"
+
+# Slack channel name used to resolve the team channel ID for activity searches.
+SPRINT_SLACK_CHANNEL="${SPRINT_SLACK_CHANNEL:-team-context-and-mcp}"
 
 # Project board number under SPRINT_ORG. Leave empty until the team creates a
 # board: board-dependent steps (plan items, archive, goals) then skip cleanly
@@ -32,13 +35,13 @@ SPRINT_TEAM_NAME="${SPRINT_TEAM_NAME:-AI Gateway}"
 SPRINT_PROJECT_NUMBER="${SPRINT_PROJECT_NUMBER:-}"
 
 # Goals page link included in the update (leave empty to omit).
-SPRINT_GOALS_URL="${SPRINT_GOALS_URL:-https://posthog.com/teams/ai-gateway#goals}"
+SPRINT_GOALS_URL="${SPRINT_GOALS_URL:-https://posthog.com/teams/context-and-mcp#objectives}"
 
 # Markdown heading that identifies this team's sprint comment. Matched as a
-# whole line, so "# Team AI Gateway" will not collide with another team's
+# whole line, so "# Team Context & MCP" will not collide with another team's
 # heading.
-SPRINT_COMMENT_HEADER="${SPRINT_COMMENT_HEADER:-# Team AI Gateway}"
+SPRINT_COMMENT_HEADER="${SPRINT_COMMENT_HEADER:-# Team Context & MCP}"
 
 # Space-separated GitHub handles used only if the members API call fails.
 # Leave empty to fall back to asking the user.
-SPRINT_FALLBACK_MEMBERS="${SPRINT_FALLBACK_MEMBERS:-richardsolomou brandonleung}"
+SPRINT_FALLBACK_MEMBERS="${SPRINT_FALLBACK_MEMBERS:-richardsolomou adboio JakeRuth}"

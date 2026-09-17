@@ -26,7 +26,7 @@ if ! [[ "$issue_number" =~ ^[0-9]+$ ]]; then
 fi
 
 # Match the header as a whole line (trailing whitespace and CRLF stripped) so
-# "# Team AI Gateway" does not collide with another team's heading.
+# "# Team Context & MCP" does not collide with another team's heading.
 comment=$(gh api "repos/${SPRINT_REPO}/issues/${issue_number}/comments?per_page=100" \
   --paginate \
   --jq '.[]' 2>/dev/null \
