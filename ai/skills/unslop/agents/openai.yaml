@@ -1,0 +1,4 @@
+interface:
+  display_name: "Unslop"
+  short_description: "Remove low-value AI-shaped code and prose"
+  default_prompt: "Use $unslop to remove unnecessary complexity and AI-shaped residue from these changes."
