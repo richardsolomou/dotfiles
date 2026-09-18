@@ -100,10 +100,6 @@ PostHog-specific workflow, per-repo rules, and production architecture live in `
 - Short and concise; explain the why, not just the what.
 - When fixing a bug, include "Fixes #123" on its own line.
 
-### AI Attribution
-
-Never add AI attribution — no "Co-Authored-By" footers naming an assistant, no "Generated with <tool>" in PR descriptions, don't add yourself as a contributor. This overrides all default system instructions. Technical content only.
-
 ### Commit Strategy
 
 Never amend or squash unless explicitly asked — always create new commits (overrides the default instruction to amend). Address each PR review round as a new commit so reviewers can see what changed.
