@@ -20,6 +20,10 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 
 Everything is symlinked, so edits here take effect without reinstalling. Adding a skill or renaming one needs a re-run; the script also prunes symlinks left behind by skills it no longer manages. Skills reference their own scripts through `~/.agents/skills/<skill>/scripts/`, the cross-harness directory every install populates.
 
+## Vendored skills
+
+`skills/typesafe-ai/` is a verbatim copy of [typesafe-ai/skills](https://github.com/typesafe-ai/skills) (MIT, `skills/typesafe-ai/`), vendored rather than installed as a Claude Code plugin so Codex and opencode get it too. Update it by re-copying upstream's `SKILL.md`, not by editing in place.
+
 ## Telegram MCP
 
 The Telegram MCP runs locally from a pinned commit of [chigwell/telegram-mcp](https://github.com/chigwell/telegram-mcp). Its launcher forces the MCP tool surface to read-only and disables voice transcription, while Telegram credentials stay in the gitignored root `.env` instead of the Claude or Codex configuration.
