@@ -22,6 +22,7 @@ posthog-db|PostHog database connection|$HOME/.local/bin/postgres-mcp --access-mo
 memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory|
 grafana|Grafana MCP server|$HOME/dev/posthog/posthog/tools/infra-scripts/mcp/mcp-grafana-wrapper.sh|
 telegram|Telegram chat search (read-only)|$ZSH/ai/mcp/telegram-mcp.sh|
+slack|Slack search and thread access|$ZSH/ai/mcp/slack-mcp.sh|
 "
 
 show_help() {
@@ -128,18 +129,37 @@ context_links() {
     fi
 }
 
-# Returns 2 when the server is already configured. $server_command is
-# deliberately unquoted: it carries the server's argv.
+# Returns 2 when a non-managed server is already configured.
+# $server_command is deliberately unquoted: it carries the server's argv.
+mcp_server_ready() {
+    [ "$1" != "slack" ] && return 0
+    [ -n "${SLACK_MCP_XOXP_TOKEN:-}" ] && return 0
+    [ -r "$ZSH/.env" ] || return 1
+
+    value=$(sed -n 's/^SLACK_MCP_XOXP_TOKEN=//p' "$ZSH/.env" | head -1 | tr -d '\r')
+    value="${value#\"}"
+    value="${value%\"}"
+    value="${value#\'}"
+    value="${value%\'}"
+    [ -n "$value" ]
+}
+
 add_mcp_server() {
     harness="$1" name="$2" server_command="$3" server_env="$4"
     case "$harness" in
         claude)
-            claude mcp list 2>/dev/null | grep -q "^${name}:" && return 2
+            if claude mcp list 2>/dev/null | grep -q "^${name}:"; then
+                [ "$name" = "slack" ] || return 2
+                claude mcp remove "$name"
+            fi
             claude mcp add --scope user "$name" ${server_env:+-e "$server_env"} -- $server_command
             ;;
         codex)
             mkdir -p "${CODEX_HOME:-$HOME/.codex}"
-            codex mcp list --json 2>/dev/null | jq -e --arg n "$name" 'any(.[]; .name == $n)' > /dev/null && return 2
+            if codex mcp list --json 2>/dev/null | jq -e --arg n "$name" 'any(.[]; .name == $n)' > /dev/null; then
+                [ "$name" = "slack" ] || return 2
+                codex mcp remove "$name"
+            fi
             codex mcp add "$name" ${server_env:+--env "$server_env"} -- $server_command
             ;;
     esac
@@ -192,6 +212,10 @@ if wants mcp; then
     info "Installing MCP servers…"
 
     echo "$MCP_SERVERS" | grep -v "^$" | while IFS='|' read -r name description server_command server_env; do
+        if ! mcp_server_ready "$name"; then
+            warning "Skipping ${description}: add SLACK_MCP_XOXP_TOKEN to $ZSH/.env first"
+            continue
+        fi
         for harness in claude codex; do
             command -v "$harness" > /dev/null 2>&1 || continue
 

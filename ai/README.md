@@ -39,6 +39,19 @@ ai/install.sh mcp
 
 The session string still has the authority of the Telegram account even though the exposed MCP tools are read-only. Revoke the `Telegram MCP` session under Telegram's **Settings → Devices** if the credential is ever exposed. The server does not restrict reads to particular chats.
 
+## Slack MCP
+
+The Slack MCP uses `slack-mcp-server@1.3.0` and reads `SLACK_MCP_XOXP_TOKEN` from the gitignored root `.env`. This keeps the token out of Claude and Codex configuration while the shared installer registers the same launcher for both harnesses. It exposes only channel listing, message history, thread replies, and message search.
+
+Create a replacement Slack user token with the scopes required by `slack-mcp-server`, add it to `.env`, restrict the file, then register or refresh the MCP configuration:
+
+```sh
+chmod 600 .env
+ai/install.sh mcp
+```
+
+Revoke the old token after the new launcher has been verified with both clients.
+
 ## T3 Code
 
 T3 Code locks a thread to the provider driver and CLI home it started on, so the only way to keep working past a usage limit without losing the conversation is a second instance of the *same* driver and home with different credentials. `t3code/provider-instances.json` declares those twins — `phaig_claude`, `phaig_codex` and `phaig_opencode` — and `install.sh t3code` writes them into `~/.t3/userdata/settings.json`, merging per instance id so anything configured by hand on the host survives.
