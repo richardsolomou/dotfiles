@@ -56,7 +56,7 @@ author_pid=$!
             "$dir/involved_candidates.json" > "$dir/involved.json"
         total=$(jq '.[0].total_count // 0' "$dir/involved_pages.json")
         captured=$(jq 'length' "$dir/involved_candidates.json")
-        ((captured < total)) && note "involves search truncated: captured ${captured} of ${total}"
+        ((captured < total)) && note "involves search truncated: captured ${captured} of ${total}" || true
     else
         echo '[]' > "$dir/involved_candidates.json"
         echo '[]' > "$dir/involved.json"
@@ -71,7 +71,7 @@ author_pid=$!
             "$dir/reviewed_candidates.json" > "$dir/reviewed.json"
         total=$(jq '.[0].total_count // 0' "$dir/reviewed_pages.json")
         captured=$(jq 'length' "$dir/reviewed_candidates.json")
-        ((captured < total)) && note "reviewed-by search truncated: captured ${captured} of ${total}"
+        ((captured < total)) && note "reviewed-by search truncated: captured ${captured} of ${total}" || true
     else
         echo '[]' > "$dir/reviewed_candidates.json"
         echo '[]' > "$dir/reviewed.json"
