@@ -16,13 +16,14 @@ ALL_COMPONENTS="context skills mcp hooks permissions preferences opencode t3code
 # ~/.claude/skills and ~/.agents/skills, the cross-harness convention.
 SKILL_DIRS="$HOME/.claude/skills $HOME/.codex/skills $HOME/.agents/skills"
 
-# Format: name|description|command|env (env optional, KEY=VALUE)
+# Format: name|description|command or URL|env (env optional, KEY=VALUE)
 MCP_SERVERS="
 posthog-db|PostHog database connection|$HOME/.local/bin/postgres-mcp --access-mode=restricted|DATABASE_URI=postgresql://posthog:posthog@localhost:5432/posthog
 memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory|
 grafana|Grafana MCP server|$HOME/dev/posthog/posthog/tools/infra-scripts/mcp/mcp-grafana-wrapper.sh|
 telegram|Telegram chat search (read-only)|$ZSH/ai/mcp/telegram-mcp.sh|
 slack|Slack search and thread access|$ZSH/ai/mcp/slack-mcp.sh|
+praetorium|Praetorium wargame rules reference|https://praetorium.gg/mcp|
 "
 
 show_help() {
@@ -152,7 +153,10 @@ add_mcp_server() {
                 [ "$name" = "slack" ] || return 2
                 claude mcp remove "$name"
             fi
-            claude mcp add --scope user "$name" ${server_env:+-e "$server_env"} -- $server_command
+            case "$server_command" in
+                http*://*) claude mcp add --scope user --transport http "$name" "$server_command" ;;
+                *) claude mcp add --scope user "$name" ${server_env:+-e "$server_env"} -- $server_command ;;
+            esac
             ;;
         codex)
             mkdir -p "${CODEX_HOME:-$HOME/.codex}"
@@ -160,7 +164,10 @@ add_mcp_server() {
                 [ "$name" = "slack" ] || return 2
                 codex mcp remove "$name"
             fi
-            codex mcp add "$name" ${server_env:+--env "$server_env"} -- $server_command
+            case "$server_command" in
+                http*://*) codex mcp add "$name" --url "$server_command" ;;
+                *) codex mcp add "$name" ${server_env:+--env "$server_env"} -- $server_command ;;
+            esac
             ;;
     esac
 }
