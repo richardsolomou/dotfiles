@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Behavior checks for the PostHog skill publisher."""
+
+import importlib.machinery
+import importlib.util
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+
+loader = importlib.machinery.SourceFileLoader("sync_skills", str(Path(__file__).with_name("sync-skills")))
+spec = importlib.util.spec_from_loader(loader.name, loader)
+sync = importlib.util.module_from_spec(spec)
+loader.exec_module(sync)
+
+
+class SyncSkillsTest(unittest.TestCase):
+    def test_local_name_gets_store_prefix_and_folded_description(self):
+        with tempfile.TemporaryDirectory() as directory:
+            skill = Path(directory) / "example"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("---\nname: example\ndescription: >\n  First line\n  second line\n---\n\n# Example\n\nLoad `helper`, then run /helper.\n")
+
+            payload = sync.parse_skill(skill, {"example", "helper"})
+
+        self.assertEqual((payload["name"], payload["description"], payload["body"]), ("rs-example", "First line second line", "# Example\n\nLoad `rs-helper`, then run /rs-helper.\n"))
+
+    def test_stale_store_entries_are_archived_after_sync(self):
+        calls = []
+
+        def request(method, url, headers, body=None):
+            calls.append((method, url))
+            if method == "GET" and "?search=" in url:
+                return 200, {"count": 3, "results": [{"name": "rs-current"}, {"name": "rs-old"}, {"name": "unrelated"}]}
+            if method == "POST":
+                return 204, None
+            raise AssertionError((method, url))
+
+        with patch.object(sync, "api_request", side_effect=request), patch.object(sync, "fetch_remote", return_value={"body": "same", "description": "same", "files": [], "latest_version": 1}):
+            sync.sync_target({"label": "test", "host": "https://example.test", "project_id": "2", "api_key": "key"}, [{"name": "rs-current", "body": "same", "description": "same"}], False)
+
+        self.assertEqual([url for method, url in calls if method == "POST"], ["https://example.test/api/environments/2/llm_skills/name/rs-old/archive/"])
+
+    def test_script_paths_keep_local_names(self):
+        result = sync.store_references("Load `helper`; run ~/.agents/skills/helper/scripts/go.sh", {"helper"})
+
+        self.assertEqual(result, "Load `rs-helper`; run ~/.agents/skills/helper/scripts/go.sh")
+
+
+if __name__ == "__main__":
+    unittest.main()

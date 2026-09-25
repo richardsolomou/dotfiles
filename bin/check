@@ -157,6 +157,10 @@ done < <(git ls-files --cached --others --exclude-standard 'ai/skills/*/test-*' 
 rm -f /tmp/dotfiles-skill-test.$$
 success "Skill tests ran ($TEST_COUNT files)"
 
+python3 -B bin/test-sync-skills > /tmp/dotfiles-skill-test.$$ 2>&1 \
+    || { error "failed: bin/test-sync-skills"; cat /tmp/dotfiles-skill-test.$$; FAILED=1; }
+rm -f /tmp/dotfiles-skill-test.$$
+
 echo ""
 if [ "$FAILED" -eq 0 ]; then
     success "All checks passed"
