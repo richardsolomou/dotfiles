@@ -21,7 +21,7 @@ command -v sqlite3 > /dev/null 2>&1 || { echo "(sqlite3 not installed - T3 Code 
 [ -r "$DB" ] || { echo "(no T3 Code state at $DB - T3 Code pass skipped)"; exit 0; }
 
 # Compare as epochs so a fractional-second or +00:00 instant still lands.
-sqlite3 -readonly -tabs "$DB" "
+sqlite3 -readonly -separator $'\t' "$DB" "
 WITH window AS (
   SELECT strftime('%s', '$WINDOW_START') AS s, strftime('%s', '$WINDOW_END') AS e
 ),

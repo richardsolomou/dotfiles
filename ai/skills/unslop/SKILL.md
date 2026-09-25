@@ -23,6 +23,7 @@ For each changed block, ask:
 - Is a defensive branch reachable from a real caller, or is it handling an imagined state?
 - Does each temporary, wrapper, option, fallback, and conversion make the data flow easier to follow?
 - Can a comment be derived from the code? If not, does it state a necessary invariant or non-obvious reason in the shortest accurate form?
+- If a shortened comment calls work bounded, does the implementation enforce a concrete limit on the relevant rows, payload, or loop?
 - Does an error add the failed operation and preserve the cause, or merely restate that something failed?
 - Does each test rule out a specific wrong result, using expectations independent of the implementation and fixture that produced the actual value?
 - Does the result match the idiom and level of abstraction in neighbouring files?
