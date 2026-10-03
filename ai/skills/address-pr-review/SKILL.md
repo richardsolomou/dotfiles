@@ -28,6 +28,8 @@ If the PR belongs to a stack and the user asks to address the stack or "each PR"
 
 Pull every form of feedback in one pass per Shared mechanics § *Fetch the existing discussion* (root-level comments, inline review comments, submitted reviews).
 
+Read each root comment's full body, including collapsed security and architecture sections. A bot's "No actionable comments" summary can coexist with findings elsewhere in that comment. If a review is still running, refresh feedback before executing the selected fixes.
+
 For each inline comment, capture: author, file path, line number, body, the diff hunk it's anchored to, and the thread's resolution state.
 
 Resolution state and the thread node ID (needed later for resolving) come from the GraphQL API:

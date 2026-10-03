@@ -15,5 +15,11 @@
         "zai-org/glm-5.3-flash": { "name": "GLM-5.3-Flash" }
       }
     }
+  },
+  "mcp": {
+    "posthog": {
+      "type": "remote",
+      "url": "https://mcp.posthog.com/mcp"
+    }
   }
 }

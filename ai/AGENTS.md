@@ -5,6 +5,7 @@
 - Incremental progress over big bangs — small changes that compile and pass tests.
 - Choose the boring, obvious solution — if you need to explain it, it's too complex.
 - Keep code minimal: no premature abstractions, nothing dead or redundant.
+- Keep shared libraries consumer-agnostic: no named consuming applications or hardcoded consumer repository matrices in their code, CI, or docs. Keep application-specific coordination in consumer repositories.
 - Express every idea once and only once; balance that tension in favour of whoever maintains the code next.
 
 ## Backwards compatibility
@@ -19,7 +20,10 @@ When a task depends on anything external (library, API, CLI, service, schema), v
 
 - Read the docs/changelog for the version the project actually pins (lockfile, manifest) — primary sources, not blog posts or memory.
 - When docs are thin, read the installed package's code, types, or signatures; probe live behavior when cheap (`--help`, a REPL call, a throwaway script).
+- Before declaring an MCP action unavailable, inspect exposed server wrappers and their tool catalogs; a missing direct tool name does not mean the connection is absent.
 - If investigation contradicts what you assumed, re-plan rather than forcing the original approach.
+- When comparing alternatives, verify which conditions and capabilities both already share before crediting either one with an advantage.
+- Before calling a rules implementation wrong based on a third-party summary, compare the claimed rule with the publisher's original wording; a summary can add restrictions the original does not contain.
 
 ### When Stuck (After 2 Attempts)
 
@@ -38,6 +42,8 @@ A single frame proves nothing for behavior that unfolds over time or across cont
 ### Setup and Ops Walkthroughs
 
 Execute every step you can from the terminal yourself; hand back only steps that genuinely require the user (browser logins, 2FA, physical devices) as a short numbered list. Check the repo's `bin/` and `scripts/` for an existing script before hand-rolling an ops command.
+Before storing a credential copied from a browser, verify the system clipboard contains the expected credential type without printing its value; a browser copy action may leave an older secret on the clipboard.
+For an expired OAuth connection to a configured MCP server, inspect `~/.codex/config.toml` and use `codex mcp login <server>`; do not direct the user to T3 Code MCP connection settings, which do not exist.
 
 ### Before Merging or Closing a Tracker Item
 
@@ -51,6 +57,7 @@ Tests passing and review approval aren't "done" for anything production-facing (
 
 - Write tests first when practical; always test new functionality, covering edge cases and errors. Run them before marking a task complete; fix failures before proceeding.
 - Test behavior, not implementation: one assertion per test when possible, deterministic, scenario-describing names, existing test utilities, no redundant tests.
+- For user-visible counts, define the counted action or item from the player's perspective and test zero, one, and multiple entries through the saved flow.
 - Prove tests fail for the intended reason: perturb or remove the behavior under test when an assertion could pass through a stub, self-derived fixture, permissive matcher, mock, or unrelated validation error.
 - Every commit compiles, passes all tests, and is formatted/linted — run `bin/fmt` if it exists, otherwise the language's formatter, before committing. Never bypass hooks with `--no-verify`.
 - No TODOs without issue numbers; no tool warnings ignored without strong justification.
@@ -68,6 +75,7 @@ Before marking non-trivial work ready for review, perform a system-boundary pass
 - Trace success, failure, retry, timeout, cancellation, partial-write, shutdown, and concurrent execution. Preserve idempotency and make state transitions atomic or self-healing where partial failure can strand state.
 - Treat limits as part of correctness. Bound input size, memory, query cardinality, retries, and work under locks; check migrations, refreshes, and request paths at production scale.
 - Keep classification consistent across sibling paths: status and error mapping, billing/settlement, breaker health, logs, metrics, limits, and authentication. Search for every producer and consumer of changed fields and apply class-wide fixes everywhere they occur.
+- When changing a shared UI control's click target or accessible name, search every consumer and browser test for its old interaction, then exercise each affected surface.
 - Test observable outcomes and negative branches, including each independent clause in compound logic. A green test that would also pass for the wrong reason is not evidence.
 - Verify trust boundaries explicitly: tenant ownership, signed or authoritative fields, secret-bearing headers, redirects/replays, database constraints, and writes that bypass model validation.
 - Exercise production-facing configuration, migrations, alerts, runbooks, and rollout assumptions in the real shape they will run. Confirm fallback and backwards compatibility rather than inferring them from unit tests.
@@ -79,9 +87,12 @@ When corrected after a mistake, update this file with a rule that prevents it; r
 
 ## Repositories
 
+- For repo ownership questions, verify the current team from an authoritative source; workflow reviewers and recent contributors can be stale after a handoff.
 - Fetch first and branch off `origin/<main>` (not a possibly-stale local main), named per the Git section. If the code looks like an older direction of the project, stop and confirm before building on it.
 - When done, prompt to commit.
 - Run `bin/fmt` if available; revert changes it makes to files we didn't touch.
+- Before shipping a request to fix all audit findings, check every identified finding against the final diff and tell the user about any remaining item before calling the work complete.
+- Before calling a repo-wide cleanup complete, inventory the relevant directories against the agreed architecture beyond the first examples, and state the scope actually audited.
 
 PostHog-specific workflow, per-repo rules, and production architecture live in `~/dev/dotfiles/ai/AGENTS.posthog.md`, symlinked at `~/dev/posthog/AGENTS.md` and `~/dev/posthog/CLAUDE.md` so it loads only under `~/dev/posthog`.
 

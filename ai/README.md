@@ -24,6 +24,10 @@ Everything is symlinked, so edits here take effect without reinstalling. Adding 
 
 `bin/sync-skills` publishes every local `skills/<name>/` directory to the PostHog skills store as `rs-<name>`. Local names stay unchanged; references to sibling skills in the published bodies use the store prefix. It updates changed skills, archives `rs-` skills that no longer have a local directory, and leaves other store skills alone. Run `bin/sync-skills --dry-run` to inspect changes. The script reads `POSTHOG_PERSONAL_API_KEY` from the environment or the repo root `.env`; `POSTHOG_PROJECT_ID` and `POSTHOG_HOST` are optional. Pushes to `main` that change skills run the same sync through GitHub Actions.
 
+## PostHog issue discovery
+
+Run `$posthog-issue-discovery` in an application repository with access to its PostHog project. It discovers up to 10 evidence-backed candidates and returns each as a self-contained code block to paste into a fresh thread. Each block invokes `$posthog-issue-discovery investigate` and includes that candidate's evidence. Both modes return research in the conversation without storing handoffs or reports, changing application code, or creating issues or PRs; discovery provides thread prompts rather than automatically launching threads.
+
 ## Vendored skills
 
 `skills/typesafe-ai/` is a verbatim copy of [typesafe-ai/skills](https://github.com/typesafe-ai/skills) (MIT, `skills/typesafe-ai/`), vendored rather than installed as a Claude Code plugin so Codex and opencode get it too. Update it by re-copying upstream's `SKILL.md`, not by editing in place.
@@ -77,5 +81,7 @@ Subscription logins stay per host: run `claude auth login` and `codex login` on 
 ## opencode
 
 `opencode/opencode.json` registers the gateway as an OpenAI-compatible provider and names the open-weight models it serves: GLM-5.2, GLM-5.3, GLM-5.3-Flash and Kimi K3. They reach no Claude or Codex instance — those enumerate models from their own CLIs, and the gateway returns `400 invalid request body` for Codex's freeform (`type: "custom"`) shell tool on every open-weight model while accepting it for OpenAI's. opencode sends plain function tools, which they accept, so `phaig_opencode` is where they are usable.
+
+The config also registers PostHog's remote MCP server at `https://mcp.posthog.com/mcp` for access to project analytics. Connection authentication is separate from the gateway key.
 
 The key comes from `POSTHOG_GATEWAY_KEY` through opencode's own `{env:…}` substitution: inside T3 Code the instance supplies it, and from a shell `zshrc` exports it out of `$ZSH/.env`. `install.sh opencode` runs opencode's installer when the binary is missing, rather than taking the Homebrew formula: it keeps `~/.opencode/bin` as the path on every host, which is what `phaig_opencode` is configured with, and core trails the current release.

@@ -86,7 +86,7 @@ If `deep` was requested, run `review-pr <pr> as:self second-opinion` against the
 
 If the batch changes files or history, check out the PR head and stop if the working tree contains unrelated changes. Never stash or discard the user's work.
 
-Fetch the base before changing history. Only update from the base when the snapshot reports a merge conflict or the fix cannot be tested against the current base. For a plain PR, merge the base without pushing. For a GitHub Stack, use `restack` once. Resolve conflicts with `resolve-conflicts`. If conflict resolution needs judgement, abort it cleanly, record the conflict event as deferred, and stop changing history.
+Fetch the base before changing history. Only update from the base when the snapshot reports a merge conflict or the fix cannot be tested against the current base. When CI tests a synthetic merge, reproduce its merged tree: a passing test on the PR head alone does not resolve a failure caused by newer base changes. For a plain PR, merge the base without pushing. For a GitHub Stack, use `restack` once. Resolve conflicts with `resolve-conflicts`. If conflict resolution needs judgement, abort it cleanly, record the conflict event as deferred, and stop changing history.
 
 Apply all unambiguous CI, review, and deep-review fixes. Run the narrow tests, formatter, and linter that cover the changed areas. Create one new fix commit when file edits exist. Never amend. Before pushing, confirm that the remote PR HEAD still equals the snapshot HEAD; if it changed, stop without pushing and report the local commit. Push the target branch once after the full batch passes local verification. Set `babysit_pushed_sha` to the pushed SHA.
 
