@@ -1,47 +1,23 @@
-# Candidate handoff
+# Fix prompt
 
-Use this structure inside each candidate's single copy-paste code block. Keep it compact but independently reproducible. If a field is unavailable, state what is missing rather than filling it with an assumption. Do not write a packet to disk.
+Return one concise, self-contained prompt inside a single `text` code block per confirmed defect. Use short prose with only the details needed to implement and validate the fix. Substitute verified facts into this shape; omit irrelevant fields rather than leaving placeholders.
 
-Start the block with `Use $posthog-issue-discovery investigate in <absolute repository root>. Independently verify the candidate below. Do not modify code or create issues or PRs.` Substitute the repository path, then include the following evidence in the same block.
+```text
+Fix ISSUE-01: <symptom-focused title> in <repository root or remote>.
 
-## Identity
+Problem: <trigger or preconditions, actual behavior, and intended behavior>. <Verified cause and the execution path that establishes it, with relevant file paths and symbols>. Inspected at <commit SHA>; <relevant uncommitted differences, if any>.
 
-- Stable ID and symptom-focused title
-- Discovery timestamp
-- PostHog host, project ID, and project-to-application mapping evidence
-- Absolute repository root, remote, branch, and inspected commit SHA
-- Relevant uncommitted changes; if they affect the diagnosis, summarize the difference from the named commit
-- Candidate status: awaiting independent investigation
+Reproduce: <minimal input and steps, or a deterministic failing scenario>. Observed: <actual result>. Expected: <required outcome and the existing contract or behavior that supports it>.
 
-## Symptom and impact
+Evidence: <PostHog host and project ID, application/environment filters, absolute time bounds and timezone, compact decisive results with affected population and denominator where available>. <Essential successful query or tool arguments and evidence link, if needed>. <Reproduction or code-trace result, and material measurement limitations>.
 
-Describe the user-visible failure or measurable regression and why it warrants investigation. Include baseline and current values, units, affected population, denominator, onset, absolute time windows, aggregation timezone, and important segments. Separate facts from estimates. State identity and sampling limitations.
+Existing work: <concise result of checking relevant issues, open and recently merged PRs, and current code, with links where relevant and check timestamp>.
 
-## Reproducible data evidence
+Acceptance: <observable outcomes covering the failing case, relevant edge cases, and behavior that must continue to work>. <Affected sibling paths or compatibility constraints, if relevant>.
 
-For each decisive observation include:
+Implement and validate the fix under the repository's guidance. Choose the implementation. Use the evidence above as context; no separate discovery or diagnosis phase is needed. If the current checkout contradicts this evidence, surface the discrepancy rather than applying an obsolete fix. Do not commit, push, or create a PR unless asked.
+```
 
-- Evidence identifier such as `E1`, retrieval timestamp, and PostHog URL when available
-- Exact successful query or tool call arguments, with project context and absolute date filters
-- A compact table or result excerpt preserving the values supporting the claim
-- What the result establishes and what it does not establish
+Give the implementation agent the established cause and required behavior, not a suggested solution. Exclude speculative hypotheses, alternative designs, investigation assignments, and unrelated queries. Acceptance criteria describe observable results, not code structure or a particular test implementation.
 
-Preserve the measured metric's definition, funnel order and conversion window, breakdowns, exclusions, cohort maturity, and any sampling settings relevant to reproducing it. Record bound parameters alongside parameterized queries. Evidence that cannot be reproduced should be labeled as such.
-
-## Code leads
-
-Name relevant file paths, symbols, and inspected line numbers at the recorded commit. Describe the code actually read and its connection to the symptom. Include relevant capture calls, flag checks, tests, and history. Distinguish a search hit from a traced execution path.
-
-## Hypotheses and counterevidence
-
-For each plausible explanation, state supporting evidence, counterevidence, and the observation that would distinguish it from alternatives. Explicitly record checks for intended behavior, experiments, configuration, upstream failures, and instrumentation defects. Do not present a guessed cause as confirmed.
-
-## Existing work and gaps
-
-Link relevant open or recently merged PRs, issues, and known fixes. Record what was searched and when, or that access prevented the check. List missing data, tool/access restrictions, and unanswered questions.
-
-## Investigation assignment
-
-Give the next agent a few concrete next steps and a measurable outcome that could validate a future fix. Avoid prescribing an implementation before the cause is established.
-
-The assignment and all evidence belong in the same block. Do not ask the next agent to retrieve a handoff file or read the discovery conversation. Indent query examples or use plain labels rather than nested code fences.
+Do not hide unresolved diagnosis behind the closing instruction: if another investigation is needed to determine what is broken or why, the finding is not ready for this format. The prompt must contain the decisive evidence itself; links are supporting references. Put necessary queries inside the outer block as plain text without nested fences. Do not write prompts to disk.

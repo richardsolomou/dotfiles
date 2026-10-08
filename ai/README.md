@@ -26,7 +26,7 @@ Everything is symlinked, so edits here take effect without reinstalling. Adding 
 
 ## PostHog issue discovery
 
-Run `$posthog-issue-discovery` in an application repository with access to its PostHog project. It discovers up to 10 evidence-backed candidates and returns each as a self-contained code block to paste into a fresh thread. Each block invokes `$posthog-issue-discovery investigate` and includes that candidate's evidence. Both modes return research in the conversation without storing handoffs or reports, changing application code, or creating issues or PRs; discovery provides thread prompts rather than automatically launching threads.
+Run `$posthog-issue-discovery` in an application repository with access to its PostHog project. It finds and verifies up to 10 defects and returns each as a self-contained fix prompt to paste into a fresh thread, with the evidence, reproduction and acceptance criteria but no prescribed implementation. It returns research in the conversation without storing handoffs or reports, changing application code, or creating issues or PRs, and provides thread prompts rather than automatically launching threads.
 
 ## Vendored skills
 
