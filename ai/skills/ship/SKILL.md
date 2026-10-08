@@ -105,11 +105,17 @@ gh pr view --json number,url 2>/dev/null
 
 **If no PR exists**, create one. Write the title and body using the `update-pr` skill — it is the single source of truth for the title rules, the description structure, the context-sensitive length guidance, and the voice. Use the commit message title as the starting point for the PR title.
 
-Write the title and body to temporary files with the file-writing tool, following the shell-safety rules in `update-pr` (never substitute generated text into a shell command), then:
+Create a private draft directory, because other sessions and agents ship at the same time and a shared path hands one PR another's title:
 
 ```sh
-gh pr create --title "$(cat /tmp/ship-title.txt)" --body-file /tmp/ship-body.md
-rm -f /tmp/ship-title.txt /tmp/ship-body.md
+mktemp -d "${TMPDIR:-/tmp}/ship.XXXXXX"
+```
+
+Write `title.txt` and `body.md` inside the printed `<draft>` directory with the file-writing tool, following the shell-safety rules in `update-pr` (never substitute generated text into a shell command), then:
+
+```sh
+gh pr create --title "$(cat <draft>/title.txt)" --body-file <draft>/body.md
+rm -rf <draft>
 ```
 
 ### Step 8: Report

@@ -90,16 +90,16 @@ Load the `tone` skill with `register: pr-description` before drafting anything. 
 
 No AI smell: no formulaic openers ("This PR…", "In this change…"), no closing sign-offs, no padding.
 
-Immediately before updating, fetch the recorded PR number again and compare its `headRefOid` and `baseRefName` with the pinned values. If either moved, discard the draft and rebuild it from the new immutable target. Then update that captured repository and PR number without putting generated content in a shell command. Write the title and body to temporary files with the available file-writing tool, then build the API payload from those files:
+Immediately before updating, fetch the recorded PR number again and compare its `headRefOid` and `baseRefName` with the pinned values. If either moved, discard the draft and rebuild it from the new immutable target. Then update that captured repository and PR number without putting generated content in a shell command. Create a private draft directory with `mktemp -d "${TMPDIR:-/tmp}/update-pr.XXXXXX"`, because other sessions and agents update PRs at the same time. Write `title.txt` and `body.md` inside the printed `<draft>` directory with the available file-writing tool, then build the API payload from those files:
 
 ```sh
-jq -n --rawfile title /tmp/update-pr-title.txt --rawfile body /tmp/update-pr-body.md '{title: ($title | rtrimstr("\n")), body: ($body | rtrimstr("\n"))}' > /tmp/update-pr.json
-gh api "repos/<captured-repo>/pulls/<captured-number>" --method PATCH --input /tmp/update-pr.json
-gh pr view <captured-number> --repo <captured-repo> --json title,body | jq '{title,body}' > /tmp/update-pr-actual.json
-diff -u /tmp/update-pr.json /tmp/update-pr-actual.json
+jq -n --rawfile title <draft>/title.txt --rawfile body <draft>/body.md '{title: ($title | rtrimstr("\n")), body: ($body | rtrimstr("\n"))}' > <draft>/payload.json
+gh api "repos/<captured-repo>/pulls/<captured-number>" --method PATCH --input <draft>/payload.json
+gh pr view <captured-number> --repo <captured-repo> --json title,body | jq '{title,body}' > <draft>/actual.json
+diff -u <draft>/payload.json <draft>/actual.json
 ```
 
 - Do not create the temporary files with `echo`, `printf`, command interpolation, or an unquoted heredoc.
 - Never substitute generated title or Markdown directly into a shell command, even inside quotes. Backticks, `$()`, quotes, and backslashes in generated content must remain data, not shell syntax.
 - Do not report success unless the exact read-back comparison passes.
-- Remove all four temporary files after verification.
+- Remove the draft directory after verification.

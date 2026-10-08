@@ -6,7 +6,7 @@ set -eu
 
 skills=$(dirname "$0")/..
 
-grep -F -- '--input /tmp/update-pr.json' "$skills/update-pr/SKILL.md" >/dev/null
+grep -F -- '--input <draft>/payload.json' "$skills/update-pr/SKILL.md" >/dev/null
 grep -F -- 'Never substitute generated title or Markdown directly into a shell command' "$skills/update-pr/SKILL.md" >/dev/null
 
 status=0
