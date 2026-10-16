@@ -1,17 +1,19 @@
-# Fix prompt
+# Handoff formats
 
-Return one concise, self-contained prompt inside a single `text` code block per confirmed defect. Use short prose with only the details needed to implement and validate the fix. Substitute verified facts into this shape; omit irrelevant fields rather than leaving placeholders.
+## Fix-ready defect
+
+Return one concise, self-contained prompt inside a single `text` code block per fix-ready defect. Use short prose with only the details needed to implement and validate the fix. Substitute verified facts into this shape; omit irrelevant fields rather than leaving placeholders.
 
 ```text
-Fix ISSUE-01: <symptom-focused title> in <repository root or remote>.
+Fix ISSUE-01: <symptom-focused title> in <repository remote>.
 
-Problem: <trigger or preconditions, actual behavior, and intended behavior>. <Verified cause and the execution path that establishes it, with relevant file paths and symbols>. Inspected at <commit SHA>; <relevant uncommitted differences, if any>.
+Problem: <trigger or preconditions, actual behavior, and intended behavior>. <Verified cause and the execution path that establishes it, with relevant file paths and symbols>. Inspected at <commit SHA or ref>; <relevant uncommitted differences, if any>.
 
 Reproduce: <minimal input and steps, or a deterministic failing scenario>. Observed: <actual result>. Expected: <required outcome and the existing contract or behavior that supports it>.
 
 Evidence: <PostHog host and project ID, application/environment filters, absolute time bounds and timezone, compact decisive results with affected population and denominator where available>. <Essential successful query or tool arguments and evidence link, if needed>. <Reproduction or code-trace result, and material measurement limitations>.
 
-Existing work: <concise result of checking relevant issues, open and recently merged PRs, and current code, with links where relevant and check timestamp>.
+Existing work: <concise result of checking the inbox report, error-tracking issue status, relevant GitHub issues, and open and recently merged PRs, with links where relevant and check timestamp>.
 
 Acceptance: <observable outcomes covering the failing case, relevant edge cases, and behavior that must continue to work>. <Affected sibling paths or compatibility constraints, if relevant>.
 
@@ -20,4 +22,17 @@ Implement and validate the fix under the repository's guidance. Choose the imple
 
 Give the implementation agent the established cause and required behavior, not a suggested solution. Exclude speculative hypotheses, alternative designs, investigation assignments, and unrelated queries. Acceptance criteria describe observable results, not code structure or a particular test implementation.
 
-Do not hide unresolved diagnosis behind the closing instruction: if another investigation is needed to determine what is broken or why, the finding is not ready for this format. The prompt must contain the decisive evidence itself; links are supporting references. Put necessary queries inside the outer block as plain text without nested fences. Do not write prompts to disk.
+Each prompt stands alone: it must not depend on the original chat, another block, or expiring links for decisive evidence. Minimize event samples and omit unnecessary personal information; use aggregates whenever possible. Put necessary queries inside the outer block as plain text without nested fences. These blocks are for private agent threads, not public issue or PR bodies.
+
+Do not hide unresolved diagnosis behind the closing instruction: if another investigation is needed to determine what is broken or why, the defect belongs in the verified tier.
+
+## Verified defect
+
+Use a short markdown entry, not a code block:
+
+```markdown
+**ISSUE-04: <symptom-focused title>** (<surface>, <application or service>)
+- Evidence: <absolute bounds, decisive result with denominator, link to the issue, report, insight, or recording>
+- Existing work: <inbox report or issue state, or "none found">
+- Not fix-ready because: <the missing repository access, unresolved cause, or reproduction>
+```
