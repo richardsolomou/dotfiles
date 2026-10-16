@@ -4,7 +4,7 @@ The user is reading the report now and will pick what to fix next, so write for 
 
 ## Shape
 
-Open with one line: project name and ID, host, the absolute UTC windows, and how many defects are fix-ready and how many are verified only.
+Open with two lines. First: project name and ID, host, the absolute UTC windows, and how many defects are fix-ready and how many are verified only. Second: what PostHog had already surfaced, as counts of inbox reports by status, open health issues, and scout emissions in the window.
 
 Then a ranked summary table:
 
