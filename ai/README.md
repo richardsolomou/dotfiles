@@ -26,7 +26,7 @@ Everything is symlinked, so edits here take effect without reinstalling. Adding 
 
 ## PostHog issue discovery
 
-Run `$posthog-issue-discovery` in an application repository with access to its PostHog project. It finds and verifies up to 10 defects and returns each as a self-contained fix prompt to paste into a fresh thread, with the evidence, reproduction and acceptance criteria but no prescribed implementation. It returns research in the conversation without storing handoffs or reports, changing application code, or creating issues or PRs, and provides thread prompts rather than automatically launching threads.
+Run `$posthog-issue-discovery` from any directory with access to a PostHog project. It sweeps every live product in the project, verifies up to 10 defects, traces each to its owning code where it can, and reports them as a ranked list with evidence and a coverage log. Discovery is read-only and writes nothing to disk; it ends by asking which defects to fix, and fixes them in the same conversation.
 
 ## Vendored skills
 
