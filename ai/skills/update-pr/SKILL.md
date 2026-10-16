@@ -11,36 +11,10 @@ This skill is also the **single source of truth for how to write a PR title and 
 
 ## Workflow
 
-1. Resolve and pin the target PR once. Record the repository, PR number, base ref, and head SHA:
-
-   ```sh
-   repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-   gh pr view --json number,title,body,baseRefName,headRefOid
-   ```
-
-2. Fetch the recorded base and PR head, verify the fetched head SHA, then read the immutable full diff:
-
-   ```sh
-   git fetch origin <baseRefName>
-   git fetch origin pull/<number>/head
-   test "$(git rev-parse FETCH_HEAD)" = "<headRefOid>"
-   merge_base=$(git merge-base "origin/<baseRefName>" "<headRefOid>")
-   git diff "$merge_base" "<headRefOid>"
-   ```
-
-3. Get the commit log for context on intent:
-
-   ```sh
-   git log --oneline "$merge_base".."<headRefOid>"
-   ```
-
-4. Check for a PR template in the repo:
-
-   ```sh
-   cat .github/pull_request_template.md 2>/dev/null
-   ```
-
-5. Write the PR title and description:
+1. Resolve the PR (`gh pr view --json number,title,body,baseRefName,headRefOid`) and record the repository and number.
+2. Read the full PR diff from the merge-base of the fetched base branch to the PR head, plus the commit log for intent.
+3. Check for `.github/pull_request_template.md`.
+4. Write the PR title and description:
 
 **Title rules:**
 
@@ -84,22 +58,18 @@ Rules:
 
 After drafting, re-read for reviewer questions. Add missing context that affects correctness, risk, rollout, or validation; then delete only repetition, padding, and scene-setting that does not help answer those questions.
 
-**Voice and tone (mandatory):**
+**Voice and tone:**
 
 Load the `tone` skill with `register: pr-description` before drafting anything. Apply that register and the common rules at the top of the doc.
 
 No AI smell: no formulaic openers ("This PR…", "In this change…"), no closing sign-offs, no padding.
 
-Immediately before updating, fetch the recorded PR number again and compare its `headRefOid` and `baseRefName` with the pinned values. If either moved, discard the draft and rebuild it from the new immutable target. Then update that captured repository and PR number without putting generated content in a shell command. Create a private draft directory with `mktemp -d "${TMPDIR:-/tmp}/update-pr.XXXXXX"`, because other sessions and agents update PRs at the same time. Write `title.txt` and `body.md` inside the printed `<draft>` directory with the available file-writing tool, then build the API payload from those files:
+Update the recorded repository and PR number without putting generated content in a shell command. Create a private draft directory with `mktemp -d "${TMPDIR:-/tmp}/update-pr.XXXXXX"`, because other sessions and agents update PRs at the same time. Write `title.txt` and `body.md` inside the printed `<draft>` directory with the available file-writing tool, then build the API payload from those files:
 
 ```sh
 jq -n --rawfile title <draft>/title.txt --rawfile body <draft>/body.md '{title: ($title | rtrimstr("\n")), body: ($body | rtrimstr("\n"))}' > <draft>/payload.json
-gh api "repos/<captured-repo>/pulls/<captured-number>" --method PATCH --input <draft>/payload.json
-gh pr view <captured-number> --repo <captured-repo> --json title,body | jq '{title,body}' > <draft>/actual.json
-diff -u <draft>/payload.json <draft>/actual.json
+gh api "repos/<repo>/pulls/<number>" --method PATCH --input <draft>/payload.json
+rm -rf <draft>
 ```
 
-- Do not create the temporary files with `echo`, `printf`, command interpolation, or an unquoted heredoc.
-- Never substitute generated title or Markdown directly into a shell command, even inside quotes. Backticks, `$()`, quotes, and backslashes in generated content must remain data, not shell syntax.
-- Do not report success unless the exact read-back comparison passes.
-- Remove the draft directory after verification.
+Never substitute generated title or Markdown directly into a shell command, even inside quotes, and don't create the draft files with `echo`, `printf`, or an unquoted heredoc: backticks, `$()`, quotes, and backslashes in generated content must stay data.

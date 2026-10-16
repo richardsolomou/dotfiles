@@ -2,7 +2,6 @@
 
 ## Philosophy
 
-- Incremental progress over big bangs — small changes that compile and pass tests.
 - Choose the boring, obvious solution — if you need to explain it, it's too complex.
 - Keep code minimal: no premature abstractions, nothing dead or redundant.
 - Keep shared libraries consumer-agnostic: no named consuming applications or hardcoded consumer repository matrices in their code, CI, or docs. Keep application-specific coordination in consumer repositories.
@@ -20,14 +19,7 @@ When a task depends on anything external (library, API, CLI, service, schema), v
 
 - Read the docs/changelog for the version the project actually pins (lockfile, manifest) — primary sources, not blog posts or memory.
 - When docs are thin, read the installed package's code, types, or signatures; probe live behavior when cheap (`--help`, a REPL call, a throwaway script).
-- Before declaring an MCP action unavailable, inspect exposed server wrappers and their tool catalogs; a missing direct tool name does not mean the connection is absent.
 - If investigation contradicts what you assumed, re-plan rather than forcing the original approach.
-- When comparing alternatives, verify which conditions and capabilities both already share before crediting either one with an advantage.
-- Before calling a rules implementation wrong based on a third-party summary, compare the claimed rule with the publisher's original wording; a summary can add restrictions the original does not contain.
-
-### When Stuck (After 2 Attempts)
-
-When implementation goes sideways, switch to plan mode and re-plan — don't keep pushing a broken approach. Document what failed, research alternatives, and question the abstraction level and problem breakdown.
 
 If the task needs a system you can't reach (MCP server, VPN-gated service, missing credential), say so and ask for access — don't cycle through alternative methods hoping one sticks.
 
@@ -35,15 +27,11 @@ If the task needs a system you can't reach (MCP server, VPN-gated service, missi
 
 Never report a fix to anything rendered (web page, game scene, OBS overlay) from code-reasoning alone — screenshot the running thing and look at it; after fixing a reported visual bug, re-screenshot the exact thing the user showed. Apply the change everywhere it appears (all scenes/variants), not just the first instance.
 
-On compact UI surfaces such as task cards, use the shortest unambiguous state label and do not pair redundant status icons with text.
-
 A single frame proves nothing for behavior that unfolds over time or across contexts (timers, cross-tab state, background routines) — trigger the real condition and observe a full cycle before reporting it works.
 
 ### Setup and Ops Walkthroughs
 
 Execute every step you can from the terminal yourself; hand back only steps that genuinely require the user (browser logins, 2FA, physical devices) as a short numbered list. Check the repo's `bin/` and `scripts/` for an existing script before hand-rolling an ops command.
-Before storing a credential copied from a browser, verify the system clipboard contains the expected credential type without printing its value; a browser copy action may leave an older secret on the clipboard.
-For an expired OAuth connection to a configured MCP server, inspect `~/.codex/config.toml` and use `codex mcp login <server>`; do not direct the user to T3 Code MCP connection settings, which do not exist.
 
 ### Before Merging or Closing a Tracker Item
 
@@ -55,13 +43,10 @@ Tests passing and review approval aren't "done" for anything production-facing (
 
 ## Code Quality
 
-- Write tests first when practical; always test new functionality, covering edge cases and errors. Run them before marking a task complete; fix failures before proceeding.
-- Test behavior, not implementation: one assertion per test when possible, deterministic, scenario-describing names, existing test utilities, no redundant tests.
-- For user-visible counts, define the counted action or item from the player's perspective and test zero, one, and multiple entries through the saved flow.
+- Write tests first when practical, one assertion per test when possible, and run them before marking a task complete.
 - Prove tests fail for the intended reason: perturb or remove the behavior under test when an assertion could pass through a stub, self-derived fixture, permissive matcher, mock, or unrelated validation error.
 - Every commit compiles, passes all tests, and is formatted/linted — run `bin/fmt` if it exists, otherwise the language's formatter, before committing. Never bypass hooks with `--no-verify`.
 - No TODOs without issue numbers; no tool warnings ignored without strong justification.
-- Use the project's existing build/test/format tooling; don't introduce new tools without strong justification.
 - Update relevant documentation when changing functionality.
 
 ### Technical Writing
@@ -70,20 +55,11 @@ Use `asd-ste100` only when the user explicitly requests controlled-language rewr
 
 ### Review Readiness
 
-Before marking non-trivial work ready for review, perform a system-boundary pass over the whole changed flow, not just each diff hunk:
-
-- Trace success, failure, retry, timeout, cancellation, partial-write, shutdown, and concurrent execution. Preserve idempotency and make state transitions atomic or self-healing where partial failure can strand state.
-- Treat limits as part of correctness. Bound input size, memory, query cardinality, retries, and work under locks; check migrations, refreshes, and request paths at production scale.
-- Keep classification consistent across sibling paths: status and error mapping, billing/settlement, breaker health, logs, metrics, limits, and authentication. Search for every producer and consumer of changed fields and apply class-wide fixes everywhere they occur.
-- When changing a shared UI control's click target or accessible name, search every consumer and browser test for its old interaction, then exercise each affected surface.
-- Test observable outcomes and negative branches, including each independent clause in compound logic. A green test that would also pass for the wrong reason is not evidence.
-- Verify trust boundaries explicitly: tenant ownership, signed or authoritative fields, secret-bearing headers, redirects/replays, database constraints, and writes that bypass model validation.
-- Exercise production-facing configuration, migrations, alerts, runbooks, and rollout assumptions in the real shape they will run. Confirm fallback and backwards compatibility rather than inferring them from unit tests.
-- Re-read the final PR description, docs, comments, metric names, and runbooks against the final diff. Remove stale claims, dead code, speculative mechanisms, and comments that overstate guarantees.
+Before marking non-trivial work ready for review, trace the whole changed flow rather than each hunk — failure, retry, concurrency, limits, and trust boundaries — and fix a class of issue everywhere it occurs, not just where it was spotted. Then re-read the PR description, docs, and comments against the final diff and remove stale or overstated claims.
 
 ## Self-Improvement
 
-When corrected after a mistake, update this file with a rule that prevents it; ruthlessly edit over time until the mistake rate drops. When the correction targets behavior a skill produced, edit that skill's SKILL.md under `~/dev/dotfiles/ai/skills/` instead — never a memory or project-local note; memories don't travel across projects and the skill keeps prescribing the old behavior.
+When corrected, add a rule only if the mistake came from missing information or an unstated preference — not from a one-off lapse a capable model would not repeat. Prefer generalising or replacing an existing rule over appending a new one, and delete rules that no longer earn their place; every line here loads into every session. Put project-specific facts in that project's `AGENTS.md`. When the correction targets behavior a skill produced, edit that skill's SKILL.md under `~/dev/dotfiles/ai/skills/` instead — never a memory or project-local note; memories don't travel across projects and the skill keeps prescribing the old behavior.
 
 ## Repositories
 
@@ -152,9 +128,6 @@ Durable personal and cross-project notes go in `~/dev/notes` — a private, git-
 
 ## Coding
 
-- Write code like a principal engineer: correct, maintainable, idiomatic, readable. Make it work → make it right → make it fast.
-- Read before you write: before implementing functionality that operates on a type, read its definition and its derives/attributes/trait implementations — parsing, serialization, and comparison are often already supported. If you're writing >10 lines for a common operation, stop and check for a built-in; standard libraries do these in 1–3 lines.
-
 ### Rust
 
 - If `cargo shear` wants to remove a dependency, use it properly or remove it — investigate before adding ignores; unused deps indicate design problems. Verify Cargo features enable code that exists and is used, and that new deps are actually imported.
@@ -171,7 +144,6 @@ Durable personal and cross-project notes go in `~/dev/notes` — a private, git-
 
 - Use plain `echo`, no custom logging methods; when warnings/errors matter, copy the helpers from <https://github.com/PostHog/template/tree/main/bin/helpers> and source them like <https://github.com/PostHog/template/blob/main/bin/fmt> does.
 - Commands for the user to paste must survive line-by-line pasting: no inline `#` comments, no variables carried over from an earlier paste, destructive paths fail closed (`${var:?}`).
-- `pgrep -f` matches your own command line — use `pgrep -x` or exclude your own pattern when verifying a process is stopped.
 
 ### Markdown Files
 

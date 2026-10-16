@@ -54,9 +54,9 @@ Hold every drafted objective to this bar:
 
 With no argument, run the full prep flow (Steps 1–8), then offer the Objectives PR Workflow.
 
-## Your Task
+## Workflow
 
-Follow these steps in order. Gather as much data automatically as possible before asking the user anything.
+Gather everything you can automatically before asking the user anything.
 
 ### Step 1: Detect Quarter Context
 
@@ -95,7 +95,7 @@ If the file is missing or `QP_POSTHOG_COM_DIR` isn't a checkout, note it and ask
 
 ### Step 4: Fetch Merged PRs
 
-For each team member, fetch their merged PRs across the **current** quarter (`cur_start` to `cur_end`). Issue all fetch calls in parallel (multiple Bash tool calls in one response):
+For each team member, fetch their merged PRs across the **current** quarter (`cur_start` to `cur_end`):
 
 ```bash
 source ~/.agents/skills/quarterly-planning/scripts/config.sh

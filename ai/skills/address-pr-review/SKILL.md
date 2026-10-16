@@ -73,14 +73,14 @@ Before drafting anything, work through:
 - **What evidence do they cite?** A specific line, a benchmark, a similar pattern elsewhere, a doc?
 - **What concept is implied?** "This is a hot path" → allocation cost, GC pressure, escape analysis. "We can't hold this lock here" → contention, deadlock, throughput. "This won't survive a partition" → CAP, retries, idempotency. Name the concept explicitly.
 
-**Strong bias: infer, don't ask.** Reviewer comments are usually terse and elliptical. That's normal — the reviewer assumes the author can read the surrounding code, knows the codebase conventions, and can fill in the blanks. Your job is to do that filling-in, not to bounce the comment back as a question. Before deciding the comment is unclear, you should have:
+**Infer rather than ask.** Reviewer comments are usually terse and elliptical. That's normal — the reviewer assumes the author can read the surrounding code, knows the codebase conventions, and can fill in the blanks. Your job is to do that filling-in, not to bounce the comment back as a question. Before deciding the comment is unclear, you should have:
 
 - Re-read the function and its callers.
 - Skimmed the file for the convention being implied.
 - Considered the most likely concrete change the reviewer would accept.
 - Looked at the reviewer's other comments on this PR for the pattern they're pushing toward.
 
-If, after that, one interpretation is clearly more plausible than the others — even if not certain — go with it and write the fix. Note your assumption in the verdict reasoning so the user can correct you if they think you picked wrong, but **do not** turn a question back to the user just because the comment was short.
+If, after that, one interpretation is clearly more plausible than the others — even if not certain — go with it and write the fix. Note your assumption in the verdict reasoning so the user can correct you if they think you picked wrong, but don't turn a question back to the user just because the comment was short.
 
 Reserve "I can't tell what the reviewer meant" for cases where two interpretations would lead to materially different fixes and there's no signal in the code or surrounding comments to pick between them. That is rare.
 
@@ -93,7 +93,7 @@ Two address-specific verifications worth calling out on top of the generic disci
 - **Match the criticism to the change.** Does the diff actually touch the line being criticised, or is the reviewer raising a pre-existing issue that's out of scope for this PR? Out-of-scope concerns are valid, but they should usually become a follow-up, not a block.
 - **Consider whether they might be partially right.** Frequently a reviewer's diagnosis is wrong but their instinct is correct — they spotted a real smell and named it badly. Distinguish "the symptom they describe isn't real" from "there's nothing here worth changing".
 
-Land on one of four verdicts for each comment. **Bias hard toward the first three.**
+Land on one of four verdicts for each comment; the last is a fallback.
 
 1. **Agree** — the claim holds. Propose the fix they want.
 2. **Agree with a different fix** — the concern is real but their suggested approach has a flaw (wrong API, wrong layer, breaks an invariant they didn't see). Propose what you'd actually do and say why.
@@ -239,10 +239,6 @@ Apply *all* the file edits, then commit and push, then refresh the PR body, and 
 - Resolved threads.
 - Pure approvals with no body ("LGTM", "👍").
 - Bot comments from CI (lint output, coverage, dependabot) — these link to logs the user reads directly.
-
-## Concepts to lean into (Go + distributed systems)
-
-Use Shared mechanics § *Concepts to lean into* from `adversarial-review` — name and explain a concept only when the reviewer's point actually touches it, and cite sources per the shared output rules.
 
 ## Voice and tone
 

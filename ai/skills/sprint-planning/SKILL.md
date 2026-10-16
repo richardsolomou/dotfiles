@@ -47,9 +47,9 @@ Pull the quarter goals and their statuses from the previous sprint's comment (St
 
 - `/sprint-planning goals` — Show what the team is currently working on by merging the current sprint plan with project board data, grouped by assignee. Follow `~/.agents/skills/sprint-planning/references/goals.md` and exit after displaying.
 
-## Your Task
+## Workflow
 
-Follow these steps in order. Gather as much data automatically as possible before asking the user anything.
+Gather everything you can automatically before asking the user anything.
 
 ### Step 1: Detect Sprint Context
 
@@ -96,7 +96,7 @@ If the result is not "NOT_FOUND", parse the comment to extract:
 
 ### Step 4: Fetch Merged PRs
 
-For each team member, fetch their merged PRs during the **previous** sprint period. Issue all fetch calls in parallel (multiple Bash tool calls in a single response) to minimize wall-clock time:
+For each team member, fetch their merged PRs during the **previous** sprint period:
 
 ```bash
 source ~/.agents/skills/sprint-planning/scripts/config.sh
@@ -156,18 +156,7 @@ Each item's `content.url` field contains the issue or PR URL. Preserve these for
 
 ### Step 6: First Prompt - Context
 
-Now that you have all the automated data, ask the user:
-
-> I'm writing the sprint planning update for **{current_title}** (#{current_number}).
->
-> Team members: {list from Step 2}
->
-> Two questions before I build the draft:
->
-> 1. Who's the support hero this sprint? (or N/A for a small team with no rotation)
-> 2. Is anyone off during the sprint?
-
-Wait for the user's response before continuing.
+Name the sprint issue and team members, then ask who the support hero is (or N/A for a team with no rotation) and whether anyone is off during the sprint. Wait for the answer.
 
 ### Step 7: Build Retro
 
@@ -284,7 +273,7 @@ Then compose the final sprint update using all gathered and confirmed data.
 
 **Write it in Richard's voice.** This comment gets posted under his name, so load `tone` with register **`slack-status`** (never `slack-casual` here) and generate in that register from the start — don't write neutral-assistant prose and rewrite. For this artifact the register means plain language, NOT chat diction: bullets stay sentence case with normal punctuation (it's a company-wide GitHub comment, not Slack), but every term gets the plain-words test — if a reader outside the team would stumble ("provenance-verified", "health-routed election", "drift detection"), say it plainly ("capture verifies the events are really ours", "routes to the healthiest provider", "alert when the ledger and billing disagree"). Domain nouns the team actually uses (attribution, breaker, failover, ledger) stay.
 
-**IMPORTANT**: Output the update as raw markdown inside a code block so the user can copy/paste it directly into GitHub.
+Output the update as raw markdown inside a code block so the user can paste it into GitHub.
 
 The format below mirrors the canonical issue template at [`.github/ISSUE_TEMPLATE/sprint_planning_retro.md`](https://github.com/PostHog/posthog/blob/master/.github/ISSUE_TEMPLATE/sprint_planning_retro.md) (the sprint issue body is generated from it) plus the house conventions visible in how teams actually post (see any open `Sprint - …` issue in `SPRINT_REPO` for live examples). Match it closely — the wider company reads these, so consistency matters. Notable conventions, easy to get wrong:
 
@@ -370,7 +359,7 @@ Write the final markdown to `~/dev/notes/PostHog/sprint-planning/<sprint_start>.
 
 ### Step 12: Hand Off for Manual Posting
 
-**Never offer to post the sprint comment, and never run `gh issue comment` for it — even if it seems helpful.** The user pastes it into #{current_number} themselves. End by presenting the final markdown (Step 10's code block) and noting the archive path from Step 11. Only post if the user spontaneously and explicitly asks in their own words.
+The user pastes the comment into #{current_number} themselves, so don't offer to post it or run `gh issue comment` unless they ask. End by presenting the final markdown (Step 10's code block) and noting the archive path from Step 11. Only post if the user spontaneously and explicitly asks in their own words.
 
 ### Step 13: Archive Previous Sprint's Done Items
 
@@ -397,4 +386,4 @@ After handing off the update, offer to clean up the project board by archiving D
    gh project item-archive "$SPRINT_PROJECT_NUMBER" --owner "$SPRINT_ORG" --id <item-id>
    ```
 
-The output template in Step 10 is the authoritative format reference (synthesis and bullet rules live in Step 7). Never offer to post and never run `gh issue comment` unprompted — the user posts the comment themselves (Step 12).
+The output template in Step 10 is the authoritative format reference (synthesis and bullet rules live in Step 7).

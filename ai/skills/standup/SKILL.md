@@ -55,7 +55,7 @@ Read `prev_file_path` when present. Use prior "started" or "continuing" items to
 
 ### 3. Harvest activity
 
-Run independent source reads concurrently with parallel tool calls. Do not spawn agents only to collect activity.
+Do not spawn agents only to collect activity.
 
 Daily mode uses:
 

@@ -5,50 +5,22 @@ description: "Commit staged/unstaged changes with a semantic commit message, pus
 
 # Ship
 
-Commit current changes, push, and create a pull request.
+Commit current changes, push, and create or refresh the pull request.
 
-## Workflow
+## Before committing
 
-### Step 1: Assess the Current State
+Check the working tree, the current branch, the remote's default branch, and any existing PR for the branch.
 
-```sh
-git status
-git diff --stat
-git diff --staged --stat
-git log --oneline -5
-git branch --show-current
-git remote show origin | grep 'HEAD branch'
-gh pr view --json state,url 2>/dev/null || true
-```
+- No changes → stop and say there is nothing to ship.
+- On the remote's default branch → stop before committing and ask the user to create a feature branch.
+- The branch's PR is merged or closed → don't push to it. Branch fresh from `origin/<base>`, replay only the unmerged changes, and confirm the new branch has no PR.
+- The user asks for one self-contained PR per repository → don't preserve a stacked base. Consolidate the prerequisite diff onto a trunk-based PR and close superseded PRs in that repository.
 
-If there are no changes (staged or unstaged), stop and tell the user there's nothing to ship.
+Read the full diff. Include untracked files only when they belong to the change; ask if unsure. If the changes are unrelated to each other, ask which to include.
 
-If the current branch has a merged or closed PR, do not push new commits to it. Fetch the remote base branch, create a fresh branch from `origin/<base>`, and replay only the unmerged changes before continuing. Verify the new branch has no existing PR.
+## Commit
 
-If the current branch is the remote's default branch, stop before staging or committing and ask the user to create a feature branch. Do not leave a local commit on the default branch and then discover that no PR can be opened.
-
-If the user asks for one self-contained PR per repository, inspect each existing PR's base before shipping. Do not preserve a stacked base: consolidate the required prerequisite diff onto the trunk-based PR and close any superseded PRs in that repository.
-
-### Step 2: Review the Changes
-
-Read the full diff to understand what changed:
-
-```sh
-git diff
-git diff --staged
-```
-
-If there are untracked files, check if they should be included. Ask the user if unsure.
-
-### Step 3: Stage Changes
-
-Stage relevant files individually. Prefer explicit file paths over `git add -A` to avoid accidentally including sensitive files (.env, credentials, etc.).
-
-If all changes are clearly related to one logical change, stage everything. If there are unrelated changes, ask the user which to include.
-
-### Step 4: Commit
-
-Write the commit message per Commit messages in the global instructions — that section owns the format, the type list, and the body rules.
+Stage explicit file paths, never `git add -A`. Write the message per Commit messages in the global instructions, using a quoted heredoc:
 
 ```sh
 git commit -m "$(cat <<'EOF'
@@ -59,68 +31,21 @@ EOF
 )"
 ```
 
-### Step 5: Confirm the Base Branch
+## Push
 
-Figure out the base branch for the PR:
+If the branch belongs to a GitHub Stack (`gh stack view --json` includes it), run `gh stack submit --auto --open` instead of a plain push and PR creation; it pushes every layer, creates or updates the PRs, and syncs the Stack object. Then apply `update-pr` to each created or changed PR.
 
-```sh
-git remote show origin | grep 'HEAD branch'
-```
+Otherwise run `git push -u origin HEAD`, using the default branch recorded before the commit as the PR base.
 
-Use the default branch recorded before the commit as the PR base. If the remote default changed during the run, stop and reassess instead of guessing.
+## Create or refresh the PR
 
-### Step 6: Push
+If a PR already exists, apply `update-pr` to refresh its title and body against the full diff; no approval needed.
 
-If the branch belongs to a GitHub Stack (`gh stack view --json` succeeds and includes it), submit the whole stack through GitHub's official extension:
-
-```sh
-gh stack submit --auto --open
-```
-
-This pushes every layer, creates or updates the PRs, and syncs the GitHub Stack object. Skip the standalone `git push` and `gh pr create` commands below, then apply `update-pr` to any created or changed PR descriptions.
-
-For an unstacked branch, push normally:
-
-Push the current branch, setting upstream if needed:
-
-```sh
-git push -u origin HEAD
-```
-
-### Step 7: Create the PR
-
-Check for a PR template in the repo:
-
-```sh
-cat .github/pull_request_template.md 2>/dev/null
-```
-
-Check if a PR already exists for this branch:
-
-```sh
-gh pr view --json number,url 2>/dev/null
-```
-
-**If a PR already exists**, the changes have just been pushed to it, so its title and description are now potentially stale. Apply the `update-pr` skill to refresh both against the full diff, then show the URL. Do not skip this — a PR that already exists is exactly the case where the description drifts. (See Pull Request Descriptions in the global instructions: refreshing is automatic, no approval needed.)
-
-**If no PR exists**, create one. Write the title and body using the `update-pr` skill — it is the single source of truth for the title rules, the description structure, the context-sensitive length guidance, and the voice. Use the commit message title as the starting point for the PR title.
-
-Create a private draft directory, because other sessions and agents ship at the same time and a shared path hands one PR another's title:
-
-```sh
-mktemp -d "${TMPDIR:-/tmp}/ship.XXXXXX"
-```
-
-Write `title.txt` and `body.md` inside the printed `<draft>` directory with the file-writing tool, following the shell-safety rules in `update-pr` (never substitute generated text into a shell command), then:
+Otherwise write the title and body with `update-pr`, which owns the title rules, structure, and voice. Other sessions ship concurrently, so draft in a private directory (`mktemp -d "${TMPDIR:-/tmp}/ship.XXXXXX"`). Write `title.txt` and `body.md` there with the file-writing tool, following the shell-safety rules in `update-pr`, then:
 
 ```sh
 gh pr create --title "$(cat <draft>/title.txt)" --body-file <draft>/body.md
 rm -rf <draft>
 ```
 
-### Step 8: Report
-
-Display:
-
-1. The commit hash and message
-2. The PR URL
+Report the commit hash and message, and the PR URL.

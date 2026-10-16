@@ -74,11 +74,11 @@ Interrogate tests rather than counting them:
 - Do boundary fixtures cross the threshold instead of stopping beside it?
 - When two hand-maintained sets must agree, what test ties them together?
 
-For every added or materially changed inline comment, ask: can the information be derived from the code; is this the shortest accurate explanation; is it necessary; and does it describe the code's current invariant rather than a change, PR, or commit? Raise a comment concern only when the answer exposes real maintenance cost, not as a style nit.
+Hold added or changed comments to the global Comments rules; raise one only when it carries real maintenance cost, not as a style nit.
 
 Run the `security-audit` flow inline when the user passes `+security` or the diff meets the Shared mechanics § *Security lens trigger*. Give it the recorded packet and require a read-only audit; it must not create reproducer tests, edit files, or rebuild the target diff during review. Do not start another general review pass.
 
-For each candidate, identify the concrete failing scenario and try to disprove it. Drop preferences, formatter output, speculative future risks, and concerns already covered by the discussion. Keep at most five findings, ordered by impact.
+For each candidate, identify the concrete failing scenario and try to disprove it. Drop preferences, formatter output, speculative future risks, and concerns already covered by the discussion. Order surviving findings by impact.
 
 Classify surviving findings:
 
@@ -96,7 +96,7 @@ Launch one fresh read-only reviewer. Give it only the immutable review packet, e
 
 If an independent agent is unavailable, perform one separate cold read. State that the second opinion was sequential, not independent.
 
-Validate the returned candidates yourself. Remove duplicates and anything that fails the same evidence bar. The second opinion does not increase the five-finding limit.
+Validate the returned candidates yourself. Remove duplicates and anything that fails the same evidence bar.
 
 ### 5. Validate anchors
 

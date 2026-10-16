@@ -1,6 +1,6 @@
 ---
 name: adversarial-review
-description: "The discipline and shared mechanics behind the review skills: skeptical posture, per-context counter-bias, adversarial verification, the defensibility bar, plus the common recipes (PR resolution, base diff, discussion fetch, output rules, concepts list, security note). Load when another skill says to apply adversarial review; apply the rules to every candidate finding before it becomes output."
+description: "The discipline and shared mechanics behind the review skills: skeptical posture, per-context counter-bias, adversarial verification, the defensibility bar, plus the common recipes (PR resolution, base diff, discussion fetch, output rules, concepts, security note). Load when another skill says to apply adversarial review; apply the rules to every candidate finding before it becomes output."
 user-invocable: false
 ---
 
@@ -51,7 +51,7 @@ Follow the answers into the code. Do not answer from the diff alone, and do not 
 For each candidate concern:
 
 - **Re-read the actual code, not the diff hunk.** Look at the surrounding function, the callers, the type definition. Often the concern is already handled three lines above or in a wrapper not in the diff.
-- **Check the claimed facts.** If the assertion is "this allocates on every call," confirm — mentally run the snippet through `go build -gcflags="-m"`. If "this races," name the two goroutines and the shared state. If it cites an API behaviour, confirm the API actually behaves that way.
+- **Check the claimed facts.** If the assertion is "this allocates on every call," confirm it (e.g. `go build -gcflags=-m`). If "this races," name the two goroutines and the shared state. If it cites an API behaviour, confirm the API actually behaves that way.
 - **Look for counterexamples in the same repo.** If you're flagging a pattern, is the existing pattern used successfully elsewhere? The codebase convention may be deliberate.
 - **Construct the failing scenario.** Pass `nil`, `""`, a 10MB input, a concurrent caller, a malformed UTF-8 string. What breaks?
 
@@ -163,16 +163,11 @@ Don't second feedback another reviewer already raised, even unresolved — trust
 
 - File references are always the full repo-relative path (`frontend/src/config.ts`), never a bare basename — a PR can change two files with the same name.
 - Anything the user will copy-paste goes inside its own fenced code block (```` ``` ````), never a blockquote (`>`) — only the fence renders a one-click copy button; a blockquote drags `>` markers into the paste.
-- Link docs only when you can verify the URL is real — never fabricate. Good sources: the Go memory model, Effective Go, the Go blog, pkg.go.dev, the AWS Builders Library, DDIA by chapter, Jepsen analyses.
+- Link docs only when you can verify the URL is real — never fabricate.
 
-### Concepts to lean into (Go + distributed systems)
+### Concepts to lean into
 
-Name and teach a concept only when the finding genuinely touches it — forcing one in to look thorough is worse than skipping it.
-
-- **Go runtime & concurrency**: goroutine lifecycle and leaks; channel semantics and closing rules; `sync.Mutex`/`RWMutex`/atomics and contention; `sync.Once`/`WaitGroup`/`Pool`; `context.Context` cancellation and deadlines; the Go memory model (<https://go.dev/ref/mem>).
-- **Go performance**: escape analysis (`go build -gcflags="-m"`); allocation on hot paths and preallocation; GC pressure; `pprof`/`testing.B` to ground claims in measurement.
-- **Distributed systems**: idempotency and idempotency keys; retry semantics (backoff, jitter, budgets); delivery semantics (at-most-once, at-least-once, and why exactly-once is usually a lie without dedup); consistency models; partial failures and timeouts; backpressure and load shedding; circuit breakers; clock skew and logical clocks.
-- **General correctness**: off-by-ones, inverted conditions, swallowed errors, async/await mistakes, injection at boundaries, secret exposure in logs, races, partial writes.
+The user is building depth in Go and distributed systems. When a finding genuinely touches one of those concepts, name it and explain it with a tie-back to the code; forcing one in to look thorough is worse than skipping it.
 
 ### Security note
 
