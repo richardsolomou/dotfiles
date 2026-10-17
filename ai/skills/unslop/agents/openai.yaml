@@ -1,4 +1,4 @@
 interface:
   display_name: "Unslop"
-  short_description: "Remove low-value AI-shaped code and prose"
-  default_prompt: "Use $unslop to remove unnecessary complexity and AI-shaped residue from these changes."
+  short_description: "Reuse existing patterns, swap custom code for packages, strip AI residue"
+  default_prompt: "Use $unslop to make these changes reuse the project's existing patterns, replace hand-rolled code with packages where it fits, and remove AI-shaped residue."
