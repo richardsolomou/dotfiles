@@ -1,0 +1,4 @@
+interface:
+  display_name: "Competitor research"
+  short_description: "Browse competitors in Chrome and turn their strengths into actionable improvements"
+  default_prompt: "Use $competitor-research to compare this repository's product with its competitors and list what we should improve."

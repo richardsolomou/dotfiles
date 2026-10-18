@@ -20,6 +20,7 @@ SKILL_DIRS="$HOME/.claude/skills $HOME/.codex/skills $HOME/.agents/skills"
 MCP_SERVERS="
 posthog-db|PostHog database connection|$HOME/.local/bin/postgres-mcp --access-mode=restricted|DATABASE_URI=postgresql://posthog:posthog@localhost:5432/posthog
 memory|Persistent memory across sessions|npx -y @modelcontextprotocol/server-memory|
+chrome-devtools|Browse in the running Chrome|npx -y chrome-devtools-mcp@latest --autoConnect --no-usage-statistics|
 grafana|Grafana MCP server|$HOME/dev/posthog/posthog/tools/infra-scripts/mcp/mcp-grafana-wrapper.sh|
 telegram|Telegram chat search (read-only)|$ZSH/ai/mcp/telegram-mcp.sh|
 slack|Slack search and thread access|$ZSH/ai/mcp/slack-mcp.sh|
