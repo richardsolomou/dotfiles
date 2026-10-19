@@ -53,7 +53,9 @@ The session string still has the authority of the Telegram account even though t
 
 ## Slack MCP
 
-The Slack MCP uses `slack-mcp-server@1.3.0` and reads `SLACK_MCP_XOXP_TOKEN` from the gitignored root `.env`. This keeps the token out of Claude and Codex configuration while the shared installer registers the same launcher for both harnesses. It exposes only channel listing, message history, thread replies, and message search.
+The Slack MCP uses `slack-mcp-server@1.3.0` and reads credentials from the gitignored root `.env`. This keeps tokens out of Claude and Codex configuration while the shared installer registers the same launcher for both harnesses. It exposes channel listing, message history, thread replies, message search, and `saved_list` for reading Slack Later items.
+
+The existing `SLACK_MCP_XOXP_TOKEN` OAuth token supports message access. Reading Later items requires both `SLACK_MCP_XOXC_TOKEN` (browser token) and `SLACK_MCP_XOXD_TOKEN` (the browser's `d` cookie). Add both to `.env`; the launcher uses the browser credentials instead of OAuth when they are present. A partial pair stops startup. Keep the OAuth token for the installer's registration check. Restart the Slack MCP connection after changing credentials or enabled tools.
 
 Create a replacement Slack user token with the scopes required by `slack-mcp-server`, add it to `.env`, restrict the file, then register or refresh the MCP configuration:
 
