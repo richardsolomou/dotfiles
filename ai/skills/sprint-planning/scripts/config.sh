@@ -21,7 +21,7 @@ SPRINT_ORG="${SPRINT_ORG:-PostHog}"
 SPRINT_REPO="${SPRINT_REPO:-PostHog/posthog}"
 
 # GitHub team slug under SPRINT_ORG (used for the members API).
-SPRINT_TEAM_SLUG="${SPRINT_TEAM_SLUG:-team-context-mcp}"
+SPRINT_TEAM_SLUG="${SPRINT_TEAM_SLUG:-team-context-and-mcp}"
 
 # Human-readable team name used in prose and prompts.
 SPRINT_TEAM_NAME="${SPRINT_TEAM_NAME:-Context & MCP}"

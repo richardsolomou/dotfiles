@@ -25,7 +25,7 @@ The defaults target the **Context & MCP** team:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `QP_ORG` | `PostHog` | GitHub org (members API + PR search) |
-| `QP_TEAM_SLUG` | `team-context-mcp` | GitHub team slug under the org |
+| `QP_TEAM_SLUG` | `team-context-and-mcp` | GitHub team slug under the org |
 | `QP_TEAM_NAME` | `Context & MCP` | Display name used in prose |
 | `QP_TEAM_PAGE_SLUG` | `context-and-mcp` | Folder under `contents/teams/` on posthog.com |
 | `QP_POSTHOG_COM_DIR` | `~/dev/posthog/posthog.com` | Local checkout of the posthog.com repo |

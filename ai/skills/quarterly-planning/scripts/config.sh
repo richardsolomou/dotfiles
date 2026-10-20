@@ -17,7 +17,7 @@
 QP_ORG="${QP_ORG:-PostHog}"
 
 # GitHub team slug under QP_ORG (used for the members API).
-QP_TEAM_SLUG="${QP_TEAM_SLUG:-team-context-mcp}"
+QP_TEAM_SLUG="${QP_TEAM_SLUG:-team-context-and-mcp}"
 
 # Human-readable team name used in prose and prompts.
 QP_TEAM_NAME="${QP_TEAM_NAME:-Context & MCP}"

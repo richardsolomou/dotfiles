@@ -16,7 +16,7 @@ The defaults target the **Context & MCP** team:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `SPRINT_TEAM_SLUG` | `team-context-mcp` | GitHub team slug under the org |
+| `SPRINT_TEAM_SLUG` | `team-context-and-mcp` | GitHub team slug under the org |
 | `SPRINT_TEAM_NAME` | `Context & MCP` | Display name used in prose |
 | `SPRINT_SLACK_CHANNEL` | `team-context-and-mcp` | Slack channel name used for team activity |
 | `SPRINT_PROJECT_NUMBER` | _(unset)_ | Project board number — empty until the team has a board |

@@ -6,13 +6,14 @@
 # `generated-at:` marker in the most recent archived entry, so consecutive
 # entries never overlap (no duplicates) and never leave a gap.
 #
-# Usage: activity-dates.sh <notes-subdir> <header-style: day|week> <same-day: reuse|previous>
+# Usage: activity-dates.sh <notes-subdir> <header-style: day|date|week> <same-day: reuse|previous>
 #
 #   notes-subdir   Directory under ~/dev/notes, e.g. "PostHog/standup".
 #   header-style   day  -> "17 June", dated the business day the entry is for:
 #                          noon or later means today (a worked weekend keeps its
 #                          own date); before noon means the previous business
 #                          day (Tuesday 9am -> Monday, Monday 9am -> Friday).
+#                  date -> "17 June", dated the generation day.
 #                  week -> "Week of 17 June", dated the generation day.
 #   same-day       reuse    -> on a re-run for the same entry date, that entry is
 #                              the previous one (window = delta since the earlier
@@ -26,8 +27,8 @@
 
 set -euo pipefail
 
-subdir="${1:?usage: activity-dates.sh <notes-subdir> <day|week> <reuse|previous>}"
-header_style="${2:?header-style required: day|week}"
+subdir="${1:?usage: activity-dates.sh <notes-subdir> <day|date|week> <reuse|previous>}"
+header_style="${2:?header-style required: day|date|week}"
 same_day="${3:?same-day mode required: reuse|previous}"
 
 DIR="$HOME/dev/notes/$subdir"
@@ -53,6 +54,10 @@ case "$header_style" in
         fi
         entry_date=$(ago "$back" %Y-%m-%d)
         header=$(ago "$back" "%-d %B")
+        ;;
+    date)
+        entry_date=$(date +%Y-%m-%d)
+        header=$(date "+%-d %B")
         ;;
     week)
         entry_date=$(date +%Y-%m-%d)

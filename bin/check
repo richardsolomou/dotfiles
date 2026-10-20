@@ -108,7 +108,7 @@ while read -r skill; do
     {
         grep -ohE '`[a-z0-9]+(-[a-z0-9]+)+` (skill|lens|discipline)' "$skill"
         grep -ohE '(skill|[Ll]oad|[Aa]pply|[Rr]un|via) `[a-z0-9]+(-[a-z0-9]+)+`' "$skill" | sed -E 's/^[^`]*//'
-        grep -ohE '`/[a-z0-9]+(-[a-z0-9]+)+' "$skill" | tr -d '/'
+        grep -ohE '`/[a-z0-9]+(-[a-z0-9]+)+`' "$skill" | tr -d '/'
         grep -ohE '`[a-z0-9]+(-[a-z0-9]+)+` →' "$skill"
     } | grep -oE '`[^`]+`' | tr -d '`' \
         | sort -u \
