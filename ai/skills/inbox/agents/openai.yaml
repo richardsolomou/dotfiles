@@ -1,0 +1,4 @@
+interface:
+  display_name: "Inbox"
+  short_description: "Plan the day from calendar, sprint, GitHub, and Slack"
+  default_prompt: "Use $inbox to plan what I should work on today."

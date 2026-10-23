@@ -1,6 +1,6 @@
 ---
 name: activity-harvest
-description: "Shared machinery for the cadence skills (standup, today, sprint-planning, and quarterly-planning): the activity window, the GitHub and Slack harvest queries, and the archive-to-notes step. Load only when one of those skills points here; not useful standalone."
+description: "Shared machinery for the cadence skills (standup, inbox, sprint-planning, and quarterly-planning): the activity window, the GitHub and Slack harvest queries, and the archive-to-notes step. Load only when one of those skills points here; not useful standalone."
 user-invocable: false
 ---
 
