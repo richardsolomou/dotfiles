@@ -6,14 +6,10 @@
 # `generated-at:` marker in the most recent archived entry, so consecutive
 # entries never overlap (no duplicates) and never leave a gap.
 #
-# Usage: activity-dates.sh <notes-subdir> <header-style: day|date|week> <same-day: reuse|previous>
+# Usage: activity-dates.sh <notes-subdir> <header-style: date|week> <same-day: reuse|previous>
 #
 #   notes-subdir   Directory under ~/dev/notes, e.g. "PostHog/standup".
-#   header-style   day  -> "17 June", dated the business day the entry is for:
-#                          noon or later means today (a worked weekend keeps its
-#                          own date); before noon means the previous business
-#                          day (Tuesday 9am -> Monday, Monday 9am -> Friday).
-#                  date -> "17 June", dated the generation day.
+#   header-style   date -> "17 June", dated the generation day.
 #                  week -> "Week of 17 June", dated the generation day.
 #   same-day       reuse    -> on a re-run for the same entry date, that entry is
 #                              the previous one (window = delta since the earlier
@@ -23,12 +19,15 @@
 #                              regenerate, e.g. standup weekly mode).
 #
 # Output (tab-separated):
-#   <window_start>\t<now>\t<new_file_path>\t<header>\t<prev_file_path>
+#   <window_start>\t<now>\t<new_file_path>\t<header>\t<prev_file_path>\t<slack_after>
+#
+# slack_after is the UTC date before window_start, because Slack's
+# filter_date_after excludes the date it is given.
 
 set -euo pipefail
 
 subdir="${1:?usage: activity-dates.sh <notes-subdir> <day|date|week> <reuse|previous>}"
-header_style="${2:?header-style required: day|date|week}"
+header_style="${2:?header-style required: date|week}"
 same_day="${3:?same-day mode required: reuse|previous}"
 
 DIR="$HOME/dev/notes/$subdir"
@@ -36,25 +35,7 @@ mkdir -p "$DIR"
 
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    ago() { date -v-"$1"d +"$2"; }
-else
-    ago() { date -d "$1 days ago" +"$2"; }
-fi
-
 case "$header_style" in
-    day)
-        # Entry date = the business day the entry covers, not the generation
-        # day. `generated-at:` still records the real instant, so windows stay
-        # gapless either way.
-        back=0
-        if [ "$(date +%H)" -lt 12 ]; then
-            back=1
-            while [ "$(ago "$back" %u)" -gt 5 ]; do back=$((back + 1)); done
-        fi
-        entry_date=$(ago "$back" %Y-%m-%d)
-        header=$(ago "$back" "%-d %B")
-        ;;
     date)
         entry_date=$(date +%Y-%m-%d)
         header=$(date "+%-d %B")
@@ -87,4 +68,10 @@ else
     fi
 fi
 
-echo -e "${window_start}\t${now}\t${new_file}\t${header}\t${prev_file}"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    slack_after=$(date -u -v-1d -j -f %Y-%m-%d "${window_start%%T*}" +%Y-%m-%d)
+else
+    slack_after=$(date -u -d "${window_start%%T*} -1 day" +%Y-%m-%d)
+fi
+
+echo -e "${window_start}\t${now}\t${new_file}\t${header}\t${prev_file}\t${slack_after}"

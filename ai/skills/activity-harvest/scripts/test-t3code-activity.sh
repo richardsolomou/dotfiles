@@ -9,24 +9,22 @@ trap 'rm -f "$db"' EXIT
 
 sqlite3 "$db" "
 CREATE TABLE projection_projects (project_id TEXT PRIMARY KEY, workspace_root TEXT NOT NULL);
-CREATE TABLE projection_threads (thread_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, branch TEXT, deleted_at TEXT);
-CREATE TABLE projection_thread_messages (message_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, role TEXT NOT NULL, text TEXT NOT NULL, created_at TEXT NOT NULL);
-CREATE TABLE projection_thread_pull_requests (thread_id TEXT NOT NULL, url TEXT NOT NULL);
+CREATE TABLE orchestration_v2_projection_threads (thread_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, deleted_at TEXT, payload_json TEXT NOT NULL);
+CREATE TABLE orchestration_v2_projection_messages (message_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, role TEXT NOT NULL, created_at TEXT NOT NULL, payload_json TEXT NOT NULL);
 INSERT INTO projection_projects VALUES ('p1', '$HOME/dev/posthog/ai-gateway'), ('p2', '$HOME/dev/tro.gg');
-INSERT INTO projection_threads VALUES
-  ('in',      'p1', 'Fix failover',     'fix/failover', NULL),
-  ('before',  'p1', 'Old work',         NULL,           NULL),
-  ('deleted', 'p1', 'Gone',             NULL,           '2026-09-13T00:00:00Z'),
-  ('personal','p2', 'Side project',     'main',         NULL);
-INSERT INTO projection_thread_messages VALUES
-  ('m1', 'in',       'user',      'first prompt',            '2026-09-13T10:00:00.500Z'),
-  ('m2', 'in',       'assistant', 'assistant reply',         '2026-09-13T10:01:00Z'),
-  ('m3', 'in',       'user',      'second' || char(10) || 'prompt', '2026-09-13T11:00:00Z'),
-  ('m4', 'before',   'user',      'too early',               '2026-09-12T09:00:00Z'),
-  ('m5', 'deleted',  'user',      'deleted thread prompt',   '2026-09-13T10:30:00Z'),
-  ('m6', 'personal', 'user',      'personal prompt',         '2026-09-13T12:00:00Z'),
-  ('m7', 'in',       'user',      'after the window',        '2026-09-14T09:00:00Z');
-INSERT INTO projection_thread_pull_requests VALUES ('in', 'https://github.com/PostHog/ai-gateway/pull/1');
+INSERT INTO orchestration_v2_projection_threads VALUES
+  ('in',      'p1', 'Fix failover', NULL, '{\"branch\":\"fix/failover\",\"pullRequests\":[{\"url\":\"https://github.com/PostHog/ai-gateway/pull/1\"}]}'),
+  ('before',  'p1', 'Old work',     NULL, '{\"pullRequests\":[]}'),
+  ('deleted', 'p1', 'Gone',         '2026-09-13T00:00:00Z', '{}'),
+  ('personal','p2', 'Side project', NULL, '{\"branch\":\"main\"}');
+INSERT INTO orchestration_v2_projection_messages VALUES
+  ('m1', 'in',       'user',      '2026-09-13T10:00:00.500Z', json_object('text', 'first prompt')),
+  ('m2', 'in',       'assistant', '2026-09-13T10:01:00Z',     json_object('text', 'assistant reply')),
+  ('m3', 'in',       'user',      '2026-09-13T11:00:00Z',     json_object('text', 'second' || char(10) || 'prompt')),
+  ('m4', 'before',   'user',      '2026-09-12T09:00:00Z',     json_object('text', 'too early')),
+  ('m5', 'deleted',  'user',      '2026-09-13T10:30:00Z',     json_object('text', 'deleted thread prompt')),
+  ('m6', 'personal', 'user',      '2026-09-13T12:00:00Z',     json_object('text', 'personal prompt')),
+  ('m7', 'in',       'user',      '2026-09-14T09:00:00Z',     json_object('text', 'after the window'));
 "
 
 pass=0; fail=0
@@ -55,6 +53,15 @@ check "malformed instant is rejected before reaching SQL" "$status" "2"
 
 status=0; T3_STATE_DB="$db" "$script" 2026-09-13T00:00:00Z > /dev/null 2>&1 || status=$?
 check "window end is required" "$status" "1"
+
+status=0; T3_STATE_DB="$db" "$script" 2099-01-01T00:00:00Z 2099-01-02T00:00:00Z > /dev/null 2>&1 || status=$?
+check "database not written since the window started is a failure" "$status" "3"
+
+legacy="$(mktemp -t t3code-legacy.XXXXXX)"
+trap 'rm -f "$db" "$legacy"' EXIT
+sqlite3 "$legacy" "CREATE TABLE projection_projects (project_id TEXT);"
+status=0; T3_STATE_DB="$legacy" "$script" 2026-09-13T00:00:00Z 2026-09-14T00:00:00Z > /dev/null 2>&1 || status=$?
+check "database without the expected tables is a failure" "$status" "3"
 
 echo
 echo "Results: $pass passed, $fail failed"

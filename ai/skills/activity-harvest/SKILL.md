@@ -21,20 +21,29 @@ An entry covers the immutable half-open interval **`[window_start, window_end)`*
 ### Dates script
 
 ```bash
-~/.agents/skills/activity-harvest/scripts/activity-dates.sh <notes-subdir> <header-style: day|date|week> <same-day: reuse|previous>
+~/.agents/skills/activity-harvest/scripts/activity-dates.sh <notes-subdir> <header-style: date|week> <same-day: reuse|previous>
 ```
 
-Returns tab-separated: `<window_start>\t<now>\t<new_file_path>\t<header>\t<prev_file_path>`
+Returns tab-separated: `<window_start>\t<now>\t<new_file_path>\t<header>\t<prev_file_path>\t<slack_after>`
 
 - `window_start` — ISO 8601 UTC instant of the previous entry; feed it to every GitHub and Slack query.
 - `now` — ISO 8601 UTC instant of this run; stamp it into the new entry's `generated-at:` marker.
-- `new_file_path` — where to write this entry (`YYYY-MM-DD.md` under `~/dev/notes/<notes-subdir>/`, dated per below).
-- `header` — human header ("17 June" for `day` and `date`, "Week of 17 June" for `week`), matching the file date.
+- `new_file_path` — where to write this entry (`YYYY-MM-DD.md` under `~/dev/notes/<notes-subdir>/`, dated the generation day).
+- `header` — human header ("17 June" for `date`, "Week of 17 June" for `week`), matching the file date.
 - `prev_file_path` — the most recent existing entry, or empty.
-
-For `day` style, the file and header carry the date the entry is **for** — the business day it covers — not the generation day: a run at noon or later is for today (a worked weekend keeps its own date); a morning run is for the previous business day (Tuesday 9am → Monday's entry, Monday 9am → Friday's, weekend work included via the window). `generated-at:` still records the real instant, so windows stay gapless. `date` and `week` styles are dated the generation day.
+- `slack_after` — the value for Slack's `filter_date_after`; see [Slack harvest](#slack-harvest).
 
 The `same-day` argument sets re-run semantics when `new_file_path` already exists: `reuse` treats that same-date entry as the previous one, so a daily standup covers only the delta since the earlier run. `previous` skips it, so a weekly sync reaches back to the prior real sync and regenerates the current artifact.
+
+### Per-day split
+
+Callers that keep one entry per day split a multi-day window with:
+
+```bash
+~/.agents/skills/activity-harvest/scripts/activity-days.sh "${window_start}" "${now}" "$(dirname "${new_file_path}")"
+```
+
+Returns one tab-separated line per local calendar day: `<day_start>\t<day_end>\t<file_path>\t<header>`. Days run from `window_start`'s local date through today. Each day ends at the next local midnight, and today ends at `now`. Harvest each sub-window with its own bounds.
 
 ## Run the passes concurrently
 
@@ -87,8 +96,8 @@ Use the scripts rather than reaching for `gh` directly — they bake in lessons 
 Much of the work never reaches GitHub — debugging in a thread, incident response, design decisions, unblocking others, cross-team coordination. Search your own messages with `mcp__slack__conversations_search_messages` using its **structured filters** (not Slack search-operator syntax):
 
 - `filter_users_from: "U0A008HMS48"` — always the user ID; name/handle lookups don't reliably resolve in this tool.
-- `filter_date_after: <date part of window_start>` — just `YYYY-MM-DD` (day-granular, inclusive). Omit any before/on filter, then enforce the frozen upper bound during post-filtering.
-- `limit: 100`
+- `filter_date_after: <slack_after>` from the dates script. The filter is day-granular and **excludes** the date it is given, so the date part of `window_start` would drop that day's messages. Omit any before/on filter, then enforce the frozen upper bound during post-filtering.
+- `limit: 100`, following the cursor until it is empty.
 
 Because the Slack filter is only day-granular, **post-filter the results to the exact half-open window**: keep messages whose `Time` is at or after `window_start` and before `now`.
 
@@ -108,6 +117,8 @@ Work driven through T3 Code that never reaches GitHub or Slack: investigations, 
 ```bash
 ~/.agents/skills/activity-harvest/scripts/t3code-activity.sh "${window_start}" "${now}"
 ```
+
+Exit 3 means T3 Code moved its database or changed its schema, which has happened before: treat it as a failed pass and fix the script, never as an empty result.
 
 One tab-separated line per thread that received a prompt inside the window: the first in-window prompt instant, the project relative to `~/dev`, the branch, the thread title, any linked PR URLs, and the in-window prompts joined with ` | ` and truncated to 240 characters.
 

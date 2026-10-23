@@ -38,7 +38,7 @@ Write two short sections: `Last week` and `This week`.
 For daily mode, run:
 
 ```bash
-~/.agents/skills/activity-harvest/scripts/activity-dates.sh PostHog/standup day reuse
+~/.agents/skills/activity-harvest/scripts/activity-dates.sh PostHog/standup date reuse
 ```
 
 For weekly mode, run:
@@ -47,7 +47,7 @@ For weekly mode, run:
 ~/.agents/skills/activity-harvest/scripts/activity-dates.sh PostHog/context-and-mcp-sync week previous
 ```
 
-Store `window_start`, `now`, `new_file_path`, `header`, and `prev_file_path` per the harvest skill. Daily same-day reruns append only new activity. Weekly same-day reruns rebuild the same weekly artifact from the previous real sync.
+Store `window_start`, `now`, `new_file_path`, `header`, `prev_file_path`, and `slack_after` per the harvest skill. In daily mode, split the window into one entry per local day with the harvest skill's `activity-days.sh "${window_start}" "${now}" "$(dirname "${new_file_path}")"`. Daily mode can run at any time: missed days get their own entries, today's work so far goes in today's entry, and a rerun covers only the activity since the previous run. Weekly same-day reruns rebuild the same weekly artifact from the previous real sync.
 
 ### 2. Read the previous entry
 
@@ -57,11 +57,13 @@ Read `prev_file_path` when present. Use prior "started" or "continuing" items to
 
 Do not spawn agents only to collect activity.
 
-Daily mode uses:
+Daily mode uses, for each day's `day_start` and `day_end`:
 
-- GitHub: `github-harvest.sh "${window_start}" "${now}" active skip`.
-- Slack: follow the harvest skill's Slack query and exact timestamp filter.
-- T3 Code: `t3code-activity.sh "${window_start}" "${now}"`.
+- GitHub: `github-harvest.sh "${day_start}" "${day_end}" active skip`.
+- Slack: run the harvest skill's Slack query once for the whole window, then assign each message to the day whose sub-window contains its `Time`.
+- T3 Code: `t3code-activity.sh "${day_start}" "${day_end}"`.
+
+Run every day's passes concurrently. Credit each work stream to the day its evidence falls in. A PR worked on across days can appear in more than one entry, with verbs matched to that day's evidence.
 
 Weekly mode uses:
 
@@ -89,7 +91,7 @@ Daily output shape:
 <!-- generated-at: <now> -->
 ```
 
-Write it to `new_file_path` with commit prefix `standup:`. On a same-day rerun, append only new bullets and update the timestamp marker.
+Write each day's entry to its `file_path` with that day's `header`, stamping `generated-at:` with its `day_end`. Skip days with no material activity. The latest written entry takes `now` as its marker, so the next window starts after everything harvested. When a day's file already exists, append only new bullets and update its marker. Commit all written entries together with commit prefix `standup:`.
 
 Weekly output shape:
 
@@ -113,4 +115,4 @@ Use the harvest skill's archive procedure to commit and push the notes repositor
 
 ### 6. Report
 
-Show the generated entry and its path. In weekly mode, also ask what to add or remove from `This week`.
+Show each generated entry and its path. In weekly mode, also ask what to add or remove from `This week`.
