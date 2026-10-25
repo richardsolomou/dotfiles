@@ -32,10 +32,12 @@ Include a query only when it is decisive and a link would not reproduce it, as a
 
 ## Coverage
 
-Close the findings with a compact coverage table, one row per surface: the tool or query that checked it, the window, and the result, or why it had no live data, was skipped, or was incomplete. For product analytics, also identify the core flows and saved funnels reconciled, including zero-count steps, stale event names, and any unchecked flows or sibling operations. Below it, give each significant rejected lead and each existing inbox report a one-line disposition: rejected with evidence, known noise, fixed on main with the deploy confirmed or unconfirmed, duplicate of active work, or blocked with the missing access or unresolved question.
+Close the findings with a compact coverage table, one row per surface: the tool or query that checked it, the window, and the result, or why it had no live data, was skipped, or was incomplete. For product analytics, also identify the core flows and saved funnels reconciled, including zero-count steps, stale event names, and any unchecked flows or sibling operations. Below it, give each significant rejected lead and every open inbox report, feature and improvement proposals included, a one-line disposition: rejected with evidence, known noise, fixed or shipped on main with the deploy confirmed or unconfirmed, duplicate of active work, still open with the data for or against it, or blocked with the missing access or unresolved question.
 
 ## Next step
 
 End by asking which defects to fix. Once the user picks, fix them in this conversation under the owning repository's guidance, starting from the cause above rather than repeating discovery; if the checkout now contradicts the evidence, say so before changing code. If the user asks to hand a defect to another agent or thread instead, write it a self-contained brief that repeats the project, bounds, evidence, cause, and expected behavior, since that agent cannot see this conversation.
+
+If the user then asks what features or improvements the data suggests, start from the open inbox proposals and give each a verdict, then add only ideas the data supports. Before recommending any change, confirm the capability is absent from the default branch with `git grep` for its entry points and `git log` of recent merges; an idea that already shipped becomes a question about adoption, measured with its existing events.
 
 Keep personal information out: prefer aggregates to event samples, and do not name individual users or distinct IDs unless the user asks.

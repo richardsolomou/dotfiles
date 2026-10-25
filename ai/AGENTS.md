@@ -29,7 +29,7 @@ For the user's existing Chrome tabs, prefer the installed extension connection: 
 
 ### Rendered Output
 
-Never report a fix to anything rendered (web page, game scene, OBS overlay) from code-reasoning alone — screenshot the running thing and look at it; after fixing a reported visual bug, re-screenshot the exact thing the user showed. Apply the change everywhere it appears (all scenes/variants), not just the first instance.
+Never report a fix to anything rendered (web page, game scene, OBS overlay) from code-reasoning alone — screenshot the running thing and look at it; after fixing a reported visual bug, re-screenshot the exact thing the user showed. Attach one or two of those screenshots to the report of any visible change, unasked. Apply the change everywhere it appears (all scenes/variants), not just the first instance.
 
 A single frame proves nothing for behavior that unfolds over time or across contexts (timers, cross-tab state, background routines) — trigger the real condition and observe a full cycle before reporting it works.
 
