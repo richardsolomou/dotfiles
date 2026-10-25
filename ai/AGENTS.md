@@ -23,6 +23,10 @@ When a task depends on anything external (library, API, CLI, service, schema), v
 
 If the task needs a system you can't reach (MCP server, VPN-gated service, missing credential), say so and ask for access — don't cycle through alternative methods hoping one sticks.
 
+### Browser Access
+
+For the user's existing Chrome tabs, prefer the installed extension connection: `cua_repl` in Codex and `claude-in-chrome` in Claude Code. Reserve `chrome-devtools` for tasks that specifically need DevTools; its `--autoConnect` connection asks Chrome for debugging consent. If the extension cannot connect, report the blocker rather than falling back to DevTools or launching a separate browser profile.
+
 ### Rendered Output
 
 Never report a fix to anything rendered (web page, game scene, OBS overlay) from code-reasoning alone — screenshot the running thing and look at it; after fixing a reported visual bug, re-screenshot the exact thing the user showed. Apply the change everywhere it appears (all scenes/variants), not just the first instance.
