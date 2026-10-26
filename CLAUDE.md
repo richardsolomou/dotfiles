@@ -28,7 +28,7 @@ Key files:
 
 `ai/RTK.md` is Claude Code only; it is imported from `ai/AGENTS.md` with `@RTK.md`, which other harnesses ignore.
 
-`ai/install.sh` takes component names (`context skills mcp hooks permissions preferences t3code`) and installs everything when given none. MCP servers are registered with both `claude mcp` and `codex mcp`; hooks, permissions, and preferences are Claude Code settings. `--uninstall` removes the symlinks it created.
+`ai/install.sh` takes component names (`context skills mcp plugins hooks permissions preferences t3code`) and installs everything when given none. MCP servers are registered with both `claude mcp` and `codex mcp`; plugins, hooks, permissions, and preferences are Claude Code settings. `--uninstall` removes the symlinks it created.
 
 The `t3code` component declares twins of the Claude and Codex subscriptions that route to the homelab CLIProxyAPI (`cpa_`): T3 Code pins a thread to the driver and CLI home it started on, so a twin sharing both — with other credentials instead of the subscription's — is what the model picker will offer inside a running thread once a usage limit hits. Its settings cannot be symlinked (T3 Code saves through a temp file plus rename), so the component merges per instance id and writes the keys into T3 Code's own secret store.
 

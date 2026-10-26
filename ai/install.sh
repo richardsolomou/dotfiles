@@ -10,7 +10,7 @@ export ZSH
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-ALL_COMPONENTS="context skills mcp hooks permissions preferences t3code"
+ALL_COMPONENTS="context skills mcp plugins hooks permissions preferences t3code"
 
 # Directories every harness scans for skills. opencode auto-loads both
 # ~/.claude/skills and ~/.agents/skills, the cross-harness convention.
@@ -27,6 +27,13 @@ slack|Slack search and thread access|$ZSH/ai/mcp/slack-mcp.sh|
 praetorium|Praetorium wargame rules reference|https://praetorium.gg/mcp|
 "
 
+CLAUDE_PLUGINS="
+posthog@claude-plugins-official
+frontend-design@claude-plugins-official
+gopls-lsp@claude-plugins-official
+rust-analyzer-lsp@claude-plugins-official
+"
+
 show_help() {
     echo "Usage: $0 [--uninstall] [component…]"
     echo ""
@@ -36,6 +43,7 @@ show_help() {
     echo "  context      Instruction files: ~/.claude/CLAUDE.md, ~/.codex/AGENTS.md"
     echo "  skills       ai/skills/* into each harness' skill directory"
     echo "  mcp          MCP servers (Claude Code and Codex)"
+    echo "  plugins      Claude Code plugins"
     echo "  hooks        Claude Code hooks"
     echo "  permissions  Claude Code tool permissions"
     echo "  preferences  Claude Code editor preferences"
@@ -233,6 +241,21 @@ if wants mcp; then
                 *) warning "Failed to install ${description} for ${harness}" ;;
             esac
         done
+    done
+fi
+
+if wants plugins && command -v claude > /dev/null 2>&1; then
+    info "Installing Claude Code plugins…"
+
+    installed=$(claude plugin list --json 2>/dev/null | jq -r '.[] | select(.scope == "user") | .id')
+    for plugin in $CLAUDE_PLUGINS; do
+        if echo "$installed" | grep -qxF "$plugin"; then
+            success "${plugin} already installed"
+        elif claude plugin install --scope user "$plugin" > /dev/null; then
+            success "${plugin} installed"
+        else
+            warning "Failed to install ${plugin}"
+        fi
     done
 fi
 
