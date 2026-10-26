@@ -10,7 +10,7 @@ export ZSH
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-ALL_COMPONENTS="context skills mcp hooks permissions preferences opencode t3code"
+ALL_COMPONENTS="context skills mcp hooks permissions preferences t3code"
 
 # Directories every harness scans for skills. opencode auto-loads both
 # ~/.claude/skills and ~/.agents/skills, the cross-harness convention.
@@ -39,8 +39,7 @@ show_help() {
     echo "  hooks        Claude Code hooks"
     echo "  permissions  Claude Code tool permissions"
     echo "  preferences  Claude Code editor preferences"
-    echo "  opencode     opencode config: the gateway's open-weight models"
-    echo "  t3code       T3 Code gateway provider instances and their gateway key"
+    echo "  t3code       T3 Code CLIProxyAPI provider instances and their keys"
     echo ""
     echo "Options:"
     echo "  --uninstall  Remove the symlinks made by context and skills"
@@ -312,28 +311,6 @@ if wants permissions; then
     $ZSH/ai/configure-tool-permissions.sh
 fi
 
-# The gateway's open-weight models (GLM, Kimi) reach no Claude or Codex
-# instance: those enumerate models from their own CLIs, and the gateway rejects
-# Codex's freeform shell tool for them. opencode speaks plain OpenAI function
-# tools, so it is where they are usable, and `t3code` registers an opencode
-# instance pointed at the same config.
-if wants opencode; then
-    # opencode's own installer, not Homebrew: it keeps ~/.opencode/bin on every
-    # host, which is the path the T3 Code instance is configured with, and core
-    # lags the current release.
-    if [ ! -x "$HOME/.opencode/bin/opencode" ]; then
-        info "Installing opencode…"
-        if curl -fsSL https://opencode.ai/install | bash; then
-            success "Installed opencode"
-        else
-            warning "opencode install failed - PH·OpenCode will show as unavailable"
-        fi
-    fi
-
-    link "$ZSH/ai/opencode/opencode.json" "$HOME/.config/opencode/opencode.json"
-    success "Linked opencode gateway provider config"
-fi
-
 # T3 Code keeps provider instances in ~/.t3/userdata/settings.json and their
 # sensitive environment values as plain 0600 files in ~/.t3/userdata/secrets, so
 # provisioning a host means writing both. Neither can be symlinked: the server
@@ -343,25 +320,26 @@ fi
 # The instances are twins of the Claude and Codex subscriptions: same driver,
 # same CLI home, different credentials. T3 Code locks a thread to one driver kind
 # and home, so a twin that matches both is the only thing the model picker will
-# offer mid-thread when a subscription runs out of usage. `phaig_` twins route
-# to the PostHog AI gateway, `cpa_` twins to the homelab CLIProxyAPI.
+# offer mid-thread when a subscription runs out of usage. The `cpa_` twins route
+# to the homelab CLIProxyAPI.
 #
-# Every environment entry marked `valueRedacted` is filled from the key for its
-# instance prefix; T3 Code reads those from the secret store rather than the
-# settings file.
+# Every environment entry marked `valueRedacted` is filled from $ZSH/.env; T3
+# Code reads those from the secret store rather than the settings file.
 if wants t3code && ! command -v jq > /dev/null 2>&1; then
     warning "jq not found - T3 Code provider configuration skipped"
     info "Install jq and re-run: $0 t3code"
 fi
 
 if wants t3code && command -v jq > /dev/null 2>&1; then
-    info "Configuring T3 Code gateway providers…"
+    info "Configuring T3 Code CLIProxyAPI providers…"
 
     T3_BASE="${T3_BASE_DIR:-$HOME/.t3}"
     T3_SETTINGS="$T3_BASE/userdata/settings.json"
     T3_SECRETS="$T3_BASE/userdata/secrets"
     T3_INSTANCE_FILE="$ZSH/ai/t3code/provider-instances.json"
 
+    # `phaig_` ids are the retired PostHog gateway twins; owning them lets an
+    # existing host drop those instances and their keys.
     OWNED_PREFIXES='^(phaig|cpa)_'
 
     # $ZSH/.env is the source of truth on each host: gitignored, so keys are
@@ -379,13 +357,10 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
         fi
         printf '%s' "$value"
     }
-    GATEWAY_KEY=$(env_key POSTHOG_GATEWAY_KEY)
-
     # Prints nothing when a key it needs is missing. The CLIProxyAPI sits behind
     # Cloudflare Access, so its twins also carry the Access service token.
     secret_value() {
         case "$1/$2" in
-            phaig_*/*) printf '%s' "$GATEWAY_KEY" ;;
             cpa_*/ANTHROPIC_AUTH_TOKEN) env_key CLIPROXY_API_KEY ;;
             cpa_*/ANTHROPIC_CUSTOM_HEADERS)
                 local id secret
@@ -409,8 +384,7 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
         --slurpfile current "$T3_SETTINGS" \
         --slurpfile desired "$T3_INSTANCE_FILE" \
         --arg owned "$OWNED_PREFIXES" \
-        '($desired[0].providerInstances
-            | walk(if type == "string" and startswith("~/") then env.HOME + ltrimstr("~") else . end)) as $own
+        '$desired[0].providerInstances as $own
          | {providerInstances: (
                (($current[0].providerInstances // {})
                  | with_entries(select(.key | test($owned) | not)))
@@ -447,13 +421,6 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
         info "Removed the stale key for $instance"
     done
 
-    # A quoted or truncated paste reaches the gateway as a 401 that reads like a
-    # credential problem, so say it here instead.
-    if [ -n "$GATEWAY_KEY" ] && [ "${GATEWAY_KEY#phs_}" = "$GATEWAY_KEY" ]; then
-        warning "POSTHOG_GATEWAY_KEY does not start with phs_ - the gateway wants a personal API key"
-        info "Create one at https://us.posthog.com/settings/user-api-keys"
-    fi
-
     # A host without a key keeps the copy already in T3 Code's secret store.
     mkdir -p "$T3_SECRETS"
     chmod 700 "$T3_SECRETS"
@@ -472,7 +439,7 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
                  | "\($id)\t\(.name)"' "$T3_INSTANCE_FILE")
     success "Wrote the provider keys into T3 Code's secret store"
 
-    # Shared with the subscription instance, which never selects these providers.
+    # Shared with the subscription instance, which never selects this provider.
     # A block that drifted from the repo is replaced, keeping the rest of the file.
     CODEX_CONFIG="${CODEX_HOME:-$HOME/.codex}/config.toml"
     mkdir -p "$(dirname "$CODEX_CONFIG")"

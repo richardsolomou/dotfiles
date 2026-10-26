@@ -6,8 +6,7 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 - `AGENTS.posthog.md` — extra rules loaded only under `~/dev/posthog`
 - `RTK.md` — rtk usage notes, imported by Claude Code only
 - `skills/` — local skills shared by the installed agent harnesses
-- `t3code/` — T3 Code provider instances that route to the gateway or the homelab CLIProxyAPI
-- `opencode/` — opencode config: the gateway's open-weight models
+- `t3code/` — T3 Code provider instances that route to the homelab CLIProxyAPI
 
 ## Installation
 
@@ -68,17 +67,15 @@ Revoke the old token after the new launcher has been verified with both clients.
 
 ## T3 Code
 
-T3 Code locks a thread to the provider driver and CLI home it started on, so the only way to keep working past a usage limit without losing the conversation is a second instance of the *same* driver and home with different credentials. `t3code/provider-instances.json` declares those twins — `phaig_claude`, `phaig_codex` and `phaig_opencode` for the PostHog gateway, `cpa_claude` and `cpa_codex` for CLIProxyAPI — and `install.sh t3code` writes them into `~/.t3/userdata/settings.json`, merging per instance id so anything configured by hand on the host survives.
+T3 Code locks a thread to the provider driver and CLI home it started on, so the only way to keep working past a usage limit without losing the conversation is a second instance of the *same* driver and home with different credentials. `t3code/provider-instances.json` declares those twins — `cpa_claude` and `cpa_codex`, routed to CLIProxyAPI — and `install.sh t3code` writes them into `~/.t3/userdata/settings.json`, merging per instance id so anything configured by hand on the host survives.
 
-Neither the settings nor the credentials can be symlinked. T3 Code saves settings through a temp file plus rename, which would replace a symlink with a regular file, and sensitive environment values live in `~/.t3/userdata/secrets` as `provider-env-<base64url instance>-<base64url variable>.bin`, mode 0600. Every environment entry marked `valueRedacted` is filled from the key for its instance prefix — `POSTHOG_GATEWAY_KEY` for `phaig_`, `CLIPROXY_API_KEY` for `cpa_` — read from the environment, then from `$ZSH/.env`; a host with neither keeps the copy already in that secret store.
+Neither the settings nor the credentials can be symlinked. T3 Code saves settings through a temp file plus rename, which would replace a symlink with a regular file, and sensitive environment values live in `~/.t3/userdata/secrets` as `provider-env-<base64url instance>-<base64url variable>.bin`, mode 0600. Every environment entry marked `valueRedacted` is filled from the keys below, read from the environment, then from `$ZSH/.env`; a host with neither keeps the copy already in that secret store.
 
-Paths in that file may start with `~/`; the installer expands them, because the opencode driver takes `binaryPath` literally and the T3 Code server does not inherit a login shell's PATH.
+Codex reaches the proxy through the `[model_providers.cliproxy]` block in `t3code/codex-cliproxy.toml`, written into `~/.codex/config.toml` when missing or out of date and selected per instance with `-c model_provider=cliproxy`; `-c` is used rather than `--profile` because only `-c`, `--config`, `--enable` and `--disable` reach the `codex exec` path. Claude needs no config file: `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` on the instance take precedence over the subscription login in the shared config directory, at the cost of claude.ai connectors in that instance.
 
-Codex reaches each server through a `[model_providers.*]` block from `t3code/codex-*.toml`, appended to `~/.codex/config.toml` when missing and selected per instance with `-c model_provider=<name>`; `-c` is used rather than `--profile` because only `-c`, `--config`, `--enable` and `--disable` reach the `codex exec` path. Claude needs no config file: `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN` on the instance take precedence over the subscription login in the shared config directory, at the cost of claude.ai connectors in that instance.
+Both twins are named `CPA·Claude` and `CPA·Codex` so the rail badge reads `CP`. The badge takes the first two characters of a single-word label, or the first character of each of the first two words, splitting on whitespace as well as `_` and `-` — so `CPA-Codex` would badge as `CC`, and the middle dot is what keeps it one word. The teal accent color also forces the badge to render on every instance rather than only when a driver has several. Ids prefixed `cpa_` are owned by this repo: the installer replaces them and drops ones the file no longer declares, along with their now-unused key files. It also owns `phaig_`, the retired PostHog gateway twins, so re-running it on a host that still has them removes them.
 
-Both twins are named `PH·Claude` and `PH·Codex` so the rail badge reads `PH`. The badge takes the first two characters of a single-word label, or the first character of each of the first two words, splitting on whitespace as well as `_` and `-` — so `PH-Codex` would badge as `PC`, and the middle dot is what keeps it one word. The accent color is PostHog orange, which also forces the badge to render on every instance rather than only when a driver has several. The CPA twins use the same scheme in teal, badging as `CP`. Ids prefixed `phaig_` or `cpa_` are owned by this repo: the installer replaces them and drops ones the file no longer declares, along with their now-unused key files.
-
-Subscription logins stay per host: run `claude auth login` and `codex login` on the machine. A headless host that only ever uses the gateway or CLIProxyAPI needs neither.
+Subscription logins stay per host: run `claude auth login` and `codex login` on the machine. A headless host that only ever uses CLIProxyAPI needs neither.
 
 ### CLIProxyAPI
 
@@ -95,11 +92,3 @@ CF_ACCESS_CLIENT_SECRET=<service token client secret>
 ```
 
 `install.sh t3code` writes them into the `cpa_` twins: Claude gets the client key as `ANTHROPIC_AUTH_TOKEN` and the Access headers through `ANTHROPIC_CUSTOM_HEADERS`; Codex sends them through the `[model_providers.cliproxy]` block's `env_key` and `env_http_headers`. With the key present, `zshrc` also wraps `claude` and `codex` so a terminal session goes through the proxy, passing the values per call instead of exporting them, so other Anthropic and OpenAI SDKs in the shell keep their own endpoints. `command claude` and `command codex` bypass the proxy and use the machine's own login, which is the fallback when the NAS is down, alongside the plain Claude and Codex instances in T3 Code.
-
-## opencode
-
-`opencode/opencode.json` registers the gateway as an OpenAI-compatible provider and names the open-weight models it serves: GLM-5.2, GLM-5.3, GLM-5.3-Flash and Kimi K3. They reach no Claude or Codex instance — those enumerate models from their own CLIs, and the gateway returns `400 invalid request body` for Codex's freeform (`type: "custom"`) shell tool on every open-weight model while accepting it for OpenAI's. opencode sends plain function tools, which they accept, so `phaig_opencode` is where they are usable.
-
-The config also registers PostHog's remote MCP server at `https://mcp.posthog.com/mcp` for access to project analytics. Connection authentication is separate from the gateway key.
-
-The key comes from `POSTHOG_GATEWAY_KEY` through opencode's own `{env:…}` substitution: inside T3 Code the instance supplies it, and from a shell `zshrc` exports it out of `$ZSH/.env`. `install.sh opencode` runs opencode's installer when the binary is missing, rather than taking the Homebrew formula: it keeps `~/.opencode/bin` as the path on every host, which is what `phaig_opencode` is configured with, and core trails the current release.
