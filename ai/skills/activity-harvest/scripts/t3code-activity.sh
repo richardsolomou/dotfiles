@@ -27,7 +27,7 @@ for table in projection_projects orchestration_v2_projection_threads orchestrati
     || { echo "T3 Code state at $DB has no $table table; its schema changed" >&2; exit 3; }
 done
 
-mtime() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1"; }
+mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1"; }
 last_write=$(mtime "$DB")
 [ -e "$DB-wal" ] && [ "$(mtime "$DB-wal")" -gt "$last_write" ] && last_write=$(mtime "$DB-wal")
 if [ "$last_write" -lt "$(sqlite3 :memory: "SELECT strftime('%s', '$WINDOW_START')")" ]; then
