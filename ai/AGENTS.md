@@ -25,7 +25,7 @@ If the task needs a system you can't reach (MCP server, VPN-gated service, missi
 
 ### Browser Access
 
-For the user's existing Chrome tabs, prefer the installed extension connection: `cua_repl` in Codex and `claude-in-chrome` in Claude Code. Reserve `chrome-devtools` for tasks that specifically need DevTools; its `--autoConnect` connection asks Chrome for debugging consent. If the extension cannot connect, report the blocker rather than falling back to DevTools or launching a separate browser profile.
+For the user's existing Chrome tabs, prefer the installed extension connection: `cua_repl` in Codex and `claude-in-chrome` in Claude Code. Reserve `chrome-devtools` for tasks that specifically need DevTools; its `--autoConnect` connection asks Chrome for debugging consent. If the extension cannot connect, fall back to `chrome-devtools` rather than launching a separate browser profile.
 
 ### Rendered Output
 
