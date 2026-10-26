@@ -148,6 +148,14 @@ install_dotfiles
 ln -sfn "$DOTFILES_ROOT/.markdownlint.json" "$HOME/.markdownlint.json"
 success 'linked .markdownlint.json to home directory'
 
+# fish has no rc file this repo owns, so its additions go in conf.d.
+if command -v fish > /dev/null 2>&1
+then
+  mkdir -p "$HOME/.config/fish/conf.d"
+  ln -sfn "$DOTFILES_ROOT/fish/cliproxy.fish" "$HOME/.config/fish/conf.d/cliproxy.fish"
+  success 'linked cliproxy.fish into fish conf.d'
+fi
+
 # This repo started from haacked/dotfiles and still has it as `upstream`. gh
 # prefers an upstream as the base for new PRs, so without this a `gh pr create`
 # here targets that repository instead of ours.

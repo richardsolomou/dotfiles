@@ -57,6 +57,65 @@
           "valueRedacted": true
         }
       ]
+    },
+    "cpa_claude": {
+      "driver": "claudeAgent",
+      "displayName": "CPA·Claude",
+      "accentColor": "#0f766e",
+      "enabled": true,
+      "environment": [
+        {
+          "name": "ANTHROPIC_BASE_URL",
+          "value": "https://ai.ras.sh",
+          "sensitive": false
+        },
+        {
+          "name": "ANTHROPIC_AUTH_TOKEN",
+          "value": "",
+          "sensitive": true,
+          "valueRedacted": true
+        },
+        {
+          "name": "ANTHROPIC_CUSTOM_HEADERS",
+          "value": "",
+          "sensitive": true,
+          "valueRedacted": true
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "value": "",
+          "sensitive": true
+        }
+      ]
+    },
+    "cpa_codex": {
+      "driver": "codex",
+      "displayName": "CPA·Codex",
+      "accentColor": "#0f766e",
+      "enabled": true,
+      "config": {
+        "launchArgs": "-c model_provider=cliproxy"
+      },
+      "environment": [
+        {
+          "name": "CLIPROXY_API_KEY",
+          "value": "",
+          "sensitive": true,
+          "valueRedacted": true
+        },
+        {
+          "name": "CF_ACCESS_CLIENT_ID",
+          "value": "",
+          "sensitive": true,
+          "valueRedacted": true
+        },
+        {
+          "name": "CF_ACCESS_CLIENT_SECRET",
+          "value": "",
+          "sensitive": true,
+          "valueRedacted": true
+        }
+      ]
     }
   }
 }

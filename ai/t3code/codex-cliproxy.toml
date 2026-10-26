@@ -1,0 +1,7 @@
+
+[model_providers.cliproxy]
+name = "CLIProxyAPI"
+base_url = "https://ai.ras.sh/v1"
+env_key = "CLIPROXY_API_KEY"
+env_http_headers = { "CF-Access-Client-Id" = "CF_ACCESS_CLIENT_ID", "CF-Access-Client-Secret" = "CF_ACCESS_CLIENT_SECRET" }
+wire_api = "responses"

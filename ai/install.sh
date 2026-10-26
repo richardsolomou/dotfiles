@@ -340,13 +340,15 @@ fi
 # saves settings through a temp file plus rename, which replaces a symlink with
 # a regular file.
 #
-# The instances are gateway twins of the Claude and Codex subscriptions: same
-# driver, same CLI home, different credentials. T3 Code locks a thread to one
-# driver kind and home, so a twin that matches both is the only thing the model
-# picker will offer mid-thread when a subscription runs out of usage.
+# The instances are twins of the Claude and Codex subscriptions: same driver,
+# same CLI home, different credentials. T3 Code locks a thread to one driver kind
+# and home, so a twin that matches both is the only thing the model picker will
+# offer mid-thread when a subscription runs out of usage. `phaig_` twins route
+# to the PostHog AI gateway, `cpa_` twins to the homelab CLIProxyAPI.
 #
-# Every environment entry marked `valueRedacted` is filled from the gateway key
-# below; T3 Code reads those from the secret store rather than the settings file.
+# Every environment entry marked `valueRedacted` is filled from the key for its
+# instance prefix; T3 Code reads those from the secret store rather than the
+# settings file.
 if wants t3code && ! command -v jq > /dev/null 2>&1; then
     warning "jq not found - T3 Code provider configuration skipped"
     info "Install jq and re-run: $0 t3code"
@@ -360,48 +362,64 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
     T3_SECRETS="$T3_BASE/userdata/secrets"
     T3_INSTANCE_FILE="$ZSH/ai/t3code/provider-instances.json"
 
-    # $ZSH/.env is the source of truth on each host: gitignored, so the key is
-    # never committed, and copied across machines by hand. An already-configured
-    # host also re-uses the copy in T3 Code's own secret store.
+    OWNED_PREFIXES='^(phaig|cpa)_'
+
+    # $ZSH/.env is the source of truth on each host: gitignored, so keys are
+    # never committed, and copied across machines by hand.
     #
     # Tolerate what a hand-copied file picks up: surrounding quotes, a trailing
     # CR from a Windows or web editor, stray whitespace. A key that keeps any of
-    # those reaches the gateway as a 401 that looks like a credential problem.
-    GATEWAY_KEY="${POSTHOG_GATEWAY_KEY:-}"
-    if [ -z "$GATEWAY_KEY" ] && [ -r "$ZSH/.env" ]; then
-        GATEWAY_KEY=$(sed -n 's/^POSTHOG_GATEWAY_KEY=//p' "$ZSH/.env" | head -1 |
-            tr -d '\r' | sed -e 's/^["'"'"']//' -e 's/["'"'"']$//' -e 's/[[:space:]]*$//')
-        chmod 600 "$ZSH/.env"
-    fi
-    if [ -z "$GATEWAY_KEY" ]; then
-        for secret in "$T3_SECRETS"/provider-env-*.bin; do
-            [ -s "$secret" ] || continue
-            GATEWAY_KEY=$(cat "$secret")
-            break
-        done
-    fi
+    # those reaches the server as a 401 that looks like a credential problem.
+    env_key() {
+        local value="${!1:-}"
+        if [ -z "$value" ] && [ -r "$ZSH/.env" ]; then
+            value=$(sed -n "s/^$1=//p" "$ZSH/.env" | head -1 |
+                tr -d '\r' | sed -e 's/^["'"'"']//' -e 's/["'"'"']$//' -e 's/[[:space:]]*$//')
+            chmod 600 "$ZSH/.env"
+        fi
+        printf '%s' "$value"
+    }
+    GATEWAY_KEY=$(env_key POSTHOG_GATEWAY_KEY)
+
+    # Prints nothing when a key it needs is missing. The CLIProxyAPI sits behind
+    # Cloudflare Access, so its twins also carry the Access service token.
+    secret_value() {
+        case "$1/$2" in
+            phaig_*/*) printf '%s' "$GATEWAY_KEY" ;;
+            cpa_*/ANTHROPIC_AUTH_TOKEN) env_key CLIPROXY_API_KEY ;;
+            cpa_*/ANTHROPIC_CUSTOM_HEADERS)
+                local id secret
+                id=$(env_key CF_ACCESS_CLIENT_ID)
+                secret=$(env_key CF_ACCESS_CLIENT_SECRET)
+                [ -n "$id" ] && [ -n "$secret" ] &&
+                    printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s' "$id" "$secret"
+                ;;
+            *) env_key "$2" ;;
+        esac
+    }
 
     mkdir -p "$(dirname "$T3_SETTINGS")"
     [ -f "$T3_SETTINGS" ] || echo '{}' > "$T3_SETTINGS"
 
     # Merge per instance id so instances configured on this host by hand, and
-    # the rest of the settings file, survive. Ids prefixed `phaig_` are owned
+    # the rest of the settings file, survive. Ids with an owned prefix are owned
     # here: they are replaced wholesale, and ones this file no longer declares
     # are dropped so a rename does not leave the old instance behind.
     T3_CONFIG=$(jq -n \
         --slurpfile current "$T3_SETTINGS" \
         --slurpfile desired "$T3_INSTANCE_FILE" \
+        --arg owned "$OWNED_PREFIXES" \
         '($desired[0].providerInstances
             | walk(if type == "string" and startswith("~/") then env.HOME + ltrimstr("~") else . end)) as $own
          | {providerInstances: (
                (($current[0].providerInstances // {})
-                 | with_entries(select(.key | startswith("phaig_") | not)))
+                 | with_entries(select(.key | test($owned) | not)))
                + $own)}')
 
-    set_json_settings "$T3_SETTINGS" "$T3_CONFIG" "T3 Code gateway providers"
+    set_json_settings "$T3_SETTINGS" "$T3_CONFIG" "T3 Code twin providers"
     case $? in
-        0) success "Configured T3 Code gateway provider instances" ;;
-        2) success "T3 Code gateway provider instances already configured" ;;
+        0) success "Configured T3 Code twin provider instances" ;;
+        2) success "T3 Code twin provider instances already configured" ;;
     esac
 
     # provider-env-<base64url instance id>-<base64url variable name>.bin
@@ -423,10 +441,10 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
         [ -f "$secret" ] || continue
         encoded="${secret##*/provider-env-}"
         instance=$(b64url_decode "${encoded%%-*}")
-        case "$instance" in phaig_*) ;; *) continue ;; esac
+        [[ "$instance" =~ $OWNED_PREFIXES ]] || continue
         printf '%s\n' "$MANAGED_IDS" | grep -qx "$instance" && continue
         rm -f "$secret"
-        info "Removed the stale gateway key for $instance"
+        info "Removed the stale key for $instance"
     done
 
     # A quoted or truncated paste reaches the gateway as a 401 that reads like a
@@ -436,32 +454,46 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
         info "Create one at https://us.posthog.com/settings/user-api-keys"
     fi
 
-    if [ -n "$GATEWAY_KEY" ]; then
-        mkdir -p "$T3_SECRETS"
-        chmod 700 "$T3_SECRETS"
-        jq -r '.providerInstances | to_entries[] | .key as $id
-                 | .value.environment[]? | select(.valueRedacted == true)
-                 | "\($id)\t\(.name)"' "$T3_INSTANCE_FILE" |
-        while IFS=$'\t' read -r instance variable; do
-            secret="$T3_SECRETS/provider-env-$(b64url "$instance")-$(b64url "$variable").bin"
-            printf '%s' "$GATEWAY_KEY" > "$secret"
+    # A host without a key keeps the copy already in T3 Code's secret store.
+    mkdir -p "$T3_SECRETS"
+    chmod 700 "$T3_SECRETS"
+    while IFS=$'\t' read -r instance variable; do
+        key=$(secret_value "$instance" "$variable")
+        secret="$T3_SECRETS/provider-env-$(b64url "$instance")-$(b64url "$variable").bin"
+        if [ -n "$key" ]; then
+            printf '%s' "$key" > "$secret"
             chmod 600 "$secret"
-        done
-        success "Wrote the gateway key into T3 Code's secret store"
-    else
-        warning "No gateway key found - T3 Code gateway instances will not authenticate"
-        info "Set POSTHOG_GATEWAY_KEY in $ZSH/.env and re-run: $0 t3code"
-    fi
+        elif [ ! -s "$secret" ]; then
+            warning "No key for $instance $variable - it will not authenticate"
+            info "Set the keys described in ai/README.md in $ZSH/.env and re-run: $0 t3code"
+        fi
+    done < <(jq -r '.providerInstances | to_entries[] | .key as $id
+                 | .value.environment[]? | select(.valueRedacted == true)
+                 | "\($id)\t\(.name)"' "$T3_INSTANCE_FILE")
+    success "Wrote the provider keys into T3 Code's secret store"
 
-    # Shared with the subscription instance, which never selects this provider.
+    # Shared with the subscription instance, which never selects these providers.
+    # A block that drifted from the repo is replaced, keeping the rest of the file.
     CODEX_CONFIG="${CODEX_HOME:-$HOME/.codex}/config.toml"
-    if grep -q '^\[model_providers\.posthog\]' "$CODEX_CONFIG" 2>/dev/null; then
-        success "Codex already has the gateway model provider"
-    else
-        mkdir -p "$(dirname "$CODEX_CONFIG")"
-        cat "$ZSH/ai/t3code/codex-gateway.toml" >> "$CODEX_CONFIG"
-        success "Added the gateway model provider to $CODEX_CONFIG"
-    fi
+    mkdir -p "$(dirname "$CODEX_CONFIG")"
+    touch "$CODEX_CONFIG"
+    toml_section() {
+        awk -v header="$1" '$0 == header { on = 1; print; next } on && /^\[/ { on = 0 } on' "$2"
+    }
+    for provider in "$ZSH"/ai/t3code/codex-*.toml; do
+        header=$(grep -m1 '^\[model_providers\.' "$provider")
+        current=$(toml_section "$header" "$CODEX_CONFIG" | sed '/^[[:space:]]*$/d')
+        if [ "$current" = "$(sed '/^[[:space:]]*$/d' "$provider")" ]; then
+            success "Codex already has $header"
+            continue
+        fi
+        if [ -n "$current" ]; then
+            remaining=$(awk -v header="$header" '$0 == header { skip = 1; next } skip && /^\[/ { skip = 0 } !skip' "$CODEX_CONFIG")
+            printf '%s\n' "$remaining" > "$CODEX_CONFIG"
+        fi
+        cat "$provider" >> "$CODEX_CONFIG"
+        success "Wrote $header to $CODEX_CONFIG"
+    done
 
     info "Subscription logins are per host: run 'claude auth login' and 'codex login' on this machine"
 fi

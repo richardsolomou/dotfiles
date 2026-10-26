@@ -31,11 +31,11 @@ Key files:
 
 `ai/install.sh` takes component names (`context skills mcp hooks permissions preferences opencode t3code`) and installs everything when given none. MCP servers are registered with both `claude mcp` and `codex mcp`; hooks, permissions, and preferences are Claude Code settings. `--uninstall` removes the symlinks it created.
 
-The `t3code` component declares gateway twins of the Claude and Codex subscriptions: T3 Code pins a thread to the driver and CLI home it started on, so a twin sharing both — with the gateway's credentials instead of the subscription's — is what the model picker will offer inside a running thread once a usage limit hits. Its settings cannot be symlinked (T3 Code saves through a temp file plus rename), so the component merges per instance id and writes the key into T3 Code's own secret store.
+The `t3code` component declares twins of the Claude and Codex subscriptions that route to the PostHog gateway (`phaig_`) or the homelab CLIProxyAPI (`cpa_`): T3 Code pins a thread to the driver and CLI home it started on, so a twin sharing both — with other credentials instead of the subscription's — is what the model picker will offer inside a running thread once a usage limit hits. Its settings cannot be symlinked (T3 Code saves through a temp file plus rename), so the component merges per instance id and writes the keys into T3 Code's own secret store.
 
 The `opencode` component installs opencode when a host is missing it and links the config that registers the gateway's open-weight models, which no Claude or Codex instance can reach.
 
-The gateway credential lives in `$ZSH/.env` as `POSTHOG_GATEWAY_KEY`, which is gitignored and copied to each host by hand. `zshrc` exports it so a shell-run CLI authenticates, `ai/install.sh` reads it when writing T3 Code's secret store, and an already-configured host falls back to the copy in that store.
+The gateway credential lives in `$ZSH/.env` as `POSTHOG_GATEWAY_KEY`, which is gitignored and copied to each host by hand. `zshrc` exports it so a shell-run CLI authenticates, `ai/install.sh` reads it when writing T3 Code's secret store, and an already-configured host falls back to the copy in that store. `CLIPROXY_API_KEY`, `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` connect a host to the homelab CLIProxyAPI at `https://ai.ras.sh`; `ai/install.sh` writes them into the `cpa_` twins, and `zshrc` wraps `claude` and `codex` with them without exporting them.
 
 `bin/check` validates the repo: shell syntax, shellcheck, JSON, markdownlint, each skill's frontmatter name against its directory, that every skill a SKILL.md names exists, and the `test-*` scripts under `ai/skills/`. CI runs the same script.
 
