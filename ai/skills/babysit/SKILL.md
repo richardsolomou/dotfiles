@@ -59,7 +59,7 @@ Compare the snapshot with the carried cursor. Actionable work is one or more of:
 - A requested `deep` review that has not run for the invocation-start HEAD and whose HEAD differs from `babysit_pushed_sha`.
 - A Stamphog submission that is due under step 4.
 
-If none applies, print one status line and the updated cursor, then stop. Pending checks are a wait condition, not work to poll within the invocation. Ignore skipped and neutral checks. Treat a non-gating failure as informational only when repository configuration or documented workflow behavior clearly permits it.
+If none applies, print one status line and the updated cursor, then stop. Pending checks are a wait condition, not work to poll within the invocation. A run whose status is `waiting` (an environment or deployment approval, listed by `actions/runs/<id>/pending_deployments`) is a human decision, not a pending check: name the environment in the status line, and when it does not gate merging, judge CI from the gating checks alone. Ignore skipped and neutral checks. Treat a non-gating failure as informational only when repository configuration or documented workflow behavior clearly permits it.
 
 ### 2. Classify all current work
 

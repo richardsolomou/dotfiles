@@ -48,4 +48,8 @@ gh pr create --title "$(cat <draft>/title.txt)" --body-file <draft>/body.md
 rm -rf <draft>
 ```
 
+## Merge (only when asked)
+
+Wait only on checks that gate merging: branch protection or ruleset required checks, or, when there are none, the CI jobs that build and test the change. Never `gh pr checks --watch` across every check. Take a snapshot first: a run with status `waiting` needs an environment approval (`gh api repos/<repo>/actions/runs/<id>/pending_deployments`), so name it and, when it does not gate merging, merge once the gating checks pass instead of waiting on it.
+
 Report the commit hash and message, and the PR URL.
