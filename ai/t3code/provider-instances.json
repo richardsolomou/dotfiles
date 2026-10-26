@@ -1,18 +1,24 @@
 {
   "providerInstances": {
-    "phaig_claude": {
+    "cpa_claude": {
       "driver": "claudeAgent",
-      "displayName": "PH·Claude",
-      "accentColor": "#f54e00",
+      "displayName": "CPA·Claude",
+      "accentColor": "#0f766e",
       "enabled": true,
       "environment": [
         {
           "name": "ANTHROPIC_BASE_URL",
-          "value": "https://ai-gateway.us.posthog.com",
+          "value": "https://ai.ras.sh",
           "sensitive": false
         },
         {
           "name": "ANTHROPIC_AUTH_TOKEN",
+          "value": "",
+          "sensitive": true,
+          "valueRedacted": true
+        },
+        {
+          "name": "ANTHROPIC_CUSTOM_HEADERS",
           "value": "",
           "sensitive": true,
           "valueRedacted": true
@@ -24,34 +30,29 @@
         }
       ]
     },
-    "phaig_codex": {
+    "cpa_codex": {
       "driver": "codex",
-      "displayName": "PH·Codex",
-      "accentColor": "#f54e00",
+      "displayName": "CPA·Codex",
+      "accentColor": "#0f766e",
       "enabled": true,
       "config": {
-        "launchArgs": "-c model_provider=posthog -c service_tier=priority"
+        "launchArgs": "-c model_provider=cliproxy"
       },
       "environment": [
         {
-          "name": "POSTHOG_GATEWAY_KEY",
+          "name": "CLIPROXY_API_KEY",
           "value": "",
           "sensitive": true,
           "valueRedacted": true
-        }
-      ]
-    },
-    "phaig_opencode": {
-      "driver": "opencode",
-      "displayName": "PH·OpenCode",
-      "accentColor": "#f54e00",
-      "enabled": true,
-      "config": {
-        "binaryPath": "~/.opencode/bin/opencode"
-      },
-      "environment": [
+        },
         {
-          "name": "POSTHOG_GATEWAY_KEY",
+          "name": "CF_ACCESS_CLIENT_ID",
+          "value": "",
+          "sensitive": true,
+          "valueRedacted": true
+        },
+        {
+          "name": "CF_ACCESS_CLIENT_SECRET",
           "value": "",
           "sensitive": true,
           "valueRedacted": true
