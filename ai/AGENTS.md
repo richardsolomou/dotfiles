@@ -130,6 +130,8 @@ Use the `gh` CLI (via Bash) for all GitHub operations — reads (`view`, `list`,
 
 Durable personal and cross-project notes go in `~/dev/notes` — a private, git-backed repo (<https://github.com/richardsolomou/notes>), organized by subfolder (e.g. `PostHog/`) — not scattered in project roots or `$HOME`.
 
+"Dokploy", "Hetzner", "the server" and "prod" mean `hera`, the one production box (`ssh hera`; `ssh dokploy` and `ssh hetzner` are aliases); `homelab` is the LAN NAS. Never write server IPs into repos — this file is public.
+
 ## Coding
 
 ### Rust
