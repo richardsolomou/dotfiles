@@ -55,27 +55,9 @@ done
 # --- Secrets ---
 # $ZSH/.env is gitignored and per-host.
 #
-# The homelab CLIProxyAPI serves the shared Claude and ChatGPT subscriptions
-# from behind Cloudflare Access. Its keys are passed per call rather than
-# exported, so Anthropic and OpenAI SDKs run from this shell keep their own
-# endpoints; `command claude` and `command codex` use this machine's logins.
-if [ -r "$ZSH/.env" ] && grep -q '^CLIPROXY_API_KEY=' "$ZSH/.env"; then
-  _dotenv() { sed -n "s/^$1=//p" "$ZSH/.env" | head -1; }
-
-  claude() {
-    ANTHROPIC_BASE_URL=https://ai.ras.sh \
-    ANTHROPIC_AUTH_TOKEN="$(_dotenv CLIPROXY_API_KEY)" \
-    ANTHROPIC_API_KEY= \
-    ANTHROPIC_CUSTOM_HEADERS="CF-Access-Client-Id: $(_dotenv CF_ACCESS_CLIENT_ID)"$'\n'"CF-Access-Client-Secret: $(_dotenv CF_ACCESS_CLIENT_SECRET)" \
-      command claude "$@"
-  }
-
-  codex() {
-    CLIPROXY_API_KEY="$(_dotenv CLIPROXY_API_KEY)" \
-    CF_ACCESS_CLIENT_ID="$(_dotenv CF_ACCESS_CLIENT_ID)" \
-    CF_ACCESS_CLIENT_SECRET="$(_dotenv CF_ACCESS_CLIENT_SECRET)" \
-      command codex -c model_provider=cliproxy "$@"
-  }
+if [ -n "${CLIPROXY_API_KEY:-}" ] || { [ -r "$ZSH/.env" ] && grep -q '^CLIPROXY_API_KEY=' "$ZSH/.env"; }; then
+  claude() { "$ZSH/bin/cliproxy" claude "$@"; }
+  codex() { "$ZSH/bin/cliproxy" codex "$@"; }
 fi
 
 # --- Shell utilities ---

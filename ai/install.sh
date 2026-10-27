@@ -361,6 +361,10 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
     T3_SECRETS="$T3_BASE/userdata/secrets"
     T3_INSTANCE_FILE="$ZSH/ai/t3code/provider-instances.json"
 
+    for client in claude codex; do
+        link "$ZSH/bin/cliproxy" "$HOME/.local/bin/cliproxy-$client" || exit 1
+    done
+
     # `phaig_` ids are the retired PostHog gateway twins; owning them lets an
     # existing host drop those instances and their keys.
     OWNED_PREFIXES='^(phaig|cpa)_'
@@ -411,7 +415,14 @@ if wants t3code && command -v jq > /dev/null 2>&1; then
          | {providerInstances: (
                (($current[0].providerInstances // {})
                  | with_entries(select(.key | test($owned) | not)))
-               + $own)}')
+               + $own
+               | with_entries(
+                   if .value.driver == "codex"
+                      and ((.value.config.binaryPath // "codex") == "codex")
+                      and ((.value.config.launchArgs // "") | test("(^|\\s)model_provider=cliproxy(\\s|$)"))
+                   then .value.config.binaryPath = "cliproxy-codex"
+                   else . end
+                 ))}')
 
     set_json_settings "$T3_SETTINGS" "$T3_CONFIG" "T3 Code twin providers"
     case $? in

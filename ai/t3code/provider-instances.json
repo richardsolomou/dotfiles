@@ -5,6 +5,9 @@
       "displayName": "CPA·Claude",
       "accentColor": "#0f766e",
       "enabled": true,
+      "config": {
+        "binaryPath": "cliproxy-claude"
+      },
       "environment": [
         {
           "name": "ANTHROPIC_BASE_URL",
@@ -36,7 +39,7 @@
       "accentColor": "#0f766e",
       "enabled": true,
       "config": {
-        "launchArgs": "-c model_provider=cliproxy"
+        "binaryPath": "cliproxy-codex"
       },
       "environment": [
         {
