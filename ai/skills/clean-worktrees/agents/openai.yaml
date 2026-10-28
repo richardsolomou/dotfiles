@@ -1,0 +1,4 @@
+interface:
+  display_name: "Clean agent worktrees"
+  short_description: "Reclaim space from unused T3 and Claude worktrees"
+  default_prompt: "Use $clean-worktrees to clean unused T3 and Claude worktrees and report the measured disk space reclaimed."
