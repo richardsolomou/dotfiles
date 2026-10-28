@@ -32,7 +32,7 @@ Include a query only when it is decisive and a link would not reproduce it, as a
 
 ## Coverage
 
-Close the findings with a compact coverage table, one row per surface: the tool or query that checked it, the window, and the result, or why it had no live data, was skipped, or was incomplete. For product analytics, also identify the core flows and saved funnels reconciled, including zero-count steps, stale event names, and any unchecked flows or sibling operations. Below it, give each significant rejected lead and every open inbox report, feature and improvement proposals included, a one-line disposition: rejected with evidence, known noise, fixed or shipped on main with the deploy confirmed or unconfirmed, duplicate of active work, still open with the data for or against it, or blocked with the missing access or unresolved question.
+Close the findings with a compact coverage table, one row per surface: the tool or query that checked it, the window, and the result, or why it had no live data, was skipped, or was incomplete. For product analytics, also identify the core flows and saved funnels reconciled, including zero-count steps, stale event names, and any unchecked flows or sibling operations. Below it, give each significant rejected lead a one-line disposition: rejected with evidence, known noise, fixed or shipped on main with the deploy confirmed or unconfirmed, duplicate of active work, still open with the data for or against it, or blocked with the missing access or unresolved question. Then list the inbox reports this run settled, grouped by the state set, and each report left open with the reason it stays open.
 
 ## Next step
 

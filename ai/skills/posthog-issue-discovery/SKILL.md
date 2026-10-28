@@ -13,7 +13,7 @@ Find and verify up to 10 distinct defects unless the user specifies another targ
 
 The scope is the PostHog project, not the working directory. The skill works from any directory; a repository is needed only to trace a cause (see "Resolve the owning code"). Never reset, switch, or modify a checkout.
 
-Discovery is read-only across PostHog and GitHub: no code changes, inbox state changes, scout or scanner changes, tracker writes, PRs, or analytics configuration changes. Report in the conversation. Do not install dependencies, run builds, or write files in the user's checkouts; run any reproduction from a fresh temporary directory. Fetching remote refs is fine. The read-only limit ends only for the defects the user picks after the report.
+Discovery is read-only across PostHog and GitHub: no code changes, scout or scanner changes, tracker writes, PRs, or analytics configuration changes. The one exception is the inbox: the user does not review it, so this skill settles every open report itself (see "Settle the inbox"). Report in the conversation. Do not install dependencies, run builds, or write files in the user's checkouts; run any reproduction from a fresh temporary directory. Fetching remote refs is fine. The read-only limit ends only for the defects the user picks after the report.
 
 ## Connect and orient
 
@@ -78,5 +78,18 @@ If the repository cannot be identified or read, keep the defect as verified rath
 Group observations with the same verified cause; keep independent failures separate even on the same page. A persistent symptom is one defect across windows. Exclude known noise, already fixed defects, and duplicates with active work, and record them in the coverage log. A rejection needs the same evidence as a finding: an untraced explanation such as "probably a validation error" or "an old build" leaves the lead open, and a version is old only once no production or self-hosted install still sends it.
 
 Rank by observed impact, persistence, and strength of evidence. Target 10, not a quota. Do not invent numerical confidence scores. State measurement limitations without overstating impact; limitations that undermine the symptom disqualify a lead.
+
+## Settle the inbox
+
+Give every open inbox report (ready, pending input, failed, and candidate) a verified disposition, then move it with `inbox-reports-set-state`, from the main thread only, with a `dismissal_note` that cites the evidence: fix commit or PR, release, last occurrence, or source-issue state.
+
+- Fixed or shipped on main, with the deploy confirmed or the symptom absent from current builds: `resolved` with `pr_merged`, `fixed_outside_posthog`, or `already_fixed`.
+- Useful, but no work remains, such as a scope decision or a closed-as-not-planned source issue: `resolved` with `no_action_needed`.
+- Not a defect, intended behavior, or a wrong analysis: `suppressed` with `wontfix_irrelevant`, `wontfix_intentional`, or `analysis_wrong`. Use `wrong_repo` with `corrected_repository` when the report targets the wrong repository.
+- Leave it open when the defect is still live or the work is unfinished: an open or draft implementation PR, or an open source issue. Resolving or dismissing a report closes its implementation PR.
+
+Do not claim reports. A disposition without evidence, such as "probably fixed", leaves the report open; say why in the report.
+
+## Report
 
 Report in the format in [references/report.md](references/report.md), then ask which defects to fix. Do not dump exploratory queries or an investigation transcript.
