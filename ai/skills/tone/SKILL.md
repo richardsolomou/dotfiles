@@ -22,7 +22,7 @@ Apply this skill when the output will be posted, sent, or pasted under Richard's
 
 - Pasted into Slack → `slack-casual` for DMs / team chat / brainstorming, `slack-status` for standups / ops / incidents.
 - Posted to a PR description, RFC comment, or internal proposal → `pr-description`.
-- Posted as an inline PR review comment on an internal PR → `slack-casual`, following its *Inline PR review comments* rules.
+- Posted as an inline PR review comment on an internal PR → `slack-casual`, following its *Inline PR review comments* rules; on an external contributor's PR → `external`, following its inline review comment rules.
 - Posted to a customer-facing thread (Zendesk, public partner repo, public GitHub issue) → `external`.
 - Posted to X or LinkedIn as a social post → `social-post`.
 
@@ -267,6 +267,18 @@ Customer-facing comments (Zendesk replies, public PR threads on partner repos, p
 **Example:**
 
 > Hey, [GitHub PR link] examples were running with the pinned versions on each example. Not sure if Anthropic bumped a major version of their SDK in the meantime or the docs are not up to date with the examples, but last time I ran the examples using `llm-analytics-apps`, it worked fine.
+
+#### Inline review comments on external contributors' PRs
+
+Full grammar, but plain and direct rather than polished. The polite framing above is for customer threads, not review comments.
+
+- Open with the mechanism or the gap, then the evidence, then a plain ask or suggestion (`Maybe add…?`, `Looping over X instead…`).
+- No verdict or must-fix lines (`this needs a change before it lands`); the evidence and the review's Request changes event carry the severity.
+- No politeness frames (`Would you be up for…`, `if youre up for…`, `Thanks for…` openers on individual comments). A one-line thanks belongs in the review body only.
+
+**Example:**
+
+> Nothing tests the `\u` key rule from the README. Swapping lines 123–125 for a no-op still passes all 103 tests. Maybe add a case with a top-level `"permission_mode":"bypassPermissions"` plus a `"permission_mode":"default"` key that expects a prompt?
 
 ### social-post
 

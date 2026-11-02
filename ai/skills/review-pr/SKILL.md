@@ -20,7 +20,7 @@ Mode changes only the review posture and output:
 
 - `self` — use the own-code counter-bias. Explain findings in the terminal and offer to apply them.
 - `teammate` — use the teammate counter-bias. Draft concise inline comments in the user's `tone` `slack-casual` voice.
-- `contributor` — use the contributor counter-bias. Draft neutral, constructive inline comments and explain unfamiliar conventions.
+- `contributor` — use the contributor counter-bias. Draft inline comments in the user's `tone` `external` voice and explain unfamiliar conventions.
 
 Never post a comment, review, or approval. Never edit another author's branch.
 
@@ -117,7 +117,7 @@ Fix: <concrete change and any trade-off>
 
 Offer to apply selected fixes. Do not edit, stage, commit, or push until the user chooses. A calling skill can override this interaction when it already has mutation authority and a stricter action budget.
 
-For `teammate`, load `tone` with `register: slack-casual` and apply its *Inline PR review comments* rules. For `contributor`, use a neutral and welcoming voice without `tone`. Render each comment separately:
+For `teammate`, load `tone` with `register: slack-casual` and apply its *Inline PR review comments* rules. For `contributor`, load `tone` with `register: external` and apply its *Inline review comments on external contributors' PRs* rules. Render each comment separately:
 
 ````markdown
 File: <path>:<line> · <Blocker|Suggestion|Question>

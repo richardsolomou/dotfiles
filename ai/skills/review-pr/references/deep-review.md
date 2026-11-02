@@ -13,7 +13,7 @@ Detect the author mode per Shared mechanics § *Detect the author mode* in `adve
 | Counter-bias (from `adversarial-review`) | own-code | teammate | contributor |
 | `security-audit` lens | on-demand¹ | on-demand¹ | **default on** |
 | Convention drift | normal | assume shared conventions | flag **and educate** (link the pattern, explain why) |
-| Voice | none — terminal, blunt | `tone` `slack-casual` (inline review comment rules) | neutral, professional, welcoming — **no `tone`** (it's the user's internal voice) |
+| Voice | none — terminal, blunt | `tone` `slack-casual` (inline review comment rules) | `tone` `external` (inline review comment rules) |
 | Destination | terminal walkthrough + offer to apply fixes | drafted inline comments | drafted inline comments |
 
 ¹ Run when `+security` is passed or the diff meets Shared mechanics § *Security lens trigger*; `-security` forces it off.
@@ -92,7 +92,7 @@ Read the result back as the author would: the ask in the first sentence, the lin
 
 **self** — the `review-pr` self format, then offer to apply fixes. Never posts.
 
-**teammate / contributor** — one comment per finding. Teammate bodies use `tone` `slack-casual` with its *Inline PR review comments* rules, applied before rendering; if `tone` is unavailable, say so and apply those rules directly. Contributor bodies are neutral and welcoming, explaining the why and linking conventions.
+**teammate / contributor** — one comment per finding. Teammate bodies use `tone` `slack-casual` with its *Inline PR review comments* rules, applied before rendering; if `tone` is unavailable, say so and apply those rules directly. Contributor bodies use `tone` `external` with its *Inline review comments on external contributors' PRs* rules, explaining the why and linking conventions.
 
 By default, draft without posting. Group by target PR, and render each comment as:
 

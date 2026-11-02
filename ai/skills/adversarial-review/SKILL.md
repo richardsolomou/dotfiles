@@ -79,6 +79,8 @@ Drop pure preference items, stylistic choices with no impact, things you'd phras
 
 If a formatter would normalise it, the formatter can fix it. Don't spend a finding slot on it.
 
+Don't ask the author to split a correct but unrelated change into a separate PR; the extra PR and approval round cost more than the mixed scope.
+
 ### Don't drop real concerns for politeness
 
 The defensibility bar is for accuracy, not politeness. Don't drop a real concern because it feels awkward to raise, or because the other party (author, reviewer) is senior to you. Letting a real issue ship is worse than the awkwardness of bringing it up. If a finding survives verification and meets the defensibility bar, raise it.
