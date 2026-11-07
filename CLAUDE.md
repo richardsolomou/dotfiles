@@ -24,16 +24,11 @@ Key files:
 | `ai/AGENTS.md` | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` | — |
 | `ai/AGENTS.posthog.md` | `~/dev/posthog/CLAUDE.md` | `~/dev/posthog/AGENTS.md` | either of those |
 | `ai/skills/*` | `~/.claude/skills/` | `~/.codex/skills/` | `~/.agents/skills/` |
-| `ai/t3code/provider-instances.json` | merged into `~/.t3/userdata/settings.json` | | |
 
 `ai/RTK.md` is Claude Code only; it is imported from `ai/AGENTS.md` with `@RTK.md`, which other harnesses ignore.
 
-`ai/install.sh` takes component names (`context skills mcp plugins hooks permissions preferences t3code`) and installs everything when given none. MCP servers are registered with both `claude mcp` and `codex mcp`; plugins, hooks, permissions, and preferences are Claude Code settings. `--uninstall` removes the symlinks it created.
+`ai/install.sh` takes component names (`context skills mcp plugins hooks permissions preferences`) and installs everything when given none. MCP servers are registered with both `claude mcp` and `codex mcp`; plugins, hooks, permissions, and preferences are Claude Code settings. `--uninstall` removes the symlinks it created.
 
-The `t3code` component declares twins of the Claude and Codex subscriptions that route to the homelab CLIProxyAPI (`cpa_`): T3 Code pins a thread to the driver and CLI home it started on, so a twin sharing both — with other credentials instead of the subscription's — is what the model picker will offer inside a running thread once a usage limit hits. Its settings cannot be symlinked (T3 Code saves through a temp file plus rename), so the component merges per instance id and writes the keys into T3 Code's own secret store.
-
-`CLIPROXY_API_KEY`, `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` live in `$ZSH/.env`, which is gitignored and copied to each host by hand. They connect a host to the homelab CLIProxyAPI; `ai/install.sh` writes them into the `cpa_` twins, and the twins plus the zsh/fish wrappers use `bin/cliproxy`. The launcher prefers `http://homelab.local:8317`, falls back to `https://ai.ras.sh`, and keeps the selected endpoint for that CLI process. It passes credentials to the CLI without exporting them into the parent shell.
-
-`bin/check` validates the repo: launcher routing and shell wrappers, shell syntax, shellcheck, JSON, markdownlint, each skill's frontmatter name against its directory, that every skill a SKILL.md names exists, and the `test-*` scripts under `ai/skills/`. CI runs the same script.
+`bin/check` validates the repo: shell syntax, shellcheck, JSON, markdownlint, each skill's frontmatter name against its directory, that every skill a SKILL.md names exists, and the `test-*` scripts under `ai/skills/`. CI runs the same script.
 
 Keep `ai/AGENTS.md` harness-neutral: it is loaded verbatim by all three, so name a harness only when a rule is genuinely specific to it.

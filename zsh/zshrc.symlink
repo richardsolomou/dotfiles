@@ -52,14 +52,6 @@ do
   [ -d "$dir" ] && path=("$dir" $path)
 done
 
-# --- Secrets ---
-# $ZSH/.env is gitignored and per-host.
-#
-if [ -n "${CLIPROXY_API_KEY:-}" ] || { [ -r "$ZSH/.env" ] && grep -q '^CLIPROXY_API_KEY=' "$ZSH/.env"; }; then
-  claude() { "$ZSH/bin/cliproxy" claude "$@"; }
-  codex() { "$ZSH/bin/cliproxy" codex "$@"; }
-fi
-
 # --- Shell utilities ---
 
 listening() {

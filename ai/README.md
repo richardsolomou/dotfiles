@@ -6,7 +6,6 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 - `AGENTS.posthog.md` — extra rules loaded only under `~/dev/posthog`
 - `RTK.md` — rtk usage notes, imported by Claude Code only
 - `skills/` — local skills shared by the installed agent harnesses
-- `t3code/` — T3 Code provider instances that route to the homelab CLIProxyAPI
 
 ## Installation
 
@@ -64,31 +63,3 @@ ai/install.sh mcp
 ```
 
 Revoke the old token after the new launcher has been verified with both clients.
-
-## T3 Code
-
-T3 Code locks a thread to the provider driver and CLI home it started on, so the only way to keep working past a usage limit without losing the conversation is a second instance of the *same* driver and home with different credentials. `t3code/provider-instances.json` declares those twins — `cpa_claude` and `cpa_codex`, routed to CLIProxyAPI — and `install.sh t3code` writes them into `~/.t3/userdata/settings.json`, merging per instance id so anything configured by hand on the host survives.
-
-Neither the settings nor the credentials can be symlinked. T3 Code saves settings through a temp file plus rename, which would replace a symlink with a regular file, and sensitive environment values live in `~/.t3/userdata/secrets` as `provider-env-<base64url instance>-<base64url variable>.bin`, mode 0600. Every environment entry marked `valueRedacted` is filled from the keys below, read from the environment, then from `$ZSH/.env`; a host with neither keeps the copy already in that secret store.
-
-The twins use `cliproxy-claude` and `cliproxy-codex`, symlinks installed in `~/.local/bin` to the shared `bin/cliproxy` launcher. They keep the subscription instances’ CLI homes, so switching between a subscription and its twin can resume the same thread. The launcher chooses LAN or Cloudflare when each CLI process starts. The installer also switches existing Codex instances that already select `model_provider=cliproxy` to this launcher, preserving their other settings and custom binary paths. Codex selects the `[model_providers.cliproxy]` block from `t3code/codex-cliproxy.toml` and overrides its base URL with `-c`; the installer keeps the provider block in `~/.codex/config.toml`. Claude uses `ANTHROPIC_BASE_URL` and `ANTHROPIC_AUTH_TOKEN`, at the cost of claude.ai connectors in that instance.
-
-Both twins are named `CPA·Claude` and `CPA·Codex` so the rail badge reads `CP`. The badge takes the first two characters of a single-word label, or the first character of each of the first two words, splitting on whitespace as well as `_` and `-` — so `CPA-Codex` would badge as `CC`, and the middle dot is what keeps it one word. The teal accent color also forces the badge to render on every instance rather than only when a driver has several. Ids prefixed `cpa_` are owned by this repo: the installer replaces them and drops ones the file no longer declares, along with their now-unused key files. It also owns `phaig_`, the retired PostHog gateway twins, so re-running it on a host that still has them removes them.
-
-Subscription logins stay per host: run `claude auth login` and `codex login` on the machine. A headless host that only ever uses CLIProxyAPI needs neither.
-
-### CLIProxyAPI
-
-CLIProxyAPI runs on the homelab NAS as a TrueNAS custom app (`cliproxyapi`, data in `/mnt/HDDs/Applications/cliproxyapi`) and holds the Claude and ChatGPT subscription logins centrally, so every machine shares one set of accounts and quotas. `routing.strategy: fill-first` drains the highest-`priority` account before moving to the next.
-
-Clients prefer `http://homelab.local:8317` when reachable. At each CLI launch, `bin/cliproxy` probes `/v1/models` without credentials and accepts the expected HTTP 401. The probe has a two-second curl deadline and a three-second process deadline. An unavailable or unexpected response selects `https://ai.ras.sh` through the NAS’s Cloudflare tunnel. Set `CLIPROXY_LAN_URL` to use a different local address. The selected endpoint stays fixed for that CLI process; restart it after changing networks. LAN requests use HTTP and the proxy key, without Cloudflare Access headers. The tunnel only forwards `/v1/` paths, and the Cloudflare Access application `CLIProxyAPI` admits only the `cliproxy` service token, so requests through Cloudflare need that token’s headers plus a client key from the proxy’s `access.api-keys`. The management UI, CPAMC, stays LAN-only at `http://homelab.local:8317/management.html`; sign in with the management key, then add or reorder accounts under OAuth Login, Auth Files, and Quota Management.
-
-Three values in `$ZSH/.env` connect a host:
-
-```sh
-CLIPROXY_API_KEY=<client key>
-CF_ACCESS_CLIENT_ID=<service token client id>
-CF_ACCESS_CLIENT_SECRET=<service token client secret>
-```
-
-`install.sh t3code` writes them into the `cpa_` twins: Claude gets the client key as `ANTHROPIC_AUTH_TOKEN` and the Access headers through `ANTHROPIC_CUSTOM_HEADERS`; Codex sends them through the `[model_providers.cliproxy]` block's `env_key` and `env_http_headers`. With the key present, `zshrc` and `fish/cliproxy.fish` also wrap `claude` and `codex` with the same launcher. It reads credentials from the process environment, then the dotfiles `.env`, without exporting them into the parent shell. Other Anthropic and OpenAI SDKs in the shell keep their own endpoints. `command claude` and `command codex` bypass the proxy and use the machine's own login, which is the fallback when the NAS is down, alongside the plain Claude and Codex instances in T3 Code.

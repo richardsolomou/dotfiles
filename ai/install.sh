@@ -10,7 +10,7 @@ export ZSH
 . $ZSH/ai/helpers/output.sh
 . $ZSH/ai/helpers/json-settings.sh
 
-ALL_COMPONENTS="context skills mcp plugins hooks permissions preferences t3code"
+ALL_COMPONENTS="context skills mcp plugins hooks permissions preferences"
 
 # Directories every harness scans for skills. opencode auto-loads both
 # ~/.claude/skills and ~/.agents/skills, the cross-harness convention.
@@ -47,7 +47,6 @@ show_help() {
     echo "  hooks        Claude Code hooks"
     echo "  permissions  Claude Code tool permissions"
     echo "  preferences  Claude Code editor preferences"
-    echo "  t3code       T3 Code CLIProxyAPI provider instances and their keys"
     echo ""
     echo "Options:"
     echo "  --uninstall  Remove the symlinks made by context and skills"
@@ -332,171 +331,6 @@ fi
 
 if wants permissions; then
     $ZSH/ai/configure-tool-permissions.sh
-fi
-
-# T3 Code keeps provider instances in ~/.t3/userdata/settings.json and their
-# sensitive environment values as plain 0600 files in ~/.t3/userdata/secrets, so
-# provisioning a host means writing both. Neither can be symlinked: the server
-# saves settings through a temp file plus rename, which replaces a symlink with
-# a regular file.
-#
-# The instances are twins of the Claude and Codex subscriptions: same driver,
-# same CLI home, different credentials. T3 Code locks a thread to one driver kind
-# and home, so a twin that matches both is the only thing the model picker will
-# offer mid-thread when a subscription runs out of usage. The `cpa_` twins route
-# to the homelab CLIProxyAPI.
-#
-# Every environment entry marked `valueRedacted` is filled from $ZSH/.env; T3
-# Code reads those from the secret store rather than the settings file.
-if wants t3code && ! command -v jq > /dev/null 2>&1; then
-    warning "jq not found - T3 Code provider configuration skipped"
-    info "Install jq and re-run: $0 t3code"
-fi
-
-if wants t3code && command -v jq > /dev/null 2>&1; then
-    info "Configuring T3 Code CLIProxyAPI providers…"
-
-    T3_BASE="${T3_BASE_DIR:-$HOME/.t3}"
-    T3_SETTINGS="$T3_BASE/userdata/settings.json"
-    T3_SECRETS="$T3_BASE/userdata/secrets"
-    T3_INSTANCE_FILE="$ZSH/ai/t3code/provider-instances.json"
-
-    for client in claude codex; do
-        link "$ZSH/bin/cliproxy" "$HOME/.local/bin/cliproxy-$client" || exit 1
-    done
-
-    # `phaig_` ids are the retired PostHog gateway twins; owning them lets an
-    # existing host drop those instances and their keys.
-    OWNED_PREFIXES='^(phaig|cpa)_'
-
-    # $ZSH/.env is the source of truth on each host: gitignored, so keys are
-    # never committed, and copied across machines by hand.
-    #
-    # Tolerate what a hand-copied file picks up: surrounding quotes, a trailing
-    # CR from a Windows or web editor, stray whitespace. A key that keeps any of
-    # those reaches the server as a 401 that looks like a credential problem.
-    env_key() {
-        local value="${!1:-}"
-        if [ -z "$value" ] && [ -r "$ZSH/.env" ]; then
-            value=$(sed -n "s/^$1=//p" "$ZSH/.env" | head -1 |
-                tr -d '\r' | sed -e 's/^["'"'"']//' -e 's/["'"'"']$//' -e 's/[[:space:]]*$//')
-            chmod 600 "$ZSH/.env"
-        fi
-        printf '%s' "$value"
-    }
-    # Prints nothing when a key it needs is missing. The CLIProxyAPI sits behind
-    # Cloudflare Access, so its twins also carry the Access service token.
-    secret_value() {
-        case "$1/$2" in
-            cpa_*/ANTHROPIC_AUTH_TOKEN) env_key CLIPROXY_API_KEY ;;
-            cpa_*/ANTHROPIC_CUSTOM_HEADERS)
-                local id secret
-                id=$(env_key CF_ACCESS_CLIENT_ID)
-                secret=$(env_key CF_ACCESS_CLIENT_SECRET)
-                [ -n "$id" ] && [ -n "$secret" ] &&
-                    printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s' "$id" "$secret"
-                ;;
-            *) env_key "$2" ;;
-        esac
-    }
-
-    mkdir -p "$(dirname "$T3_SETTINGS")"
-    [ -f "$T3_SETTINGS" ] || echo '{}' > "$T3_SETTINGS"
-
-    # Merge per instance id so instances configured on this host by hand, and
-    # the rest of the settings file, survive. Ids with an owned prefix are owned
-    # here: they are replaced wholesale, and ones this file no longer declares
-    # are dropped so a rename does not leave the old instance behind.
-    T3_CONFIG=$(jq -n \
-        --slurpfile current "$T3_SETTINGS" \
-        --slurpfile desired "$T3_INSTANCE_FILE" \
-        --arg owned "$OWNED_PREFIXES" \
-        '$desired[0].providerInstances as $own
-         | {providerInstances: (
-               (($current[0].providerInstances // {})
-                 | with_entries(select(.key | test($owned) | not)))
-               + $own
-               | with_entries(
-                   if .value.driver == "codex"
-                      and ((.value.config.binaryPath // "codex") == "codex")
-                      and ((.value.config.launchArgs // "") | test("(^|\\s)model_provider=cliproxy(\\s|$)"))
-                   then .value.config.binaryPath = "cliproxy-codex"
-                   else . end
-                 ))}')
-
-    set_json_settings "$T3_SETTINGS" "$T3_CONFIG" "T3 Code twin providers"
-    case $? in
-        0) success "Configured T3 Code twin provider instances" ;;
-        2) success "T3 Code twin provider instances already configured" ;;
-    esac
-
-    # provider-env-<base64url instance id>-<base64url variable name>.bin
-    b64url() { printf '%s' "$1" | base64 | tr '+/' '-_' | tr -d '=\n'; }
-
-    b64url_decode() {
-        local value="$1"
-        case $((${#value} % 4)) in
-            2) value="$value==" ;;
-            3) value="$value=" ;;
-        esac
-        printf '%s' "$value" | tr '_-' '/+' | base64 --decode 2>/dev/null
-    }
-
-    # A renamed instance leaves its key behind under the old id; it is unused
-    # but still a copy of the credential, so drop the ones we own.
-    MANAGED_IDS=$(jq -r '.providerInstances | keys[]' "$T3_INSTANCE_FILE")
-    for secret in "$T3_SECRETS"/provider-env-*.bin; do
-        [ -f "$secret" ] || continue
-        encoded="${secret##*/provider-env-}"
-        instance=$(b64url_decode "${encoded%%-*}")
-        [[ "$instance" =~ $OWNED_PREFIXES ]] || continue
-        printf '%s\n' "$MANAGED_IDS" | grep -qx "$instance" && continue
-        rm -f "$secret"
-        info "Removed the stale key for $instance"
-    done
-
-    # A host without a key keeps the copy already in T3 Code's secret store.
-    mkdir -p "$T3_SECRETS"
-    chmod 700 "$T3_SECRETS"
-    while IFS=$'\t' read -r instance variable; do
-        key=$(secret_value "$instance" "$variable")
-        secret="$T3_SECRETS/provider-env-$(b64url "$instance")-$(b64url "$variable").bin"
-        if [ -n "$key" ]; then
-            printf '%s' "$key" > "$secret"
-            chmod 600 "$secret"
-        elif [ ! -s "$secret" ]; then
-            warning "No key for $instance $variable - it will not authenticate"
-            info "Set the keys described in ai/README.md in $ZSH/.env and re-run: $0 t3code"
-        fi
-    done < <(jq -r '.providerInstances | to_entries[] | .key as $id
-                 | .value.environment[]? | select(.valueRedacted == true)
-                 | "\($id)\t\(.name)"' "$T3_INSTANCE_FILE")
-    success "Wrote the provider keys into T3 Code's secret store"
-
-    # Shared with the subscription instance, which never selects this provider.
-    # A block that drifted from the repo is replaced, keeping the rest of the file.
-    CODEX_CONFIG="${CODEX_HOME:-$HOME/.codex}/config.toml"
-    mkdir -p "$(dirname "$CODEX_CONFIG")"
-    touch "$CODEX_CONFIG"
-    toml_section() {
-        awk -v header="$1" '$0 == header { on = 1; print; next } on && /^\[/ { on = 0 } on' "$2"
-    }
-    for provider in "$ZSH"/ai/t3code/codex-*.toml; do
-        header=$(grep -m1 '^\[model_providers\.' "$provider")
-        current=$(toml_section "$header" "$CODEX_CONFIG" | sed '/^[[:space:]]*$/d')
-        if [ "$current" = "$(sed '/^[[:space:]]*$/d' "$provider")" ]; then
-            success "Codex already has $header"
-            continue
-        fi
-        if [ -n "$current" ]; then
-            remaining=$(awk -v header="$header" '$0 == header { skip = 1; next } skip && /^\[/ { skip = 0 } !skip' "$CODEX_CONFIG")
-            printf '%s\n' "$remaining" > "$CODEX_CONFIG"
-        fi
-        cat "$provider" >> "$CODEX_CONFIG"
-        success "Wrote $header to $CODEX_CONFIG"
-    done
-
-    info "Subscription logins are per host: run 'claude auth login' and 'codex login' on this machine"
 fi
 
 echo ""
