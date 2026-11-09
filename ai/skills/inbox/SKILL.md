@@ -33,7 +33,7 @@ Run these concurrently per `activity-harvest`; only the support pass waits, on t
 
 ## 3. Work out what is actually waiting
 
-Source items are candidates; establish current state before ranking them.
+Source items are candidates; establish current state before ranking them. Drop every item listed in `~/dev/notes/PostHog/today/ignored.md` without mentioning it anywhere, including Not today; Richard has decided those stay as they are.
 
 - **Mentions and DMs.** Read each distinct thread with `conversations_replies`. It is waiting on Richard only when the latest substantive message is not his and it asks him something, hands him something, or is blocked on him. Answered threads, FYIs, and cc's drop out.
 - **Saved items.** Reuse the to-do index's rank and recommended action for items it already covers, refreshing status only for the top few. Read items saved after the index was written. When those are numerous or the index is more than a few days old, say the index is stale and identify what remains untriaged. Any follow-up task must describe reviewing saved items directly with `saved_list` and `conversations_replies`; do not assume a separate triage command exists.
