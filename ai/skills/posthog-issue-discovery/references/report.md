@@ -1,6 +1,6 @@
 # Report format
 
-The user is reading the report now and will pick what to fix next, so write for a person scanning a ranked list. Do not write standalone prompts for other agents. Substitute verified facts; omit fields that do not apply rather than leaving placeholders.
+Write for a person scanning a ranked list. Do not write standalone prompts for other agents. Substitute verified facts; omit fields that do not apply rather than leaving placeholders.
 
 ## Shape
 
@@ -36,7 +36,7 @@ Close the findings with a compact coverage table, one row per surface: the tool 
 
 ## Next step
 
-End by asking which defects to fix. Once the user picks, fix them in this conversation under the owning repository's guidance, starting from the cause above rather than repeating discovery; if the checkout now contradicts the evidence, say so before changing code. If the user asks to hand a defect to another agent or thread instead, write it a self-contained brief that repeats the project, bounds, evidence, cause, and expected behavior, since that agent cannot see this conversation.
+End by asking which defects to fix. Once the user picks, fix them in this conversation under the owning repository's guidance, starting from the cause above rather than repeating discovery; if the checkout now contradicts the evidence, say so before changing code. If the user asks to hand a defect to another agent or thread instead, write it a self-contained brief that repeats the project, bounds, evidence, cause, and expected behavior.
 
 If the user then asks what features or improvements the data suggests, start from the open inbox proposals and give each a verdict, then add only ideas the data supports. Before recommending any change, confirm the capability is absent from the default branch with `git grep` for its entry points and `git log` of recent merges; an idea that already shipped becomes a question about adoption, measured with its existing events.
 

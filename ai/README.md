@@ -22,10 +22,6 @@ Everything is symlinked, so edits here take effect without reinstalling. Adding 
 
 `bin/sync-skills` publishes every local `skills/<name>/` directory to the PostHog skills store as `rs-<name>`. Local names stay unchanged; references to sibling skills in the published bodies use the store prefix. It updates changed skills, archives `rs-` skills that no longer have a local directory, and leaves other store skills alone. Run `bin/sync-skills --dry-run` to inspect changes. The script reads `POSTHOG_PERSONAL_API_KEY` from the environment or the repo root `.env`; `POSTHOG_PROJECT_ID` and `POSTHOG_HOST` are optional. Pushes to `main` that change skills run the same sync through GitHub Actions.
 
-## PostHog issue discovery
-
-Run `$posthog-issue-discovery` from any directory with access to a PostHog project. It sweeps every live product in the project, verifies up to 10 defects, traces each to its owning code where it can, and reports them as a ranked list with evidence and a coverage log. Discovery is read-only and writes nothing to disk; it ends by asking which defects to fix, and fixes them in the same conversation.
-
 ## Vendored skills
 
 `skills/typesafe-ai/` is a verbatim copy of [typesafe-ai/skills](https://github.com/typesafe-ai/skills) (MIT, `skills/typesafe-ai/`), vendored rather than installed as a Claude Code plugin so Codex and opencode get it too. Update it by re-copying upstream's `SKILL.md`, not by editing in place.

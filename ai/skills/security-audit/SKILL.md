@@ -1,13 +1,6 @@
 ---
 name: security-audit
-description: >
-  Focused security audit of code, calibrated to surface real exploitable bugs and suppress
-  theoretical findings. Use when the user asks to "audit", "security-audit",
-  "find vulnerabilities", "check for IDOR/SSRF/XSS/injection", or wants a security
-  review of a file, directory, branch diff, or PR. Covers access control, injection,
-  auth/secrets, sensitive data, business logic, web boundary, and AI agent/LLM trifecta
-  risks. Produces calibrated findings with data flow, exploit request, fix, and
-  confidence — no theoretical or defense-in-depth nits.
+description: 'Focused security audit calibrated to surface real exploitable bugs and suppress theoretical findings. Use when the user asks to "audit", "security-audit", "find vulnerabilities", "check for IDOR/SSRF/XSS/injection", or wants a security review of a file, directory, branch diff, or PR.'
 ---
 
 # Security Audit
@@ -31,7 +24,6 @@ Establish how the caller authenticates and how the tenant is derived, which inpu
 ## Calibration
 
 - Report a finding only if you can trace user-controlled input from a concrete source (request body/query/header, queue payload, upload, retrieved document, tool output) to a concrete sink (DB query, shell, response, filesystem, outbound HTTP, agent tool call) with the missing control identified.
-- If you cannot construct a specific exploit request, it is not a finding.
 - Framework protections (typed DRF serializer fields, ORM parameterization, template auto-escaping, parameterized cursors) count unless this code bypasses them.
 - Rate limiting, WAFs, monitoring, and defense-in-depth suggestions are not findings — except brute-forceable OTP/TOTP verification, where missing rate limiting is the bug.
 - Dead code, code behind disabled flags, and code unreachable from any route or task are out of scope.

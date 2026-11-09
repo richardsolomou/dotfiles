@@ -1,11 +1,11 @@
 ---
 name: unslop
-description: "Make AI-built code look deliberate without changing what it does: reuse and consolidate the project's existing patterns, replace hand-rolled code with the standard library or a maintained package, and strip residue such as narration comments, speculative wrappers, and hollow tests. Works on a code change (default, edits stay inside it) or a whole repository (ranked findings first). Use when asked to unslop, simplify, de-AI, clean up, deduplicate, make code consistent, or find custom code a package could replace; use review-only mode when the user asks for findings instead of edits."
+description: "Make AI-built code look deliberate without changing behaviour, on a change (default) or whole repo. Use to unslop, simplify, de-AI, clean up, deduplicate, make code consistent, or find custom code a package could replace; review-only when asked for findings instead of edits."
 ---
 
 # Unslop
 
-Code built across many AI sessions drifts the same way: each session solves its problem afresh, hand-rolls what a library already does, and leaves explanation and defensive padding behind. Undo that drift. The target is the smallest clear implementation that solves each problem the way the project already solves it, and owns only what the project cannot get elsewhere.
+The target is the smallest clear implementation that solves each problem the way the project already solves it, and owns only what the project cannot get elsewhere.
 
 For any piece of code, prefer in this order: delete it, call something the project already has, use the language's standard library or the framework in use, use a dependency already in the lockfile, add a new package, and only then keep the custom version.
 
@@ -23,7 +23,7 @@ Pick one scope before reading code and state it in the report.
 
 ## Learn the project first
 
-Nothing can be judged a reinvention until you know what exists. Before judging code:
+Before judging code:
 
 - Read the manifests and lockfiles, the pinned language and framework versions, the check and test commands, and any conventions docs (`AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING`, READMEs).
 - Map the shared homes: where helpers, types, components, clients, constants, and test fixtures live, and what they are called.
@@ -77,6 +77,8 @@ Follow every candidate into its callers, types, and tests before changing it; do
 
 ## Verify and report
 
+Before calling a repo-wide cleanup complete, inventory the relevant directories beyond the first examples, and state the scope you actually audited.
+
 Review the final diff for accidental behaviour changes. Run the narrowest relevant formatter, linter, type-checker, and tests, then the repository check command when practical.
 
-After edits, report what became simpler, any deliberate complexity retained, out-of-scope observations (change scope), and the verification performed. For findings (repo scope or review-only), return only verified items ranked by payoff against risk, each with its location, evidence, proposed change, and whether it needs a new dependency, followed by the scope actually audited and the checks performed. Do not commit or push unless asked.
+After edits, report what became simpler, any deliberate complexity retained, out-of-scope observations (change scope), and the verification performed. For findings (repo scope or review-only), return only verified items ranked by payoff against risk, each with its location, evidence, proposed change, and whether it needs a new dependency, followed by the scope actually audited and the checks performed.

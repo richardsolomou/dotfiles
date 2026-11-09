@@ -6,15 +6,14 @@ The unit of review is one immutable target: a PR against its true base, or a loc
 
 ## Modes
 
-Detect the author mode per Shared mechanics § *Detect the author mode* in `adversarial-review`, state it in one line (`Detected: contributor PR (fork, author_association=NONE) — reviewing with the contributor posture.`), and proceed; `as:<mode>` overrides. When ambiguous, use the stricter posture (contributor > teammate).
+Detect the author mode per Shared mechanics § *Detect the author mode* in `adversarial-review`, state it in one line (`Detected: contributor PR (fork, author_association=NONE) — reviewing with the contributor posture.`), and proceed; `as:<mode>` overrides.
 
 | Axis | **self** | **teammate** | **contributor** |
 | --- | --- | --- | --- |
 | Counter-bias (from `adversarial-review`) | own-code | teammate | contributor |
 | `security-audit` lens | on-demand¹ | on-demand¹ | **default on** |
 | Convention drift | normal | assume shared conventions | flag **and educate** (link the pattern, explain why) |
-| Voice | none — terminal, blunt | `tone` `slack-casual` (inline review comment rules) | `tone` `external` (inline review comment rules) |
-| Destination | terminal walkthrough + offer to apply fixes | drafted inline comments | drafted inline comments |
+| Voice | none — terminal, blunt | `tone` `slack-casual` | `tone` `external` |
 
 ¹ Run when `+security` is passed or the diff meets Shared mechanics § *Security lens trigger*; `-security` forces it off.
 
@@ -46,7 +45,7 @@ For each `(target, round, lens)`, launch a fresh read-only reviewer with the run
 
 If subagents are unavailable, run the lenses sequentially and say they weren't independent.
 
-Lens briefs — the bar is `adversarial-review`; these say where to look:
+Lens briefs say where to look:
 
 > **combined** — All core briefs in one coherent pass, following the data flow rather than producing one token finding per category.
 >
@@ -118,7 +117,7 @@ When the user asks for corrections (tone, anchors, a new head, revised findings)
 
 ## Loop mode
 
-`post` is the only path that posts without per-comment approval; passing it is the user's explicit opt-in, and the bot marker keeps the automation visible. Drive cadence externally, e.g. `/loop 15m review-pr <pr-url> deep post`. Each pass reviews the current head and never edits the author's branch. Reacting to CI and feedback on your own PR is `babysit`, not this skill.
+`post` is the only path that posts without per-comment approval; passing it is the user's explicit opt-in. Drive cadence externally, e.g. `/loop 15m review-pr <pr-url> deep post`. Each pass reviews the current head and never edits the author's branch. Reacting to CI and feedback on your own PR is `babysit`, not this skill.
 
 ## Degradation and security
 

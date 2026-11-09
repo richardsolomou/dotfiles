@@ -1,6 +1,6 @@
 ---
 name: competitor-research
-description: Research the competitors of the product in the current repository by browsing their sites in the user's Chrome, compare features, offerings, pricing, docs, and onboarding against what the repository actually ships, and turn what they do better into ranked, actionable improvements. Accepts an optional list of competitors; otherwise finds them. Use when asked for competitor research, competitive analysis, a feature comparison, or what rivals do better.
+description: Browse competitors of the current repository's product in the user's Chrome, compare them against what it ships, and rank improvements. Accepts an optional competitor list. Use for competitor research, competitive analysis, a feature comparison, or what rivals do better.
 ---
 
 # Competitor research

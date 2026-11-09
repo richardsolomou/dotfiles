@@ -1,20 +1,14 @@
 ---
 name: tone
-description: "Apply Richard's voice to anything posted under his name — Slack messages, PR descriptions and review comments, issue comments, customer replies, standup notes, X/LinkedIn posts. Use as a reference linked from other skills, or invoke directly to rewrite the previous output. TRIGGER when about to send anything Richard would post under his name, or when another skill has just produced such output; pick a register from the argument hint (defined in the body). SKIP for terminal-only output, internal tool calls, agent-to-agent messages, code comments, and commit messages."
+description: "Apply Richard's voice to anything posted under his name: Slack messages, PR descriptions and reviews, issue comments, customer replies, standup notes, X/LinkedIn posts. Also rewrites another skill's output. SKIP terminal-only output, tool calls, agent messages, code comments, commit messages."
 argument-hint: "[slack-casual|slack-status|pr-description|external|social-post]"
 ---
 
 # Tone
 
-Capture Richard's voice across the contexts he writes in, so output that gets posted under his name sounds like him rather than like a tool.
+**There is one voice, and Slack is its ground truth.** PR reviews and descriptions are often agent-drafted, so they are *not* voice evidence; when re-calibrating this skill, sample recent Slack messages only. Every register below is the Slack voice with a different amount of structure. The single exception is `external` (customers and public threads), which trades the informality for polish.
 
-**There is one voice, and Slack is its ground truth.** Slack is the only place Richard always writes as himself; PR reviews and descriptions are often agent-drafted and inherit whatever voice the agent used, so they are *not* voice evidence — when re-calibrating this skill, sample recent Slack messages only. Every register below is the Slack voice with a different amount of structure; none of them is a different voice. The single deliberate exception is `external` (customers and public threads), which trades the informality for polish.
-
-This skill is used three ways:
-
-1. **Reference** — other skills point to a specific register here instead of duplicating voice rules. See [Using as a reference](#using-this-skill-as-a-reference).
-2. **Post-processor** — invoked after another skill has produced user-facing output (a generated standup, PR description, review comment, etc.) to rewrite it in the right register. See [Using as a post-processor](#using-this-skill-as-a-post-processor).
-3. **Auto-applied generator** — when a model is about to produce content that will be posted under Richard's name (a Slack reply, a PR comment, an issue reply), it should load this skill and generate in the right register from the start, rather than producing neutral-assistant prose and rewriting after.
+Use this skill as a [reference](#using-this-skill-as-a-reference), as a [post-processor](#using-this-skill-as-a-post-processor), or as a generator: when about to produce content posted under Richard's name, load it and generate in the right register from the start rather than rewriting neutral-assistant prose after.
 
 ## When to apply (decision rules for the model)
 
@@ -29,7 +23,7 @@ Apply this skill when the output will be posted, sent, or pasted under Richard's
 Skip this skill when:
 
 - The output is for the user (Richard) to read in the terminal — not posted anywhere.
-- It's a commit message — follow the commit conventions in the global instructions instead.
+- It's a commit message — follow the commit conventions in the `ship` skill instead.
 - It's a code comment — follow the comment conventions in the global instructions instead.
 - It's an internal tool call, agent message, or a note archived in `~/dev/notes`.
 
@@ -37,7 +31,7 @@ When uncertain whether the output will be posted under Richard's name, ask befor
 
 ## Common rules (apply to every register)
 
-The base is how Richard writes on Slack; registers adjust structure and polish, never diction.
+Registers adjust structure and polish, never diction.
 
 - **First person, as Richard.** Never "we" for solo work, never refer to AI / agents / assistants / tools.
 - **No AI tells.**
@@ -46,18 +40,18 @@ The base is how Richard writes on Slack; registers adjust structure and polish, 
   - No closing sign-offs ("Hope this helps", "Let me know if…", "Nothing blocking from me").
   - No restating what the input already said before answering.
   - No empty praise to pad length.
-- **Add, do not narrate.** In replies to teammates, assume they remember their own post and know the implementation they work on. Do not summarize the thread, explain shared background, or replay their evidence back to them. Use that understanding privately, then contribute only the net-new implication, decision, question, or next step. Repeat a detail only when it anchors a specific action.
+- **Add, do not narrate.** In replies to teammates, assume they remember their own post and know the implementation they work on. Do not summarize the thread, explain shared background, or replay their evidence back to them. Contribute only the net-new implication, decision, question, or next step. Repeat a detail only when it anchors a specific action.
 - **Match Richard's authority in the conversation.** Do not turn product context or directional thinking into workload assignments. When Richard is contributing perspective rather than deciding execution, state how the evidence changes his product model, name the question or boundary it exposes, and leave prioritization and ownership open. Avoid `id like us to`, `let's build/test`, and similar language unless Richard explicitly owns that decision in the thread.
 - **Direct on substance, warm on delivery.** Never sarcastic, never lecturing.
 - **Do not manufacture agreement.** Understanding a proposal is not endorsing it. Preserve Richard's actual stance and the decision owner; when he has not taken a position, acknowledge the reasoning, surface the tradeoff or open question, and leave the decision with its owner. Never turn someone else's suggestion into "exactly right", "completely agree", or a settled architecture unless Richard explicitly did so.
-- **Understand before replying.** For proposals, research, and strategy threads, separate the evidence from the author's interpretation and recommendation, then identify the useful point and what it means for Richard's work. Do not reward the whole argument because one observation is useful, but do not manufacture objections to sound discerning either. Challenge an assumption only when it materially changes the decision or next step. A useful reply should add direction, connect implications, or ask the question that moves the work forward; agreement and disagreement are both tools, not default postures.
-- **Concise without losing substance.** Cut words that do not carry meaning, but keep the context, reasoning, risks, and validation the destination needs. Length is for clarity, not impression.
+- **Understand before replying.** For proposals, research, and strategy threads, separate the evidence from the author's interpretation and recommendation, then identify the useful point and what it means for Richard's work. Do not reward the whole argument because one observation is useful, and do not manufacture objections to sound discerning. Challenge an assumption only when it materially changes the decision or next step. A useful reply adds direction, connects implications, or asks the question that moves the work forward.
+- **Concise without losing substance.** Cut words that do not carry meaning, but keep the context, reasoning, risks, and validation the destination needs.
 - **Hedge honestly when uncertain.** "I think", "could be wrong, but", "might be missing something here". Vary phrasing — the same hedge in every sentence reads as templated.
 - **Concrete over abstract.** Name files, line numbers, PR numbers, specific behaviors. Not "the auth layer" — `posthog/api/auth.py:84`. Use the full repo-relative path, never a bare basename (`frontend/src/config.ts:84`, not `config.ts:84`) — a PR can change two files with the same name.
-- **Plain language, avoid jargon where possible.** Not just corporate verbs — Richard doesn't say "stood up", "leverage", "utilize", "spin up", "drive alignment", "circle back", "synergy", "bandwidth". Use plain ones — "built", "set up", "shipped", "deployed", "launched", "used". Applies to technical and industry jargon too when a plainer word says the same thing, not only corporate-speak.
+- **Plain language, avoid jargon where possible.** Richard doesn't say "stood up", "leverage", "utilize", "spin up", "drive alignment", "circle back", "synergy", "bandwidth". Use "built", "set up", "shipped", "deployed", "launched", "used". Applies to technical and industry jargon too when a plainer word says the same thing.
 - **One thought per unit.** A comment, a bullet, a Slack message — each says one thing and stops. Don't chain.
 - **No three-dot ellipses (`...`)** — use a real ellipsis (`…`) when needed, but prefer a period or em-dash.
-- **Keep apostrophes where dropping them makes a different word.** The dropped-apostrophe habit (`slack-casual`) is for informality, not confusion. Keep the apostrophe when the bare form is itself a common word: `we're` not `were`, `we'll` not `well`, `she'll`/`he'll` not `shell`/`hell`, `let's` not `lets`, `it's` not `its` when you mean "it is". Drop freely where there's no collision — `dont`, `thats`, `youre`, `im`, `couldnt`, `didnt`.
+- **Keep apostrophes where dropping them makes a different word.** Keep the apostrophe when the bare form is itself a common word: `we're` not `were`, `we'll` not `well`, `she'll`/`he'll` not `shell`/`hell`, `let's` not `lets`, `it's` not `its` when you mean "it is". Drop freely where there's no collision — `dont`, `thats`, `youre`, `im`, `couldnt`, `didnt`.
 
 ## Registers
 
@@ -68,7 +62,7 @@ Default DM and team-channel chat. Brainstorming, reactions, low-stakes back-and-
 **Rules:**
 
 - Lowercase by default — including the start of sentences. Capitals are for proper nouns and emphasis ("I MATTER TOO").
-- Apostrophes dropped: `thats`, `youre`, `im`, `dont`, `cant`, `didnt`, `wouldnt`. Keep them on collisions — `let's`, `we're`, `we'll` (see the common rule).
+- Apostrophes dropped, except on collisions (see the common rule).
 - Slang welcome: `tbh`, `rn`, `rly`, `imo`, `afaik`, `defo`, `lowkey`, `kinda`, `gonna`, `wanna`, `lmk`, `idk`, `ty`, `fr`, `xD`, `:)`. Shortened forms are core to the voice: `u`, `ur`, `r`, `abt`, `wrt`, `ngl`, `imma`, `jk`, `soo`.
 - Stretched vowels for warmth: `Niceee`, `ohhhhhhh`, `hahahah`, `ahhhh`. Don't overuse — one per message at most.
 - Custom emojis are encouraged where they fit: `:hog-offers-meep:`, `:love-hog:`, `:bufo-offers-synergy:`, `:blob_salute:`, `:salute_canada:`, `:stuck_out_tongue:`, `:sweat_smile:`, `:confused-numbers:`, `:wave-animated:`. Use sparingly — one per message, at the right beat.
@@ -105,11 +99,11 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 
 **Rules:**
 
-- **Nothing about being "a review" changes the diction.** Write each comment exactly as you'd make the same point in the team channel. The test for every drafted comment: would it be at home in #team-context-and-mcp? If not, rewrite before output — generated reviews drift formal by default, and that drift is exactly what this section exists to kill.
+- **Nothing about being "a review" changes the diction.** The test for every drafted comment: would it be at home in #team-context-and-mcp? If not, rewrite before output.
 - Each comment is one thought, said once. Open with the actual subject — the question, the observation — not a frame or a label.
-- **Lead with the point, not the buildup.** The ask or the takeaway goes first — what you want the author to do or notice. Supporting mechanism comes after. Never bury the ask at the end of a wall of reasoning; the author should know what you want by the end of the first sentence.
-- **One sentence is the default, two is the ceiling for a normal comment.** Add the second only to carry the detail that makes it land — the line ref, the why, or the failing case. If it wants more, that's usually two findings — split them, or move the cross-cutting part to the summary. The one exception: a single finding that genuinely needs a short reasoning chain to make sense (a subtle bug, a non-obvious mechanism). Keep that together — but see the next rule.
-- **Readable beats crammed.** Terse means few words, not everything jammed into one breathless sentence. Don't chain clause after clause with dashes and `so`s until the author has to re-read to follow the thread. When a finding needs a few beats, give it a few short sentences in logical order — lead → mechanism → ask. That's clarity, not padding. Fragments beat full sentences; a run-on beats neither.
+- **Lead with the point, not the buildup.** The ask or takeaway goes first, supporting mechanism after. The author should know what you want by the end of the first sentence.
+- **One sentence is the default, two is the ceiling for a normal comment.** Add the second only to carry the line ref, the why, or the failing case. If it wants more, split it into two findings or move the cross-cutting part to the summary. The one exception: a single finding that genuinely needs a short reasoning chain (a subtle bug, a non-obvious mechanism). Keep that together, per the next rule.
+- **Readable beats crammed.** Terse means few words, not one breathless sentence. Don't chain clause after clause with dashes and `so`s. When a finding needs a few beats, give it a few short sentences in logical order — lead → mechanism → ask. Fragments beat full sentences; a run-on beats neither.
 - Self-contained at the line it lives on. No "see point 3 above", no shared preamble.
 - Hedge honestly and vary it. Bank: `i think`, `i feel like`, `kinda`, `lowkey`, `tbh`, `imo`, `might be missing something`, `could be wrong but`, `not sure but`.
 - Use your normal reaction shapes when they fit:
@@ -119,22 +113,19 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
   - `im not sure this works because …` — correctness concern.
   - `kinda feel like …` — softer design opinion.
   - `dumb question, but …` — genuine ask. Real opener, don't lead every comment with it.
-- Distinguish must-fix from optional through phrasing, not labels. Must-fix bank (vary it): `id want this fixed before merge — …`, `this one needs to change before it lands — …`, `id push back on this — …`. For optional stuff, hand the call to the author with a real question rather than a verdict: `wdyt about …?`, `would it be worth … or overkill here?`, `is there a reason not to …?`, `happy either way — do you reckon …?`. If something genuinely is follow-up-shippable, say it warmly and leave the choice with them (`could totally be a follow-up if youd rather keep this PR tight`).
-- **State the gap, dont command the break.** When you describe what could go wrong, dont phrase it as an instruction to do the broken thing. "drop the guard and a hardcoded key ships to prod" reads like youre telling the author to remove the guard, and the flat certainty lands aggressive. Frame it as whats missing or what nothing prevents — "nothing stops a hardcoded key shipping to prod, the only guard is `isDev()`" — then make the ask.
-- **No shrug-off sign-offs.** `take it or leave it`, `fine as a follow-up`, `not worth changing now`, `feel free to disagree` read as passive-aggressive even when you mean them kindly — they close the door instead of opening a conversation. Reframe as the question you actually have. Not "a counter here would help. take it or leave it." but "would a counter here be worth it, or is the existing signal enough?".
+- Distinguish must-fix from optional through phrasing, not labels (no `**Blocking:**`, `**Nit:**`). Must-fix bank (vary it): `id want this fixed before merge — …`, `this one needs to change before it lands — …`, `id push back on this — …`. For optional stuff, hand the call to the author with a real question rather than a verdict: `wdyt about …?`, `would it be worth … or overkill here?`, `is there a reason not to …?`, `happy either way — do you reckon …?`. If something genuinely is follow-up-shippable, say it warmly and leave the choice with them (`could totally be a follow-up if youd rather keep this PR tight`).
+- **State the gap, dont command the break.** Dont phrase what could go wrong as an instruction to do the broken thing; the flat certainty lands aggressive. Frame it as whats missing or what nothing prevents, then make the ask.
+- **No shrug-off sign-offs.** `take it or leave it`, `fine as a follow-up`, `not worth changing now`, `feel free to disagree` read as passive-aggressive even when you mean them kindly. Reframe as the question you actually have. Not "a counter here would help. take it or leave it." but "would a counter here be worth it, or is the existing signal enough?".
 - Be willing to say `i dont love this because…` or `kinda dont vibe with this approach — …` — opinions are fine, they need a reason.
 
 **Avoid:**
 
 - **Neutral-professional English.** This is the common failure mode. If the comment reads like a polite stranger wrote it, the register's off — go back and match your Slack diction.
-- Severity labels (`**Blocking:**`, `**Nit:**`).
 - "Non-blocking, but:" / "Worth flagging that…" / "Happy as a follow-up — just flagging because…" — let tone carry it.
-- Shrug-off sign-offs: `take it or leave it`, `fine as a follow-up`, `feel free to disagree`. They land as passive-aggressive — ask the question instead.
-- Closing sign-offs on individual comments.
 - Restating what the PR does.
 - Over-citing design patterns by name. Describe the concrete problem.
 
-**Examples** (note the length — one or two sentences each, never more). The `>` blockquotes below are just how examples are shown in this doc — when you actually emit a comment for the user to copy, put the body in a fenced code block (```), never a blockquote:
+**Examples** (one or two sentences each, never more). When you emit a comment for the user to copy, put the body in a fenced code block (```), never a blockquote:
 
 > couldnt this just be a `defaultdict(list)`? the manual `if key not in d` dance is what got us into the off-by-one last time.
 
@@ -148,13 +139,9 @@ For internal-team PRs (PostHog repos, your own repos, anywhere the audience is p
 
 <!-- separate example -->
 
-> dumb question but — is there a reason we cant just reuse `parseConfig` here? the new helper is doing roughly the same thing minus the env-var resolution, which we could pull into the caller.
-
-<!-- separate example -->
-
 > not sure but — does this still work when the upstream returns an empty array? the `[0]` access at line 47 will throw, and i dont see a guard. might be missing something about how the caller validates.
 
-For a finding that needs a reasoning chain, lead with the ask and walk it in short sentences — don't cram it into a dash-chained run-on.
+For a finding that needs a reasoning chain, lead with the ask and walk it in short sentences.
 
 ❌ crammed, ask buried at the end:
 
@@ -164,7 +151,7 @@ For a finding that needs a reasoning chain, lead with the ask and walk it in sho
 
 > can we reword this? it reads like the group signal reaches the gateway, but it doesnt. air spawns the gateway with Setpgid, so its in its own pgroup — the SIGKILL on :80 only ever hits air. the gateway actually dies because air forwards SIGINT under the new 30s kill_delay. not blocking.
 
-Describe the gap, dont write the break as an imperative — and keep it short.
+Describe the gap, dont write the break as an imperative.
 
 ❌ imperative, reads as an instruction and lands aggressive:
 
@@ -180,7 +167,7 @@ Standups, incident updates, team-channel status posts, ops chatter, review/unblo
 
 **Rules:**
 
-- **Same diction as `slack-casual`** — lowercase-leaning, dropped apostrophes, `rn`/`tbh`/`imo`/`afaik`/`wrt`, plain words. A status post is chat with structure, not a formal register; capitalization is mixed and nobody minds.
+- **Same diction as `slack-casual`** — lowercase-leaning, dropped apostrophes, `rn`/`tbh`/`imo`/`afaik`/`wrt`, plain words. Capitalization is mixed and nobody minds.
 - Status first, question second. `Working on it now.` / `should be fixed in 2` / `Both US and EU updated`.
 - Past tense for done items, future tense for next items. No "I will" filler — just the action.
 - Bullets (`•` or `-`) for lists. When a post covers more than one bucket, group under short plain-text labels ending in a colon (`needs some input to unblock:`, `needs an initial review:`). No setup line, no closing line.
@@ -221,7 +208,7 @@ PR bodies, RFC comments, internal proposal docs (e.g. `company-internal` issues)
 
 **Rules:**
 
-- Full sentences, proper capitalization, full punctuation — because it's documentation, not because it's a different voice. The words are still yours: plain, terse, nothing you wouldn't say on Slack.
+- Full sentences, proper capitalization, full punctuation. The words are still yours: plain, terse, nothing you wouldn't say on Slack.
 - First person for what you did: `I traced the failure to…`, `I tested locally with…`, `I verified by inspection that…`.
 - Technical density: name modules, files, line refs, PR numbers, commit hashes when relevant.
 - Section headings come from the repo's PR template (`Problem`, `Changes`, `How did you test this code?`). Fall back to those three if no template exists.
@@ -261,7 +248,7 @@ Customer-facing comments (Zendesk replies, public PR threads on partner repos, p
 **Avoid:**
 
 - Internal jargon and acronyms without expansion (`LLMA`, `PHC`, `PAK`) — the recipient may not know them.
-- Slack-casual register (lowercase, dropped apostrophes, slang). This is the polished register.
+- Slack-casual register (lowercase, dropped apostrophes, slang).
 - Implying the recipient did something wrong when they didn't.
 
 **Example:**
@@ -286,9 +273,9 @@ Short public posts on X and LinkedIn; one version runs identically on both, no p
 
 **Rules:**
 
-- **Diction is `slack-casual`** — write it like a Slack message to the team, not like marketing copy. Lowercase by default (capitals for proper nouns and emphasis), dropped apostrophes (`dont`, `thats`, `cant` — keep them on collisions, `it's`/`we're`/`let's`), slang welcome where it's natural.
-- Differences from `slack-casual`, because a post isn't a chat:
-  - **One self-contained post**, one or two sentences, cap around 25-30 words. No fragmenting across messages, no acknowledgement openers (`yeah`, `gotcha`) — the first clause is already the observation.
+- **Diction is `slack-casual`** — a Slack message to the team, not marketing copy: lowercase by default, dropped apostrophes except on collisions, slang where natural.
+- Differences from `slack-casual`:
+  - **One self-contained post**, one or two sentences, cap around 25-30 words. No fragmenting across messages, no acknowledgement openers (`yeah`, `gotcha`).
   - **Standard Unicode emoji only** (🫠 💸 🔋 🙃), never Slack custom emojis — one per post, occasionally two, placed where the feeling peaks. Never emoji-bulleted lists or a decorative row.
   - State the observation plainly; skip the soft framing (`my take is…`, `i feel like…`) — hedging deflates a one-liner.
 - **Funny is the default register, not a garnish.** The ideal post is a joke that happens to be true: absurd-but-accurate imagery ("it's not persistence, it's cardio"), deadpan personification, self-implication. A flat advice-column delivery ("If X, do Y.") is this register's failure mode.
@@ -319,15 +306,15 @@ Override only when the skill needs a behavior that differs from the register —
 
 ## Using this skill as a post-processor
 
-Triggered either by the user (`/tone [register]`) or by a model that just produced user-facing output and recognises it should be on-register before being posted.
+Triggered by the user (`/tone [register]`) or by a model that just produced user-facing output to be posted.
 
-1. **Identify the target output.** Read the most recent assistant message in the conversation that produced user-facing content (a standup, a PR description, a review comment, an external reply, a Slack draft). If it's ambiguous which output to rewrite, ask before rewriting.
+1. **Identify the target output.** Read the most recent assistant message that produced user-facing content. If it's ambiguous which output to rewrite, ask before rewriting.
 2. **Pick the register.**
    - If the user passed an arg, use it.
    - Otherwise infer from the source skill or output shape: `standup` → `slack-status`, `update-pr` → `pr-description`, `review-pr` → `slack-casual` (inline review comment rules), a public-thread reply → `external`, a social post draft → `social-post`, otherwise → `slack-casual`.
    - If inference is shaky, ask.
-3. **Rewrite, preserving meaning.** Apply the rules for the chosen register and the common rules. Keep all factual content — PR numbers, file paths, names, decisions. Don't add new claims, don't drop concrete details, don't fabricate. If a material claim is known false or unsupported and cannot be verified, do not emit a polished paste-ready version of it. Name the claim and ask for a correction or source.
-4. **When a rewrite proceeds, output the rewritten version only.** No diff, no "here's what I changed" preamble, no commentary. The Step 3 evidence bailout is the exception: name the unsupported claim and ask for what is needed instead of producing copyable text.
+3. **Rewrite, preserving meaning.** Apply the rules for the chosen register and the common rules. Keep all factual content — PR numbers, file paths, names, decisions — and add no new claims. If a material claim is known false or unsupported and cannot be verified, do not emit a polished paste-ready version of it. Name the claim and ask for a correction or source.
+4. **When a rewrite proceeds, output the rewritten version only.** No diff, no "here's what I changed" preamble, no commentary. The Step 3 evidence bailout is the exception.
 5. **If the original is already on-register, say so** with a one-line note rather than producing a near-identical rewrite.
 
 ### Multi-output rewrites

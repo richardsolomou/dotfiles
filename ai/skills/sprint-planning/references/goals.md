@@ -12,7 +12,7 @@ Follow Step 2 (Fetch Team Members) from the main workflow.
 gh api user --jq .login
 ```
 
-This user's section is highlighted in the output. If the API call fails, fall back to the output of `git config user.email` and match against team member handles.
+If the API call fails, fall back to the output of `git config user.email` and match against team member handles.
 
 ## Step G3: Fetch Current Sprint Plan
 
@@ -30,7 +30,7 @@ This user's section is highlighted in the output. If the API call fails, fall ba
 
 ## Step G4: Fetch Board Goals
 
-Run the helper script to fetch In Progress and Todo items with assignee data:
+Fetch In Progress and Todo items with assignee data:
 
 ```bash
 ~/.agents/skills/sprint-planning/scripts/fetch-board-goals.sh

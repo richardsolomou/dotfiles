@@ -7,7 +7,7 @@ description: "Update a pull request's title and description based on the actual 
 
 Update the current branch's PR title and description to reflect the actual changes.
 
-This skill is also the **single source of truth for how to write a PR title and body** — the title rules, the description structure, the length guidance, and the voice. Other skills that push code (`ship`, `address-pr-review`, `babysit`) apply this skill as a sub-step instead of restating its rules. Per the global instructions, a PR's title and body must always reflect the current diff, so any push to a branch with an open PR ends with a refresh through this skill — automatically, without asking.
+This skill is also the **single source of truth for how to write a PR title and body** — the title rules, the description structure, the length guidance, and the voice. Other skills that push code (`ship`, `address-pr-review`, `babysit`) apply this skill as a sub-step instead of restating its rules. A PR's title and body must reflect the current diff, so on any push to a branch with an open PR, compare them against the full diff and refresh through this skill if the net state makes them inaccurate or incomplete. Do this without asking, and rewrite from the entire diff rather than describing only the new commits. Pushes that don't change what the PR claims need no update.
 
 ## Workflow
 
@@ -21,7 +21,7 @@ This skill is also the **single source of truth for how to write a PR title and 
 - Use conventional commit format: `<type>(<scope>): <description>`
 - Keep under 72 characters
 - Use lowercase description, no period at the end
-- Types: the conventional commit types listed under Commit messages in the global instructions
+- Types: the conventional commit types listed in `ship`
 - Scope is optional but encouraged
 
 **Description rules:**
@@ -51,6 +51,7 @@ Rules:
 - **Tight vertical spacing.** One blank line between sections, none inside a bullet list, no trailing blanks or empty template sections left as gaps.
 - Prefer short, direct sentences. Rewrite long sentences when that improves clarity, but do not omit useful detail to meet an arbitrary word count.
 - Bullets over prose when listing more than one thing. Single sentences when listing one.
+- When the PR addresses an issue, link it with a closing keyword (`Fixes #123`), and assign the issue to the user when the PR is theirs.
 - Problem: the constraint, bug, or motivation, including impact and relevant background when they are not obvious.
 - Changes: the intent, non-obvious decisions, important behavior, compatibility or rollout considerations, and explicitly deferred scope. Skip only details that are fully obvious from the title and diff.
 - How did you test: name the tests added or run, manual scenarios exercised, and any validation gaps. Give enough detail for a reviewer to understand what was and was not verified.

@@ -12,15 +12,25 @@ Commit current changes, push, and create or refresh the pull request.
 Check the working tree, the current branch, the remote's default branch, and any existing PR for the branch.
 
 - No changes → stop and say there is nothing to ship.
-- On the remote's default branch → stop before committing and ask the user to create a feature branch.
+- On the remote's default branch, unless the user asked to push to it → create a `<type>/<slug>` branch, or `<type>/<issue#>-<slug>` when the issue is known.
 - The branch's PR is merged or closed → don't push to it. Branch fresh from `origin/<base>`, replay only the unmerged changes, and confirm the new branch has no PR.
 - The user asks for one self-contained PR per repository → don't preserve a stacked base. Consolidate the prerequisite diff onto a trunk-based PR and close superseded PRs in that repository.
 
 Read the full diff. Include untracked files only when they belong to the change; ask if unsure. If the changes are unrelated to each other, ask which to include.
 
+Before marking non-trivial work ready for review:
+
+- Trace the whole changed flow rather than each hunk: failure, retry, concurrency, limits, and trust boundaries. Fix a class of issue everywhere it occurs.
+- Apply `coding-standards` for the languages touched. Run `bin/fmt` if it exists, otherwise the language's formatter, and revert what it changes in files you didn't touch. Every commit compiles and passes its tests.
+- For a request to fix all audit findings, check each one against the final diff and name any that remain.
+
 ## Commit
 
-Stage explicit file paths, never `git add -A`. Write the message per Commit messages in the global instructions, using a quoted heredoc:
+Stage explicit file paths, never `git add -A`. No "WIP" commits unless spiking. Address each PR review round as a new commit so reviewers can see what changed.
+
+Use conventional commits, `<type>(<scope>): <description>`, with types `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `ci`, `perf`, `style`. Write the description in the imperative, lowercase, with no trailing period, and keep the whole line under 72 characters. Add a short body after a blank line when the why isn't obvious. When fixing a bug, include `Fixes #123` on its own line.
+
+Use a quoted heredoc:
 
 ```sh
 git commit -m "$(cat <<'EOF'
@@ -32,6 +42,8 @@ EOF
 ```
 
 ## Push
+
+Stacked PRs use the official `gh stack` extension, not Graphite or base-linked PRs alone (`gh stack init` and `add` to build one). After changing a mid-stack branch, propagate it with `gh stack rebase` and `gh stack sync`.
 
 If the branch belongs to a GitHub Stack (`gh stack view --json` includes it), run `gh stack submit --auto --open` instead of a plain push and PR creation; it pushes every layer, creates or updates the PRs, and syncs the Stack object. Then apply `update-pr` to each created or changed PR.
 

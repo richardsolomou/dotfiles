@@ -31,4 +31,4 @@ Key files:
 
 `bin/check` validates the repo: shell syntax, shellcheck, JSON, markdownlint, each skill's frontmatter name against its directory, that every skill a SKILL.md names exists, and the `test-*` scripts under `ai/skills/`. CI runs the same script.
 
-Keep `ai/AGENTS.md` harness-neutral: it is loaded verbatim by all three, so name a harness only when a rule is genuinely specific to it.
+Keep `ai/AGENTS.md` harness-neutral: it is loaded verbatim by all three, so name a harness only when a rule is genuinely specific to it. It loads in every session, so it holds only what must apply with no skill loaded; workflow rules belong in the skill that runs the workflow.

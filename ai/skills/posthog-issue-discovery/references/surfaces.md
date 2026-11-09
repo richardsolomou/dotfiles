@@ -37,7 +37,7 @@ For anything the table misses, load `posthog:signals-scout-general` for cross-pr
 
 ## Find defects in drop-offs
 
-The scout guidance catches flows that regress against their own baseline. A defect can also cause a steady drop-off that has always been there, so check the core flows directly:
+A defect can also cause a steady drop-off with no regression against baseline, so check the core flows directly:
 
 1. Inventory the flows and their expected events. Use saved funnels in `system.insights` (read steps with `extractAll` on `query::text`), the core and activation flows that `product_description` names, and `query-paths` from the main entry events when neither exists. Include steps with zero events; an event-name census cannot discover missing capture. Confirm every event with `read-data-schema`, note which library emits each step (client and server events break browser breakdowns and host filters differently), and apply the test-account filters and declared non-production exclusions. For an absent step, inspect its deployed emitter and event history: a chart that still names a retired event is stale configuration, while an active success path that bypasses its emitter is a capture gap. A zero count alone does not distinguish these cases from inactivity.
 2. Break each step down by the dimensions a defect follows: browser, OS, device type, `$lib` and `$lib_version`, app version or release, host, and entry path. A segment that converts far below its peers at one step, with enough entrants for a stable rate, is a lead even when nothing changed over time.

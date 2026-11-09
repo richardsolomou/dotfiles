@@ -1,11 +1,11 @@
 ---
 name: inbox
-description: "Plan Richard's day from his calendar, the current sprint plan, GitHub work waiting on him, Slack mentions, DMs, and saved items, and the support queue when he is support hero. Use in the morning, or for 'what should I work on today?', 'plan my day', or 'what needs me?'. Also use to work the plan as a checklist: 'pick up the next item', 'take the Rebecca one', 'mark that done'."
+description: "Plan Richard's day from calendar, sprint plan, GitHub, Slack, and support queue. Use in the morning, or for 'what should I work on today?', 'plan my day', 'what needs me?'. Also works the plan as a checklist: 'pick up the next item', 'take the Rebecca one', 'mark that done'."
 ---
 
 # Inbox
 
-Turn everything that might claim Richard's day into a short, ordered checklist that fits the time he actually has. Agent sessions then work it top-down (section 6). This is forward-looking; `standup` covers what already happened.
+Turn everything that might claim Richard's day into a short, ordered checklist that fits the time he actually has. This is forward-looking; `standup` covers what already happened.
 
 When the request is to pick up, take, finish, or mark an item, skip straight to section 6.
 
@@ -17,11 +17,11 @@ Load `activity-harvest` for the window and archive mechanics. Its identity const
 ~/.agents/skills/activity-harvest/scripts/activity-dates.sh PostHog/today date previous
 ```
 
-`window_start` bounds the "new since last time" searches: Slack mentions and DMs, and GitHub mentions. Everything else is current state. Read `prev_file_path` when present. Its unchecked items are the strongest candidates for today: call each one out as carried over rather than repeating it silently, and carry over the ⏸️ note on any item that was handed back. Re-check its open owed items too. They predate `window_start`, so the searches below will not find them again. Checked items are done, so drop them.
+`window_start` bounds the "new since last time" searches: Slack mentions and DMs, and GitHub mentions. Everything else is current state. Read `prev_file_path` when present. Its unchecked items are the strongest candidates for today: call each one out as carried over rather than repeating it silently, and carry over the ⏸️ note on any item that was handed back. Re-check its open owed items too; they predate `window_start`, so the searches below will not find them. Drop checked items.
 
 ## 2. Gather
 
-Issue these as parallel tool calls; only the support pass waits, on the sprint comment. Do not spawn agents only to collect.
+Run these concurrently per `activity-harvest`; only the support pass waits, on the sprint comment.
 
 - **Calendar.** Discover the available calendar tools before choosing a call. With the Google Calendar plugin, use `list_calendars` to resolve `primary`, `User interviews`, and `Holidays in Cyprus`, then `search_events` on each calendar from now to the end of today with explicit RFC3339 bounds and `timezone_str: "Asia/Nicosia"`, following every page. Use `read_event` for attendee lists and any missing descriptions or attachments; a shared calendar's `my_response_status` is not Richard's RSVP. With the standalone calendar MCP, use `get-current-time`, then `list-events` across those calendars with `timeZone: "Asia/Nicosia"` and `fields: ["description", "attachments"]`. Events on the shared `User interviews` calendar are teammates' interviews unless `richard.s@posthog.com` is an attendee; list those as optional joins that do not reduce capacity. Drop events he declined and all-day markers that do not block time; a Cyprus public holiday or an out-of-office event means he may be off. Convert every time to his timezone; events carry their organizer's offset. If no calendar tools are exposed, report that separately from a failed connection; a Slack digest is partial evidence and cannot establish availability, RSVP states, or the absence of meetings.
 - **Sprint.** Run `~/.agents/skills/sprint-planning/scripts/detect-sprint.sh`, then `~/.agents/skills/sprint-planning/scripts/fetch-previous-comment.sh <current_number>` for the team's current comment. Extract Richard's high-priority and side-quest plan items with their links, the support hero, who is off, and the working days left in the sprint.
@@ -41,7 +41,7 @@ Source items are candidates; establish current state before ranking them.
 - **Sprint items.** Match every Richard high-priority and side-quest plan item to its evidence: an open PR, a recent thread, yesterday's standup. Note which have momentum and which have not started. Account for every item in the output: actionable work goes in Focus or Owed, deferred work goes in Not today with its link and reason, and completed work is acknowledged briefly with its evidence. Include teammates' time off when it affects reviews, dependencies, or handoffs.
 - **Meetings.** Flag any that need preparation: he is presenting or interviewing, the description asks for pre-reading, or a doc is attached.
 
-Keep evidence separate from interpretation. A Slack promise is not a shipped fix, and a merged PR is not a confirmed recovery.
+A Slack promise is not a shipped fix, and a merged PR is not a confirmed recovery.
 
 ## 4. Plan the day
 
@@ -91,13 +91,13 @@ If the calendar or sprint comment shows him off today, say so and stop.
 <!-- generated-at: <now> -->
 ```
 
-Owed, Focus, and Team reviews items are tasks (`- [ ]`). Their order from top to bottom is the priority order agents follow, so put each item in its final rank. Calendar and Not today items stay plain bullets. Meeting prep that needs work is an Owed task, and the Calendar line only points to it. Make each task one self-contained unit of work, so that an agent can pick it up with only this line and its links. Split an item that has two independent next steps.
+Owed, Focus, and Team reviews items are tasks (`- [ ]`) in final priority order, top to bottom. Calendar and Not today items stay plain bullets. Meeting prep that needs work is an Owed task, and the Calendar line only points to it. Make each task self-contained, so an agent can pick it up with only this line and its links. Split an item that has two independent next steps.
 
-After the checkbox, lead every item with one action emoji so the next move reads at a glance: 💬 reply, 👀 review, 🛠️ build, 🔍 investigate, ✅ verify, 🔀 merge or fix his PR, 🧹 housekeeping, 🙋 optional. Use those and the section emojis only; no decorative extras.
+After the checkbox, lead every item with one action emoji: 💬 reply, 👀 review, 🛠️ build, 🔍 investigate, ✅ verify, 🔀 merge or fix his PR, 🧹 housekeeping, 🙋 optional. Use those and the section emojis only; no decorative extras.
 
-Link every item, and make the link text name its destination: the person and ask for a thread, `#123` for a PR or issue, `note` for a to-do note. Put the main link on the item's subject and secondary links after a `·`. Use absolute paths for notes files so they open from the terminal too, and check each one exists; the index can link notes that were never written. Omit empty sections and the ⚠️ line when every source succeeded. Do not draft replies; point to the to-do note when one exists.
+Link every item, and make the link text name its destination: the person and ask for a thread, `#123` for a PR or issue, `note` for a to-do note. Put the main link on the item's subject and secondary links after a `·`. Use absolute paths for notes files, and check each one exists; the index can link notes that were never written. Omit empty sections and the ⚠️ line when every source succeeded. Do not draft replies; point to the to-do note when one exists.
 
-GitHub and the Slack mention and DM searches are bounded by `window_start`, so a failure or truncation there would drop requests for good once `generated-at` advances: show the plan marked incomplete, name the pass to rerun, and do not write it. Every other source is current state that the next run reads again; its failures go on the ⚠️ line only.
+GitHub and the Slack mention and DM searches are required passes per `activity-harvest` § *Archive to notes*: on failure or truncation, show the plan marked incomplete and do not write it. Every other source is current state that the next run reads again; its failures go on the ⚠️ line only.
 
 For a targeted correction rather than a full rerun, preserve `generated-at` so unqueried GitHub and Slack activity remains in the next run's window.
 
@@ -105,7 +105,7 @@ Otherwise write the plan to `new_file_path`. A same-day rerun replaces it but ke
 
 ## 6. Work the list
 
-Each agent session works one task. The plan file at `~/dev/notes/PostHog/today/<today>.md` is the shared board. Git is the lock, because several sessions can pick up items at the same time.
+Each agent session works one task. The plan file at `~/dev/notes/PostHog/today/<today>.md` is the shared board, and git is the lock.
 
 A task's state is its checkbox plus at most one status suffix after a ` · `:
 
@@ -120,7 +120,7 @@ A task's state is its checkbox plus at most one status suffix after a ` · `:
 
 **Claim.** Run `git -C ~/dev/notes pull -q --rebase`, then choose the task. "Next" means the first task with no suffix, from top to bottom. Never pick it from Not today. A named task ("the Rebecca one") must be open or ⏸️. If it is 🚧, say who has it and stop. Add the 🚧 suffix, then commit `today: claim <short name>` and push. A rejected push means another session wrote first. Pull, check the task again, and claim the next open task if this one is taken. If no file exists for today, or no task is open, say so. Do not plan the day as a side effect.
 
-**Work.** Treat the line and its links as the brief, and check the current state before acting, because the plan can be hours old. Follow the user's normal rules: nothing is posted, sent, commented, merged, or enqueued without his approval in this session. Thus most 💬 and 👀 tasks end with a draft. Write it with `tone` into `~/dev/notes/PostHog/todos/` and link it.
+**Work.** Treat the line and its links as the brief, and check the current state before acting. Nothing is posted, sent, commented, merged, or enqueued without his approval in this session, so most 💬 and 👀 tasks end with a draft. Write it with `tone` into `~/dev/notes/PostHog/todos/` and link it.
 
 **Finish.** Pull again, then set the outcome on the claimed line only:
 

@@ -1,12 +1,12 @@
 ---
 name: quarterly-planning
-description: "Prep quarterly planning for the Context & MCP team the PostHog way — quarter review, HOGS, themes, and next quarter's objectives PR on posthog.com. Use when the user asks to prep/run quarterly planning, write the quarter retro/review, draft the HOGS, or open/update the objectives PR. Configurable for other teams via `scripts/config.sh`."
+description: "Prep quarterly planning for the Context & MCP team the PostHog way: quarter review, HOGS, themes, and next quarter's objectives PR on posthog.com. Use to prep/run quarterly planning, write the quarter retro/review, draft the HOGS, or open/update the objectives PR."
 argument-hint: "[review|hogs|pr]"
 ---
 
 # Quarterly Planning
 
-Prep and run quarterly planning for the **Context & MCP** team (configurable for other teams via `scripts/config.sh`), following PostHog's [goal-setting process](https://posthog.com/handbook/company/goal-setting). The end product is a PR on the team's `objectives.mdx` page setting next quarter's goals, tagged for the relevant Blitzscale member to review.
+Prep and run quarterly planning for the **Context & MCP** team, following PostHog's [goal-setting process](https://posthog.com/handbook/company/goal-setting). The end product is a PR on the team's `objectives.mdx` page setting next quarter's goals, tagged for the relevant Blitzscale member to review.
 
 The process, per the handbook:
 
@@ -14,11 +14,9 @@ The process, per the handbook:
 - **Meeting split:** ~20% reviewing the quarter that's ending, ~80% setting next quarter's goals. The review is filled in async beforehand. A well-prepared meeting takes an hour max.
 - **HOGS** are written **privately and independently** by each person *before* reading anyone else's, then pasted in together so nobody is skewed by the others' thinking.
 
-This skill produces the async prep — the review and a HOGS scaffold — and, once goals are agreed, drafts and opens the objectives PR.
-
 ## Team Configuration
 
-All team-specific values live in this skill's `scripts/config.sh`. The helper scripts source it automatically; the inline `gh`/`git` commands in this skill source it too, so always run them with the leading `source` line shown. Scripts are invoked through `~/.agents/skills/`, which every harness's installer populates, so the commands work from any working directory.
+All team-specific values live in this skill's `scripts/config.sh`. The helper scripts source it automatically; always run the inline `gh`/`git` commands with the leading `source` line shown. Scripts are invoked through `~/.agents/skills/`, so the commands work from any working directory.
 
 The defaults target the **Context & MCP** team:
 
@@ -67,7 +65,7 @@ Gather everything you can automatically before asking the user anything.
 Returns tab-separated fields:
 `cur_label\tcur_start\tcur_end\tnext_label\tnext_start\tnext_end\tdays_until_cur_end`
 
-Store these. `cur_*` is the quarter being **reviewed**; `next_*` is the quarter being **planned**. Use `days_until_cur_end` to note where in the cycle we are: ~21 days out is when Blitzscale sets direction, ~14 days out is when the team meeting runs, and goals should merge before `cur_end`.
+Store these. `cur_*` is the quarter being **reviewed**; `next_*` is the quarter being **planned**. Use `days_until_cur_end` to note where in the cadence we are.
 
 If the request names a quarter, or `days_until_cur_end` is outside the closing 21-day window, show the inferred review and planning labels and ask the user to confirm them before fetching evidence. For catch-up planning, rerun `detect-quarter.sh <date-in-review-quarter>` so the intended quarter becomes `cur_*`. If the confirmed review quarter is still open, label the result `review to date` and do not infer a miss from work that has not happened yet.
 
@@ -89,7 +87,7 @@ source ~/.agents/skills/quarterly-planning/scripts/config.sh
 cat "$QP_OBJECTIVES_PATH"
 ```
 
-Extract only the objectives section whose heading matches the confirmed `cur_label`. If no section matches, or more than one does, stop scoring and ask which section is authoritative. This prevents a page that already rolled forward or retains historical quarters from supplying the wrong goals.
+Extract only the objectives section whose heading matches the confirmed `cur_label`. If no section matches, or more than one does, stop scoring and ask which section is authoritative.
 
 If the file is missing or `QP_POSTHOG_COM_DIR` isn't a checkout, note it and ask the user for this quarter's objectives (or treat as a first-time team with no prior goals). **Capture the file's exact format** — heading style (`### Q2 2026 objectives`), goal heading style (`#### Goal N: Title`), owner-tagging convention (`(Driver: <TeamMember name="…" />)`, `(owner)` in a summary, or none), and the description / "What we'll ship" labels. The new quarter must match this format exactly.
 
@@ -102,7 +100,7 @@ source ~/.agents/skills/quarterly-planning/scripts/config.sh
 ~/.agents/skills/activity-harvest/scripts/team-merged-prs.sh <username> "$QP_ORG" <cur_start> <cur_end> 500
 ```
 
-Store all PR data per member. A quarter is a lot of PRs — you'll synthesize, not list, them. The fetch is deliberately title-only (hundreds of bodies would swamp the context at quarter scale); when a flagship or ambiguous item needs more than its title to score an objective, fetch that PR's body selectively with `gh pr view <url> --json body`.
+Store all PR data per member. The fetch is deliberately title-only; when a flagship or ambiguous item needs more than its title to score an objective, fetch that PR's body selectively with `gh pr view <url> --json body`.
 
 ### Step 5: Build the Past-Quarter Review
 
@@ -133,7 +131,7 @@ Wait for the user's response. If invoked with `review`, stop here.
 
 ### Step 6: HOGS
 
-HOGS are written **privately and independently** before anyone reads the others' — that's the whole point, so people aren't anchored. So your job here is to hand the user a scaffold to fill in *their own* HOGS, seeded lightly from the review and shipped work as prompts — not to write them.
+Hand the user a scaffold to fill in *their own* HOGS, seeded lightly from the review and shipped work as prompts — not to write them.
 
 Present the scaffold (substitute `{next_label}`):
 
@@ -193,8 +191,6 @@ git -C "$QP_POSTHOG_COM_DIR" fetch origin
 default_branch=$(gh repo view PostHog/posthog.com --json defaultBranchRef --jq .defaultBranchRef.name)
 git -C "$QP_POSTHOG_COM_DIR" switch -c "${QP_TEAM_PAGE_SLUG}-objectives-$(echo "$next_label" | tr 'A-Z ' 'a-z-')" "origin/${default_branch}"
 ```
-
-(Name the branch descriptively, e.g. `context-and-mcp-objectives-q3-2026`.)
 
 ### Step P3: Update objectives.mdx
 

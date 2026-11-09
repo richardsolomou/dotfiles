@@ -5,15 +5,15 @@ description: Find and verify defects across everything a PostHog project observe
 
 # PostHog issue discovery
 
-Sweep a PostHog project for real defects: product bugs, operational failures, and observability defects such as incorrect exception capture, repeated warnings for expected states, or fingerprint churn that presents one failure as new. Start from what PostHog has already surfaced, cover every product with live data, verify each lead, trace its cause in code, and report the results for the user to choose from.
+Sweep a PostHog project for real defects: product bugs, operational failures, and observability defects such as incorrect exception capture, repeated warnings for expected states, or fingerprint churn that presents one failure as new.
 
 ## Invocation and scope
 
 Find and verify up to 10 distinct defects unless the user specifies another target, project, surface, date range, exclusions, or known issues.
 
-The scope is the PostHog project, not the working directory. The skill works from any directory; a repository is needed only to trace a cause (see "Resolve the owning code"). Never reset, switch, or modify a checkout.
+The scope is the PostHog project, not the working directory. A repository is needed only to trace a cause. Never reset, switch, or modify a checkout.
 
-Discovery is read-only across PostHog and GitHub: no code changes, scout or scanner changes, tracker writes, PRs, or analytics configuration changes. The one exception is the inbox: the user does not review it, so this skill settles every open report itself (see "Settle the inbox"). Report in the conversation. Do not install dependencies, run builds, or write files in the user's checkouts; run any reproduction from a fresh temporary directory. Fetching remote refs is fine. The read-only limit ends only for the defects the user picks after the report.
+Discovery is read-only across PostHog and GitHub: no code changes, scout or scanner changes, tracker writes, PRs, or analytics configuration changes. The one exception is the inbox: the user does not review it, so this skill settles every open report itself (see "Settle the inbox"). Do not install dependencies, run builds, or write files in the user's checkouts; run any reproduction from a fresh temporary directory. Fetching remote refs is fine. The read-only limit ends only for the defects the user picks after the report.
 
 ## Connect and orient
 
@@ -92,4 +92,4 @@ Do not claim reports. A disposition without evidence, such as "probably fixed", 
 
 ## Report
 
-Report in the format in [references/report.md](references/report.md), then ask which defects to fix. Do not dump exploratory queries or an investigation transcript.
+Report in the format in [references/report.md](references/report.md). Do not dump exploratory queries or an investigation transcript.

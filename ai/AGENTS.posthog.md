@@ -16,6 +16,8 @@ Don't stop at the diff: build and package the extension for local Chrome install
 
 ## PostHog Specifics
 
+For repo ownership questions, verify the current team from an authoritative source; workflow reviewers and recent contributors can be stale after a handoff.
+
 ### Production Architecture
 
 PostHog production runs behind load balancers (AWS NLB → Contour/Envoy ingress → pods; Contour `num-trusted-hops: 1`, NLB `preserve_client_ip`). For anything touching client IPs — rate limiting, auth, geolocation — **never use the socket IP**; it's always the load balancer. Use `X-Forwarded-For`, then `X-Real-IP`, then `Forwarded` (RFC 7239), socket IP only as a local-dev fallback. Rust: `tower_governor::key_extractor::SmartIpKeyExtractor`; look for similar "smart" extractors in other languages.
