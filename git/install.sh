@@ -22,3 +22,6 @@ else
     echo "✓ Added mergiraf configuration to ~/.config/git/attributes"
   fi
 fi
+# Aliases live in git's XDG config rather than an [include] of ~/.gitconfig, because
+# sandboxed tools (PostHog's bin/dev-sandbox) may read only the standard config paths.
+ln -sfn "$(cd "$(dirname "$0")" && pwd)/aliases.gitconfig" ~/.config/git/config

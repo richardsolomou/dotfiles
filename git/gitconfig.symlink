@@ -1,7 +1,6 @@
 # Local/private config goes in the include
 [include]
         path = ~/.gitconfig.local
-        path = ~/.gitconfig.aliases
 
 [color]
         diff = auto
