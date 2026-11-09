@@ -86,11 +86,11 @@ If `deep` was requested, run `review-pr <pr> as:self second-opinion` against the
 
 If the batch changes files or history, check out the PR head and stop if the working tree contains unrelated changes. Never stash or discard the user's work.
 
-Fetch the base before changing history. Only update from the base when the snapshot reports a merge conflict or the fix cannot be tested against the current base. When CI tests a synthetic merge, reproduce its merged tree: a passing test on the PR head alone does not resolve a failure caused by newer base changes. For a plain PR, merge the base without pushing. For a GitHub Stack, use `restack` once. Resolve conflicts with `resolve-conflicts`. If conflict resolution needs judgement, abort it cleanly, record the conflict event as deferred, and stop changing history.
+Fetch the base before changing history. Only update from the base when the snapshot reports a merge conflict or the fix cannot be tested against the current base. When CI tests a synthetic merge, reproduce its merged tree: a passing test on the PR head alone does not resolve a failure caused by newer base changes. For a plain PR, merge the base without pushing. For a GitHub Stack, run `gh stack rebase` and `gh stack sync` once. If conflict resolution needs judgement, abort it cleanly, record the conflict event as deferred, and stop changing history.
 
 Apply all unambiguous CI, review, and deep-review fixes. Run the narrow tests, formatter, and linter that cover the changed areas. Create one new fix commit when file edits exist. Never amend. Before pushing, confirm that the remote PR HEAD still equals the snapshot HEAD; if it changed, stop without pushing and report the local commit. Push the target branch once after the full batch passes local verification. Set `babysit_pushed_sha` to the pushed SHA.
 
-If the PR belongs to a GitHub Stack and `restack` has not run in this invocation, run it once after the target push. A required restack belongs to the same corrective push batch and can update dependent branches. Do not perform another target-branch correction in this invocation.
+If the PR belongs to a GitHub Stack and the stack has not been rebased in this invocation, run `gh stack rebase` and `gh stack sync` once after the target push. A required rebase belongs to the same corrective push batch and can update dependent branches. Do not perform another target-branch correction in this invocation.
 
 If the push fails, stop and report the error. Do not retry the push, update the PR body, or claim that a review fix is live.
 

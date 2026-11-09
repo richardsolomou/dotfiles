@@ -49,7 +49,7 @@ Stop here for review-only requests. Otherwise proceed with authorized correction
 
 ## Fix and approve
 
-Assign each branch or stack to one implementation owner in an isolated worktree. The parent owns approvals, queue actions and watchers. Use `ship`, `update-pr`, `restack` and repository preflight instructions for those operations; make new commits for review rounds and batch related fixes into one corrective push. Run PostHog development commands through `.codex/with-flox` from that worktree's root, using its dependencies. Leave unrelated stacks and shared services alone.
+Assign each branch or stack to one implementation owner in an isolated worktree. The parent owns approvals, queue actions and watchers. Use `ship`, `update-pr`, `gh stack rebase`, `gh stack sync` and repository preflight instructions for those operations; make new commits for review rounds and batch related fixes into one corrective push. Run PostHog development commands through `.codex/with-flox` from that worktree's root, using its dependencies. Leave unrelated stacks and shared services alone.
 
 Before changing a queue-held branch, cancel its submission and confirm every affected layer is inactive. Failed batches may still be held while Trunk bisects or waits for other tests.
 
