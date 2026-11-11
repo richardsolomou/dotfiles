@@ -23,9 +23,9 @@ Never write a polling loop, `sleep` loop, or `gh pr checks --watch`. Use one wat
 
 - Only the thread that owns the PR watches it. A delegated agent never does.
 - Handle existing checks and comments before you start watching, because only later events wake you. Do not call the watcher again on a wake.
-- A wake is news, not a decision. Re-read the PR's state yourself.
+- A wake is news, not a decision. Re-read the PR's state yourself. A "required checks passed" wake counts only checks that have reported, so apply the `mergeStateStatus` gate from `ship` before calling CI green. If a required check has not reported yet, end the turn: the watcher wakes again when it does.
 - When an event needs no action, end the turn without a message.
-- Stop the watcher when you hand back, so the thread stops showing as working. A merge or close ends it on its own.
+- Stop the watcher when you hand back, so the thread stops showing as working. A merge or close ends it on its own and wakes no one.
 - If a watcher stops because it could not read the PR, check `gh api rate_limit --jq .resources.graphql` before starting another. Wait for the reset with one background command.
 - When GraphQL is exhausted, the REST limit is separate. Read with `gh api repos/<owner>/<repo>/pulls/<n>` and `gh api repos/<owner>/<repo>/commits/<sha>/check-runs`.
 
@@ -76,7 +76,7 @@ Report only meaningful transitions: the correction batch, reply drafts and defer
 
 Hand back and stop the watcher in these states:
 
-- `ready`: merge-gating CI is green on the latest commit, the branch is mergeable and up to date with its base, and no new feedback remains.
+- `ready`: GitHub reports the latest commit mergeable by the `mergeStateStatus` gate in `ship`, and no new feedback remains.
 - `needs-user`: a deferred decision or external dependency requires the user.
 - `finished`: the PR is merged or closed.
 

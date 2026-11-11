@@ -62,6 +62,14 @@ rm -rf <draft>
 
 ## Merge (only when asked)
 
-Wait only on checks that gate merging: branch protection or ruleset required checks, or, when there are none, the CI jobs that build and test the change. Never `gh pr checks --watch` across every check. Take a snapshot first: a run with status `waiting` needs an environment approval (`gh api repos/<repo>/actions/runs/<id>/pending_deployments`), so name it and, when it does not gate merging, merge once the gating checks pass instead of waiting on it.
+GitHub's `mergeStateStatus` (`gh pr view <n> --json mergeStateStatus`) decides, not a count of green checks:
 
-Report the commit hash and message, and the PR URL.
+- `CLEAN`, `UNSTABLE` or `HAS_HOOKS`: merge now with the method the repository uses. Never use `--admin` or another bypass.
+- `BEHIND`: update the branch from its base. `DIRTY`: resolve the conflict.
+- `BLOCKED`: find the blocker before acting. Read the base's required contexts from `gh api repos/<repo>/rules/branches/<base>` and branch protection, and compare them with the head commit's check runs. A required check whose job `needs:` other jobs has no run until they finish, so `gh pr checks --required` and watchers that count reported checks both miss it. Treat it as pending.
+
+A run with status `waiting` needs an environment approval (`gh api repos/<repo>/actions/runs/<id>/pending_deployments`): name it, and when it does not gate merging, don't wait on it.
+
+While a gating check is pending, wait as `babysit` describes and merge on the wake that finds the PR mergeable. Don't enable auto-merge: the merge would happen without you, nothing wakes you afterwards, and post-merge verification and the report never happen.
+
+Report the commit hash and message, the merge commit, and the PR URL.

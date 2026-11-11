@@ -79,10 +79,9 @@ If you are on the default branch, create a `<type>/<slug>` branch first. Open a 
 Follow `babysit` for each PR until this gate holds on its latest commit:
 
 - Proof covers the entire diff, including any fixes made since.
-- Required checks are green.
 - Review bots have finished, and each finding is fixed or recorded with its reason and a draft reply.
 - No human review requests changes.
-- The branch is up to date with its base and GitHub reports it mergeable.
+- GitHub reports it mergeable by the `mergeStateStatus` gate in `ship`, which covers required checks.
 - Auto-merge is off.
 
 Ending the turn without a watcher running stops the work. When every PR passes or is blocked, stop the watchers so the thread shows as finished.
@@ -107,7 +106,7 @@ After any verdict with no PR, stop anything you started with the repository's do
 This applies when the user later says merge, or take it live. A bare request covers every PR this run left ready; a named PR covers only that one. These steps still run without questions.
 
 1. Recheck each PR. It must still pass the gate above on the commit the user tested. If only the base moved, update the branch and wait for green again. If the head changed for any other reason, stop and report it.
-2. Merge with the method the repository documents, in dependency order. Never use `--admin` or another bypass. Stay until GitHub reports each PR as merged.
+2. Merge as `ship` describes, in dependency order, and stay until GitHub reports each PR as merged.
 3. If merging deploys, confirm the new version is running and check the fixed behaviour where it actually runs: the alert routes somewhere real, the dashboard shows live data, the fallback dispatches. A green check in one repository says nothing about related PRs in another. Use one background wait that covers the whole pipeline.
 4. Tear down this thread's worktree and any delegated ones, once their PRs have merged. Run the repository's documented teardown from inside the worktree, and never kill processes by port or name. Read the actual branch name with `git branch --show-current`, because T3 renames branches. Then, as your last command in one call, run `git -C <primary checkout> worktree remove <path>` without `--force`, followed by `git -C <primary checkout> branch -D <branch>`. The shell's working directory disappears with the worktree. Do this only if the worktree is clean and its HEAD is the merged PR's head, or has no commits of its own when there is no PR. Otherwise keep it and say why. Never remove the primary checkout.
 5. Report the merge commits, the release result, and what was torn down.
