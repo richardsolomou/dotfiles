@@ -16,6 +16,9 @@ ALL_COMPONENTS="context skills mcp plugins hooks permissions preferences"
 # ~/.claude/skills and ~/.agents/skills, the cross-harness convention.
 SKILL_DIRS="$HOME/.claude/skills $HOME/.codex/skills $HOME/.agents/skills"
 
+# Skill sources: this repository's, plus those a local ras-stack checkout ships, which link into the checkout so they track it.
+SKILL_SOURCES="$ZSH/ai/skills $HOME/dev/ras-stack/skills"
+
 # Format: name|description|command or URL|env (env optional, KEY=VALUE)
 MCP_SERVERS="
 posthog-db|PostHog database connection|$HOME/.local/bin/postgres-mcp --access-mode=restricted|DATABASE_URI=postgresql://posthog:posthog@localhost:5432/posthog
@@ -120,7 +123,7 @@ prune_dangling_skill_links() {
     for entry in "$1"/*; do
         [ -L "$entry" ] && [ ! -e "$entry" ] || continue
         case "$(readlink "$entry")" in
-            */ai/skills/*) rm -f "$entry" ;;
+            */ai/skills/* | */ras-stack/skills/*) rm -f "$entry" ;;
         esac
     done
 }
@@ -189,7 +192,7 @@ if [ "$UNINSTALL" = "true" ]; then
 
     if wants skills; then
         for dir in $SKILL_DIRS; do
-            for skill_dir in "$ZSH"/ai/skills/*/; do
+            for skill_dir in $(for source in $SKILL_SOURCES; do printf '%s ' "$source"/*/; done); do
                 [ -d "$skill_dir" ] || continue
                 unlink_managed "$dir/$(basename "$skill_dir")"
             done
@@ -213,7 +216,7 @@ fi
 
 if wants skills; then
     for dir in $SKILL_DIRS; do
-        for skill_dir in "$ZSH"/ai/skills/*/; do
+        for skill_dir in $(for source in $SKILL_SOURCES; do printf '%s ' "$source"/*/; done); do
             [ -d "$skill_dir" ] || continue
             link "$skill_dir" "$dir/$(basename "$skill_dir")"
         done

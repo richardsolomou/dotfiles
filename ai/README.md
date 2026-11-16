@@ -5,7 +5,7 @@ One set of instructions, skills, and MCP servers, shared by every agent harness:
 - `AGENTS.md` — global instructions for all harnesses
 - `AGENTS.posthog.md` — extra rules loaded only under `~/dev/posthog`
 - `RTK.md` — rtk usage notes, imported by Claude Code only
-- `skills/` — local skills shared by the installed agent harnesses
+- `skills/` — local skills shared by the installed agent harnesses, plus the skills in a `~/dev/ras-stack` checkout when one exists
 
 ## Installation
 
