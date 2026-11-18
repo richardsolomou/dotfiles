@@ -77,6 +77,7 @@ If the result is "NOT_FOUND" (e.g., the team's first sprint), skip the plan-firs
 If the result is not "NOT_FOUND", parse the comment to extract:
 
 - The **Plan** section from the previous sprint (this becomes the retro skeleton)
+- The **Sprint priorities**, the team's top two focuses, which the retro reports on first
 - Each team member's planned items
 - The quarter goal statuses
 
@@ -206,6 +207,8 @@ If there is no board (Step 5 skipped), draft the plan **only from in-progress wo
 - **Items already covered by open PRs** — an issue isn't a plan item if a teammate's open stack resolves it.
 - **Close-candidates** — issues whose work merged; mention as housekeeping, not plan items.
 
+**Propose the two sprint priorities.** They are the team's top two focuses, so people outside the team can see what we're doing at a glance. Name each as a theme in plain words, not a single PR, drawn from the themes that most of the plan's high-priority work serves. The user picks the final two.
+
 **Propose quarter-goal status bumps from evidence** (a ⚪ sub-goal with real in-flight work behind it → 🟡) instead of only asking for changes.
 
 **Suggestions, if the user asks for extra picks:** draw only from open issues the person owns or that sit next to work they already did — prioritize the remaining children of their epics so the epics can close. Phrase each as the work itself ("Reconcile the breaker with the health bands"), never as "close out the epic". Present them as a prunable list; fold the survivors into the end of that person's plan as ordinary bullets.
@@ -213,6 +216,11 @@ If there is no board (Step 5 skipped), draft the plan **only from in-progress wo
 Then present the draft:
 
 > Here's the plan I've drafted from the project board:
+>
+> **Sprint priorities:**
+>
+> - priority1
+> - priority2
 >
 > **High priority:**
 > @member1 - item1, item2
@@ -224,8 +232,9 @@ Then present the draft:
 >
 > Questions:
 >
-> 1. Any adjustments to the plan?
-> 2. Any changes to quarter goal statuses?
+> 1. What are the team's two sprint priorities?
+> 2. Any adjustments to the plan?
+> 3. Any changes to quarter goal statuses?
 
 Wait for the user's response.
 
@@ -253,7 +262,8 @@ The format below mirrors the canonical issue template at [`.github/ISSUE_TEMPLAT
 - **Status emoji prefix the line** — `- 🟡 Goal 1: …`, not a trailing emoji. Nest sub-items, each with its own emoji.
 - **The legend is a single inline line at the bottom of the Retro `<details>`** — `🟢 =finished 🟡=in progress 🔴=won't finish ⚪=not started`. No separate legend block under Quarter goals.
 - **No narrative paragraph** — the retro is bullets only, inside `<details>`.
-- **Plan subsections are `### High priority`, `### Low priority / side quests`, and `### Are any other teams impacted by this plan? If so, tag them here`** — include all three, even if a section is just `-`.
+- **Plan subsections are `### Sprint priorities`, `### High priority`, `### Low priority / side quests`, and `### Are any other teams impacted by this plan? If so, tag them here`** — include all four, even if a section is just `-`.
+- **Sprint priorities are exactly two team-wide themes**, written for readers outside the team: one plain-language line each, no `@person`, no links.
 - **Plan items are deliverables, not process.** Never write items like "review X's PRs", "coordinate with Y", or "keep an eye on Z". Every bullet names something that ships or a decision that gets recorded.
 - **Plan bullets are short.** Deliverable + issue/PR link, one line, at most one brief clause of context. No rationale chains, PR counts, launch-gate explanations, or em-dash essays — that detail lives in the linked issues.
 - **One deliverable per plan bullet.** Don't pair items just because they're adjacent ("Antithesis trial; add Bedrock to the simulator" is two bullets). Combine only when it's genuinely one workstream — a batch plus its cutover, one alerting effort with two halves.
@@ -263,7 +273,7 @@ Substitute the configured values: `SPRINT_COMMENT_HEADER` for the top heading, `
 
 Retro shape depends on the path from Step 7:
 
-- **Path A** (previous plan existed): grab last sprint's High priority and Low priority / side-quest items, tag each `@person`, and prefix each with a status emoji marking whether it completed.
+- **Path A** (previous plan existed): open the retro with a `### Sprint priorities` list carrying last sprint's two priorities, each prefixed with a status emoji. Then grab last sprint's High priority and Low priority / side-quest items, tag each `@person`, and prefix each with a status emoji marking whether it completed.
 - **Path B** (first sprint / NOT_FOUND): synthesized per-person outcome bullets, each prefixed `🟢`/`🟡` per Step 7.
 
 Use this format (Path B retro shown; for Path A, replace the per-person outcomes with status-emoji'd plan items grouped by priority):
@@ -305,6 +315,11 @@ Use this format (Path B retro shown; for Path A, replace the per-person outcomes
 ## Plan
 
 [Project Board](https://github.com/orgs/{SPRINT_ORG}/projects/{SPRINT_PROJECT_NUMBER})
+
+### Sprint priorities
+
+- First team-wide focus, in plain words
+- Second team-wide focus
 
 ### High priority
 
